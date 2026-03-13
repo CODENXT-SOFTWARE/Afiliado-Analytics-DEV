@@ -837,6 +837,20 @@ export default function GplCalculatorPage() {
       .reduce((acc, c) => acc + c.spend, 0);
   }, [traficoGruposCampaigns, selectedTraficoCampaignIds]);
 
+  // Total de cliques no link (Meta): para CPL Meta e Taxa de entrada
+  const totalCliquesMeta = useMemo(() => {
+    return traficoGruposCampaigns
+      .filter((c) => selectedTraficoCampaignIds.has(c.id))
+      .reduce((acc, c) => acc + c.adSets.reduce((s, aset) => s + aset.ads.reduce((a, ad) => a + (ad.clicks ?? 0), 0), 0), 0);
+  }, [traficoGruposCampaigns, selectedTraficoCampaignIds]);
+
+  // Total de novos (entraram) nos grupos selecionados — acumulado
+  const totalNovos = useMemo(() => {
+    return groups
+      .filter((g) => selectedGroupIds.has(g.id))
+      .reduce((acc, g) => acc + (groupCumulative[g.id]?.total_novos ?? 0), 0);
+  }, [groups, selectedGroupIds, groupCumulative]);
+
   const pessoasNoGrupo = useMemo(() => {
     const n = parseInt(String(groupSize).replace(/\D/g, ""), 10);
     return Number.isFinite(n) && n > 0 ? n : totalMembersSelected;
@@ -849,18 +863,32 @@ export default function GplCalculatorPage() {
       .reduce((acc, g) => acc + (groupCumulative[g.id]?.total_saidas ?? 0), 0);
   }, [groups, selectedGroupIds, groupCumulative]);
 
-  const custoPorPessoa = useMemo(() => {
-    if (custoTráfegoGrupos <= 0) return 0;
-    const totalPessoas = pessoasNoGrupo + totalSaidas;
-    if (totalPessoas <= 0) return 0;
-    return custoTráfegoGrupos / totalPessoas;
-  }, [custoTráfegoGrupos, pessoasNoGrupo, totalSaidas]);
+  // CPL Inicial: custo do anúncio ÷ total de entrada (usado também no Prejuízo)
+  const cplInicial = useMemo(() => {
+    if (custoTráfegoGrupos <= 0 || totalNovos <= 0) return 0;
+    return custoTráfegoGrupos / totalNovos;
+  }, [custoTráfegoGrupos, totalNovos]);
 
-  // Prejuízo com saídas: quantas saíram × custo por pessoa (tráfego já gasto por lead que saiu)
+  // Prejuízo: total de saída × CPL Inicial
   const prejuizoSaidas = useMemo(() => {
-    if (totalSaidas <= 0 || custoPorPessoa <= 0) return 0;
-    return totalSaidas * custoPorPessoa;
-  }, [totalSaidas, custoPorPessoa]);
+    if (totalSaidas <= 0 || cplInicial <= 0) return 0;
+    return totalSaidas * cplInicial;
+  }, [totalSaidas, cplInicial]);
+
+  // --- Novas métricas do relatório GPL ---
+  // CPL Meta: custo por clique no link (Meta Leads) = spend / cliques
+  const cplMeta = useMemo(() => {
+    if (custoTráfegoGrupos <= 0 || totalCliquesMeta <= 0) return 0;
+    return custoTráfegoGrupos / totalCliquesMeta;
+  }, [custoTráfegoGrupos, totalCliquesMeta]);
+
+  // CPL Real: custo tráfego ÷ (total de entrada − total de saída)
+  const cplReal = useMemo(() => {
+    if (custoTráfegoGrupos <= 0) return 0;
+    const liquido = totalNovos - totalSaidas;
+    if (liquido <= 0) return 0;
+    return custoTráfegoGrupos / liquido;
+  }, [custoTráfegoGrupos, totalNovos, totalSaidas]);
 
   // Buscar campanhas com tag "Tráfego para Grupos" — só ao clicar em Atualizar; resultado salvo no cache (IDB)
   const fetchTraficoGrupos = async () => {
@@ -1357,48 +1385,117 @@ export default function GplCalculatorPage() {
           </div>
         </div>
 
-        {/* Mini dashboard: Custo Tráfego vs Pessoas no grupo — entre o bloco da calculadora e o grid Grupos | Campanhas */}
+        {/* Mini dashboard GPL: apenas as 8 métricas definidas */}
         {traficoGruposCampaigns.length > 0 && (selectedTraficoCampaignIds.size > 0 || pessoasNoGrupo > 0) && (
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
             <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
-              <p className="text-xs text-text-secondary mb-1">Custo Tráfego (Grupos)</p>
-              <p className="text-xl font-bold text-shopee-orange">{formatCurrency(custoTráfegoGrupos)}</p>
-              <p className="text-xs text-text-secondary mt-0.5">campanhas selecionadas</p>
-            </div>
-            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
-              <p className="text-xs text-text-secondary mb-1">Total de membros</p>
-              <p className="text-xl font-bold text-indigo-400">{pessoasNoGrupo.toLocaleString("pt-BR")}</p>
-              <p className="text-xs text-text-secondary mt-0.5">no grupo / campo acima</p>
-            </div>
-            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
-              <p className="text-xs text-text-secondary mb-1">Total de saídas</p>
-              <p className="text-xl font-bold text-red-400">{totalSaidas.toLocaleString("pt-BR")}</p>
-              <p className="text-xs text-text-secondary mt-0.5">sairam no período (comparação de snapshots)</p>
-            </div>
-            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
-              <p className="text-xs text-text-secondary mb-1">Custo por pessoa</p>
-              <p className="text-xl font-bold text-emerald-400">
-                {custoTráfegoGrupos > 0 && (pessoasNoGrupo + totalSaidas) > 0 ? formatCurrency(custoPorPessoa) : "—"}
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                Custo tráfego
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Valor gasto no anúncio (soma do spend das campanhas selecionadas).</p>
+                  </div>
+                </button>
               </p>
-              <p className="text-xs text-text-secondary mt-0.5">tráfego ÷ (membros + saídas)</p>
+              <p className="text-xl font-bold text-shopee-orange">{formatCurrency(custoTráfegoGrupos)}</p>
+            </div>
+            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                Total de membros
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Quantidade de membros do grupo (grupos selecionados ou campo acima).</p>
+                  </div>
+                </button>
+              </p>
+              <p className="text-xl font-bold text-indigo-400">{pessoasNoGrupo.toLocaleString("pt-BR")}</p>
+            </div>
+            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                Total de entrada
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Quantidade de membros que entraram até a atualização (acumulado desde a base).</p>
+                  </div>
+                </button>
+              </p>
+              <p className="text-xl font-bold text-emerald-400">{totalNovos.toLocaleString("pt-BR")}</p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {pessoasNoGrupo > 0 ? `${((totalNovos / pessoasNoGrupo) * 100).toFixed(1)}% dos membros` : "—"}
+              </p>
+            </div>
+            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                Total de saída
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Quantidade de membros que saíram até a atualização (acumulado desde a base).</p>
+                  </div>
+                </button>
+              </p>
+              <p className="text-xl font-bold text-red-400">{totalSaidas.toLocaleString("pt-BR")}</p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {pessoasNoGrupo > 0 ? `${((totalSaidas / pessoasNoGrupo) * 100).toFixed(1)}% dos membros` : "—"}
+              </p>
+            </div>
+            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                CPL Inicial
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Custo do anúncio dividido pelo total de entrada. Fórmula: custo tráfego ÷ total de entrada.</p>
+                  </div>
+                </button>
+              </p>
+              <p className="text-xl font-bold text-amber-400">
+                {custoTráfegoGrupos > 0 && totalNovos > 0 ? formatCurrency(cplInicial) : "—"}
+              </p>
+            </div>
+            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                CPL do Meta
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Custo de leads gerado no Meta (custo por clique no link / lead). Fórmula: custo tráfego ÷ cliques (leads).</p>
+                  </div>
+                </button>
+              </p>
+              <p className="text-xl font-bold text-blue-400">
+                {custoTráfegoGrupos > 0 && totalCliquesMeta > 0 ? formatCurrency(cplMeta) : "—"}
+              </p>
+            </div>
+            <div className="bg-dark-card p-4 rounded-lg border border-dark-border">
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                CPL Real
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Custo do tráfego dividido por (total de entrada menos total de saída). Fórmula: custo tráfego ÷ (entrada − saída).</p>
+                  </div>
+                </button>
+              </p>
+              <p className="text-xl font-bold text-emerald-400">
+                {cplReal > 0 ? formatCurrency(cplReal) : "—"}
+              </p>
             </div>
             <div className="bg-dark-card p-4 rounded-lg border border-red-500/30">
-              <p className="text-xs text-text-secondary mb-1">Prejuízo (saídas)</p>
+              <p className="text-xs text-text-secondary mb-1 flex items-center gap-1">
+                Prejuízo
+                <button type="button" className="group relative flex-shrink-0" aria-label="Informação">
+                  <Info className="h-4 w-4 text-text-secondary hover:text-text-primary transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-dark-tooltip rounded-lg shadow-lg border border-dark-border opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10 text-xs text-left">
+                    <p className="text-text-primary">Total de saída × CPL Inicial (valor perdido com as saídas).</p>
+                  </div>
+                </button>
+              </p>
               <p className="text-xl font-bold text-red-400">
-                {totalSaidas > 0 && custoPorPessoa > 0 ? formatCurrency(prejuizoSaidas) : "—"}
-              </p>
-              <p className="text-xs text-text-secondary mt-0.5">
-                {totalSaidas > 0 && custoPorPessoa > 0
-                  ? `${totalSaidas} saídas × ${formatCurrency(custoPorPessoa)}`
-                  : "saídas × custo/pessoa"}
-              </p>
-            </div>
-            <div className="bg-dark-card p-4 rounded-lg border border-dark-border flex flex-col justify-center">
-              <p className="text-xs text-text-secondary mb-1">Análise</p>
-              <p className="text-sm font-medium text-text-primary">
-                {custoTráfegoGrupos > 0 && (pessoasNoGrupo + totalSaidas) > 0
-                  ? `R$ ${custoPorPessoa.toFixed(2)} de tráfego por lead no grupo.${totalSaidas > 0 ? ` ${totalSaidas} saíram = prejuízo de ${formatCurrency(prejuizoSaidas)}.` : ""}`
-                  : "Selecione campanhas e preencha pessoas para ver o custo por lead."}
+                {totalSaidas > 0 && cplInicial > 0 ? formatCurrency(prejuizoSaidas) : "—"}
               </p>
             </div>
           </div>
