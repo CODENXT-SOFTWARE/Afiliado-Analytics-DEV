@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Megaphone,
   ShoppingBag,
+  MessageCircle,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -58,6 +59,11 @@ const sidebarNavItems = [
     title: "Gerador de Links Shopee",
     href: "/dashboard/gerador-links-shopee",
     icon: <ShoppingBag className="h-5 w-5" />,
+  },
+  {
+    title: "Grupos de Venda",
+    href: "/dashboard/grupos-venda",
+    icon: <MessageCircle className="h-5 w-5" />,
   },
 ];
 

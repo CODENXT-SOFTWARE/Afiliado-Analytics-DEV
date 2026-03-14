@@ -20,6 +20,8 @@ export type BuscarGruposPayload = {
   totalParticipantes: number;
   nomeInstancia: string;
   hash: string | null;
+  /** Nome da lista ao criar lista de grupo (Grupos de Venda) */
+  nomeLista?: string;
 };
 
 function normalizeStr(input?: unknown): string {
@@ -34,9 +36,13 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (payload: BuscarGruposPayload) => void;
+  /** Quando true, exibe campo "Nome da lista" e botão "CRIAR LISTA DE GRUPO" */
+  criarListaMode?: boolean;
+  /** Instância já selecionada na página (evita selecionar de novo no modal) */
+  initialInstanceId?: string;
 };
 
-export default function BuscarGruposModal({ isOpen, onClose, onConfirm }: Props) {
+export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarListaMode, initialInstanceId }: Props) {
   const [instances, setInstances] = useState<EvolutionInstanceItem[]>([]);
   const [instanceStatusMap, setInstanceStatusMap] = useState<Record<string, "open" | "close" | null>>({});
   const [statusLoading, setStatusLoading] = useState(false);
@@ -46,6 +52,7 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm }: Props)
   const [groupsError, setGroupsError] = useState<string | null>(null);
   const [groupFilter, setGroupFilter] = useState("");
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [nomeLista, setNomeLista] = useState("");
 
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
   const nomeInstancia = selectedInstance?.nome_instancia ?? "";
@@ -54,11 +61,12 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm }: Props)
   // Carregar instâncias ao abrir o modal
   useEffect(() => {
     if (!isOpen) return;
-    setSelectedInstanceId("");
     setGroups([]);
     setGroupsError(null);
     setGroupFilter("");
     setSelectedGroupIds(new Set());
+    setNomeLista("");
+    setSelectedInstanceId(initialInstanceId ?? "");
     fetch("/api/evolution/instances")
       .then((r) => r.json())
       .then((data) => {
@@ -70,10 +78,12 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm }: Props)
               hash: i.hash ?? null,
             }))
           );
+          // Se a página passou uma instância, manter selecionada (pode ter vindo antes da lista carregar)
+          if (initialInstanceId) setSelectedInstanceId(initialInstanceId);
         }
       })
       .catch(() => setInstances([]));
-  }, [isOpen]);
+  }, [isOpen, initialInstanceId]);
 
   // Buscar status de cada instância ao ter lista
   useEffect(() => {
@@ -179,14 +189,17 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm }: Props)
   };
 
   const handleConfirm = () => {
-    onConfirm({
+    const payload: BuscarGruposPayload = {
       grupos: selectedGroups,
       totalParticipantes: totalParticipantesSelected,
       nomeInstancia,
       hash: instanceHash,
-    });
+    };
+    if (criarListaMode) payload.nomeLista = nomeLista.trim() || undefined;
+    onConfirm(payload);
     onClose();
   };
+  const canConfirm = criarListaMode ? selectedGroupIds.size > 0 && nomeLista.trim().length > 0 : selectedGroupIds.size > 0;
 
   if (!isOpen) return null;
 
@@ -354,26 +367,40 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm }: Props)
         </div>
 
         {/* Rodapé */}
-        <div className="p-4 border-t border-dark-border shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="text-xs text-text-secondary">
-            {selectedGroupIds.size > 0 ? (
-              <>
-                {selectedGroupIds.size} grupo{selectedGroupIds.size !== 1 ? "s" : ""} selecionado
-                {selectedGroupIds.size !== 1 ? "s" : ""} ·{" "}
-                {totalParticipantesSelected.toLocaleString("pt-BR")} participantes selecionados
-              </>
-            ) : (
-              "Selecione um ou mais grupos"
-            )}
+        <div className="p-4 border-t border-dark-border shrink-0 flex flex-col gap-3">
+          {criarListaMode && selectedGroupIds.size > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Nome da lista</label>
+              <input
+                type="text"
+                value={nomeLista}
+                onChange={(e) => setNomeLista(e.target.value)}
+                placeholder="Ex: Vendas CN, Ofertas Diárias"
+                className="w-full px-3 py-2 rounded-md border border-dark-border bg-[#232323] text-text-primary text-sm placeholder-text-secondary/60 focus:outline-none focus:border-shopee-orange"
+              />
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="text-xs text-text-secondary">
+              {selectedGroupIds.size > 0 ? (
+                <>
+                  {selectedGroupIds.size} grupo{selectedGroupIds.size !== 1 ? "s" : ""} selecionado
+                  {selectedGroupIds.size !== 1 ? "s" : ""} ·{" "}
+                  {totalParticipantesSelected.toLocaleString("pt-BR")} participantes selecionados
+                </>
+              ) : (
+                "Selecione um ou mais grupos"
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={!canConfirm}
+              className="px-4 py-2 rounded-md bg-shopee-orange text-white text-sm font-semibold hover:bg-shopee-orange/90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            >
+              {criarListaMode ? "CRIAR LISTA DE GRUPO" : "Confirmar Seleção"}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={selectedGroupIds.size === 0}
-            className="px-4 py-2 rounded-md bg-shopee-orange text-white text-sm font-semibold hover:bg-shopee-orange/90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-          >
-            Confirmar Seleção
-          </button>
         </div>
       </div>
     </div>

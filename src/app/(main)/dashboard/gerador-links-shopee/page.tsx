@@ -143,7 +143,7 @@ export default function GeradorLinksShopeePage() {
   const loadHistory = useCallback(async (page: number, search?: string) => {
     setHistoryLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: "10" });
+      const params = new URLSearchParams({ page: String(page), limit: "4" });
       if (search?.trim()) params.set("search", search.trim());
       const res = await fetch(`/api/shopee/link-history?${params}`);
       const json = await res.json();
@@ -396,44 +396,64 @@ export default function GeradorLinksShopeePage() {
     }
   }, [selectedProduct]);
 
-  const handleShareStory = useCallback(async () => {
-    const link = lastGeneratedLink;
-    if (!link) {
-      setShareFeedback("Converta o link antes (botão \"Converter Link\") para copiar o link com seus Sub IDs.");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(link);
-      setShareFeedback("Link copiado! Abra o Instagram → Stories → adicione a imagem → sticker \"Adicionar link\" → cole o link. Adicione uma música viral no Story.");
-      setTimeout(() => setShareFeedback(""), 8000);
-      if (typeof window !== "undefined") {
-        window.open("https://www.instagram.com/", "_blank", "noopener");
-      }
-    } catch {
-      setShareFeedback("Copie o link manualmente e abra o Instagram.");
-    }
-  }, [lastGeneratedLink]);
-
   const getSelectedImageFile = useCallback(async (): Promise<File | null> => {
     const url = storyImageUseGenerated && generatedStoryImage
       ? generatedStoryImage
       : selectedProduct?.imageUrl;
     if (!url) return null;
     try {
+      let blob: Blob;
       if (url.startsWith("data:")) {
         const res = await fetch(url);
-        const blob = await res.blob();
-        return new File([blob], "story-shopee.jpg", { type: blob.type || "image/jpeg" });
+        blob = await res.blob();
+      } else {
+        const proxyUrl = `/api/shopee/proxy-image?url=${encodeURIComponent(url)}`;
+        const res = await fetch(proxyUrl);
+        if (!res.ok) return null;
+        blob = await res.blob();
       }
-      const proxyUrl = `/api/shopee/proxy-image?url=${encodeURIComponent(url)}`;
-      const res = await fetch(proxyUrl);
-      if (!res.ok) return null;
-      const blob = await res.blob();
-      return new File([blob], "story-shopee.jpg", { type: blob.type || "image/jpeg" });
+      if (!blob || blob.size === 0) return null;
+      const type = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
+      return new File([blob], "story-shopee.jpg", { type });
     } catch {
       return null;
     }
   }, [storyImageUseGenerated, generatedStoryImage, selectedProduct?.imageUrl]);
+
+  const handleShareStory = useCallback(async () => {
+    const link = lastGeneratedLink;
+    if (!link) {
+      setShareFeedback("Converte o link antes (botão \"Converter Link\") para copiar o link.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      setShareFeedback("Não foi possível copiar o link. Copie manualmente.");
+      return;
+    }
+    const imageFile = await getSelectedImageFile();
+    const canShare = typeof navigator !== "undefined" && navigator.share;
+    const canShareFiles = imageFile && (navigator as { canShare?: (x: { files?: File[] }) => boolean }).canShare?.({ files: [imageFile] });
+    if (canShare && canShareFiles) {
+      try {
+        await navigator.share({
+          files: [imageFile],
+          title: "Story Shopee",
+        });
+        setShareFeedback("Link copiado! Escolha Instagram → a imagem vai para Stories. Cole só o link no Story (sticker \"Adicionar link\").");
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") {
+          setShareFeedback("Link copiado! Usa \"Baixar imagem\" e abre o Instagram → Stories → cola o link no sticker \"Adicionar link\".");
+          if (typeof window !== "undefined") window.open("https://www.instagram.com/", "_blank", "noopener");
+        }
+      }
+    } else {
+      setShareFeedback("Link copiado! Usa \"Baixar imagem\" e no Instagram Stories cola o link no sticker \"Adicionar link\".");
+      if (typeof window !== "undefined") window.open("https://www.instagram.com/", "_blank", "noopener");
+    }
+    setTimeout(() => setShareFeedback(""), 9000);
+  }, [lastGeneratedLink, getSelectedImageFile]);
 
   const [whatsappSharing, setWhatsappSharing] = useState(false);
 
@@ -443,37 +463,58 @@ export default function GeradorLinksShopeePage() {
       return;
     }
     setWhatsappSharing(true);
-    const legenda = storyCaption.trim();
     const link = lastGeneratedLink;
-    const textAsCaption = legenda ? (link ? `${legenda}\n\n${link}` : legenda) : link;
-    let shared = false;
-    try {
-      const imageFile = await getSelectedImageFile();
-      const canShare = typeof navigator !== "undefined" && navigator.share;
-      const canShareFiles = imageFile && (navigator as { canShare?: (x: { files?: File[] }) => boolean }).canShare?.({ files: [imageFile] });
+    const legenda = storyCaption.trim();
+    let textAsCaption: string;
+    if (!legenda) {
+      textAsCaption = `Comprar agora: ${link}`;
+    } else {
+      const placeholder = /\{Link do Converter Link\}|\{link\}/i;
+      if (placeholder.test(legenda)) {
+        textAsCaption = legenda.replace(placeholder, link);
+      } else {
+        const lines = legenda.split("\n");
+        const title = lines[0]?.trim() ?? "";
+        const rest = lines.slice(1).join("\n").trim();
+        textAsCaption = rest ? `${title}\n\nComprar agora: ${link}\n\n${rest}` : `${title}\n\nComprar agora: ${link}`;
+      }
+    }
+    const MAX_STATUS_CHARS = 700;
+    const MAX_STATUS_LINES = 10;
+    const linesAll = textAsCaption.split("\n");
+    const linesCut = linesAll.length > MAX_STATUS_LINES ? linesAll.slice(0, MAX_STATUS_LINES).join("\n") : textAsCaption;
+    textAsCaption = linesCut.length > MAX_STATUS_CHARS ? linesCut.slice(0, MAX_STATUS_CHARS).trim() : linesCut;
 
-      if (canShare && canShareFiles) {
+    try {
+      await navigator.clipboard.writeText(textAsCaption);
+    } catch {
+      // segue mesmo se não copiar
+    }
+
+    const imageFile = await getSelectedImageFile();
+    const canShare = typeof navigator !== "undefined" && navigator.share;
+    const canShareFiles = imageFile && (navigator as { canShare?: (x: { files?: File[] }) => boolean }).canShare?.({ files: [imageFile] });
+
+    if (canShare && canShareFiles) {
+      try {
         await navigator.share({
           files: [imageFile],
-          text: textAsCaption,
           title: "Story Shopee",
         });
-        setShareFeedback("Imagem e legenda enviadas juntas! No WhatsApp escolha um contato para enviar ou \"Status\" para postar como story — a legenda e o link vão junto da imagem.");
-        setTimeout(() => setShareFeedback(""), 7000);
-        shared = true;
+        setShareFeedback("Legenda (com link no topo) copiada! Escolha WhatsApp → a imagem vai para Status. Cole no campo \"Adicione uma legenda\".");
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") {
+          setShareFeedback("Legenda copiada! Use \"Baixar imagem\" e anexe no WhatsApp; depois cole a legenda no Status ou na conversa.");
+          const waUrl = `https://wa.me/?text=${encodeURIComponent(textAsCaption)}`;
+          if (typeof window !== "undefined") window.open(waUrl, "_blank", "noopener");
+        }
       }
-    } catch (err) {
-      if ((err as Error)?.name !== "AbortError") {
-        setShareFeedback("Compartilhar com imagem não disponível. Abrindo WhatsApp só com texto...");
-      }
-    }
-
-    if (!shared) {
+    } else {
       const waUrl = `https://wa.me/?text=${encodeURIComponent(textAsCaption)}`;
       if (typeof window !== "undefined") window.open(waUrl, "_blank", "noopener");
-      setShareFeedback("WhatsApp abriu com a legenda e o link. Use \"Baixar imagem\" e anexe a imagem no chat ou no Status; a legenda já está no texto.");
-      setTimeout(() => setShareFeedback(""), 6000);
+      setShareFeedback("Legenda copiada! Use \"Baixar imagem\" e anexe no WhatsApp; depois cole a legenda no campo \"Adicione uma legenda\".");
     }
+    setTimeout(() => setShareFeedback(""), 9000);
     setWhatsappSharing(false);
   }, [lastGeneratedLink, storyCaption, getSelectedImageFile]);
 
@@ -912,6 +953,7 @@ export default function GeradorLinksShopeePage() {
                   rows={6}
                   className="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-bg text-text-primary text-sm placeholder-text-secondary/60 focus:outline-none focus:border-shopee-orange resize-y scrollbar-shopee"
                 />
+                <p className="text-xs text-text-secondary mt-1">Status do WhatsApp: máx. 700 caracteres e 10 linhas (legenda + link). A legenda é cortada automaticamente ao compartilhar.</p>
                 <div className="flex flex-wrap gap-2 mt-3">
                   <button
                     type="button"
@@ -971,7 +1013,7 @@ export default function GeradorLinksShopeePage() {
                   </p>
                 )}
                 <p className="mt-2 text-xs text-text-secondary">
-                  <strong>Instagram:</strong> o link é copiado e o app abre. Use o sticker &quot;Adicionar link&quot; no Story e cole. Adicione música pelo ícone de música. — <strong>WhatsApp:</strong> no celular envia a imagem e a legenda (com o link) juntas: escolha WhatsApp no menu e envie na conversa ou poste no Status; a legenda aparece como texto da imagem. No computador abre só o texto — use &quot;Baixar imagem&quot; para anexar.
+                  <strong>Instagram:</strong> só enviamos a imagem. O link é copiado — escolha Instagram → Stories; cole o link no sticker &quot;Adicionar link&quot;. <strong>WhatsApp:</strong> só enviamos a imagem. A legenda (com o link no topo) é copiada — escolha WhatsApp → Status ou conversa; cole no campo &quot;Adicione uma legenda&quot; ou abaixo da imagem.
                 </p>
               </div>
             </div>

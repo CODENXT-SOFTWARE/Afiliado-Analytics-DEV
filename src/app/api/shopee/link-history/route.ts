@@ -7,7 +7,7 @@ import { createClient } from "../../../../../utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const LIMIT = 10;
+const DEFAULT_LIMIT = 4;
 
 export async function GET(req: Request) {
   try {
@@ -17,10 +17,12 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+    const limitParam = parseInt(url.searchParams.get("limit") || String(DEFAULT_LIMIT), 10);
+    const limit = Math.min(50, Math.max(1, Number.isNaN(limitParam) ? DEFAULT_LIMIT : limitParam));
     const searchRaw = (url.searchParams.get("search") || "").trim();
     const search = searchRaw.replace(/'/g, "''").toLowerCase();
-    const from = (page - 1) * LIMIT;
-    const to = from + LIMIT - 1;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
     let query = supabase
       .from("shopee_link_history")
@@ -41,7 +43,7 @@ export async function GET(req: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     const total = count ?? 0;
-    const totalPages = Math.ceil(total / LIMIT) || 1;
+    const totalPages = Math.ceil(total / limit) || 1;
 
     const data = (rows ?? []).map((r: Record<string, unknown>) => ({
       id: r.id,

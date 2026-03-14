@@ -32,9 +32,10 @@ Regras:
 - Tom direto, urgência e benefícios do produto.
 - Inclua ao final várias #hashtags relevantes ao produto e ao público (moda, ofertas, promoção, etc.).
 - Não invente preço nem link; foque em convencer o lead a tocar no link do Story.
-- Uma única resposta: só a legenda com as hashtags, sem título extra.`;
+- Uma única resposta: só a legenda com as hashtags, sem título extra.
+- LIMITE OBRIGATÓRIO: a legenda (texto + hashtags) NÃO pode ultrapassar 300 caracteres. Conte e respeite esse limite.`;
 
-    const userPrompt = `Gere uma legenda de venda para Stories do Instagram para este produto: "${productName}". Inclua hashtags apelativas no final.`;
+    const userPrompt = `Gere uma legenda de venda para Stories do Instagram para este produto: "${productName}". Inclua hashtags apelativas no final. Máximo 300 caracteres no total.`;
 
     const res = await fetch(GROK_API, {
       method: "POST",
@@ -63,8 +64,9 @@ Regras:
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
-    const caption = data?.choices?.[0]?.message?.content?.trim() ?? "";
+    let caption = data?.choices?.[0]?.message?.content?.trim() ?? "";
     if (!caption) return NextResponse.json({ error: "Resposta vazia da IA" }, { status: 500 });
+    if (caption.length > 300) caption = caption.slice(0, 300).trim();
 
     return NextResponse.json({ caption });
   } catch (e) {
