@@ -31,6 +31,8 @@ type ContinuoItem = {
   id: string;
   listaId: string | null;
   listaNome: string;
+  listaOfertasId: string | null;
+  listaOfertasNome: string | null;
   instanceId: string;
   keywords: string[];
   subId1: string;
@@ -42,6 +44,8 @@ type ContinuoItem = {
   updatedAt: string;
   proximaKeyword: string | null;
 };
+
+type ListaOfertasItem = { id: string; nome: string; totalItens: number };
 
 type Instance = EvolutionInstanceItem & { id: string };
 
@@ -66,6 +70,9 @@ export default function GruposVendaPage() {
   const [deletingListaId, setDeletingListaId] = useState<string | null>(null);
   const [cronTestLoading, setCronTestLoading] = useState(false);
   const [cronTestResult, setCronTestResult] = useState<string | null>(null);
+  const [listasOfertas, setListasOfertas] = useState<ListaOfertasItem[]>([]);
+  const [loadingListasOfertas, setLoadingListasOfertas] = useState(false);
+  const [selectedListaOfertasId, setSelectedListaOfertasId] = useState("");
 
   const loadInstances = useCallback(async () => {
     try {
@@ -116,6 +123,19 @@ export default function GruposVendaPage() {
     }
   }, []);
 
+  const loadListasOfertas = useCallback(async () => {
+    setLoadingListasOfertas(true);
+    try {
+      const res = await fetch("/api/shopee/minha-lista-ofertas/listas");
+      const data = await res.json();
+      if (res.ok) setListasOfertas(Array.isArray(data.data) ? data.data : []);
+    } catch {
+      setListasOfertas([]);
+    } finally {
+      setLoadingListasOfertas(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadInstances();
   }, [loadInstances]);
@@ -127,6 +147,10 @@ export default function GruposVendaPage() {
   useEffect(() => {
     loadContinuo();
   }, [loadContinuo]);
+
+  useEffect(() => {
+    loadListasOfertas();
+  }, [loadListasOfertas]);
 
   const handleConfirmGroups = useCallback(
     async (payload: BuscarGruposPayload) => {
@@ -250,6 +274,7 @@ export default function GruposVendaPage() {
             body: JSON.stringify({
               id: configId,
               listaId: c.listaId,
+              listaOfertasId: c.listaOfertasId || undefined,
               keywords: c.keywords,
               subId1: c.subId1,
               subId2: c.subId2,
@@ -277,9 +302,10 @@ export default function GruposVendaPage() {
       setError("Selecione uma lista de grupos.");
       return;
     }
+    const useListaOfertas = !!selectedListaOfertasId;
     const kwList = keywords.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
-    if (kwList.length === 0) {
-      setError("Digite ao menos uma keyword.");
+    if (!useListaOfertas && kwList.length === 0) {
+      setError("Digite ao menos uma keyword ou selecione uma lista de ofertas.");
       return;
     }
     setContinuoTogglingId("new");
@@ -290,7 +316,8 @@ export default function GruposVendaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listaId: selectedListaId,
-          keywords: kwList,
+          listaOfertasId: useListaOfertas ? selectedListaOfertasId : undefined,
+          keywords: useListaOfertas ? [] : kwList,
           subId1,
           subId2,
           subId3,
@@ -299,10 +326,11 @@ export default function GruposVendaPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Erro");
-      setFeedback("Disparo 24h adicionado. Um produto a cada 2 min em loop.");
+      setFeedback(useListaOfertas ? "Disparo 24h por lista de ofertas adicionado. Um produto a cada 2 min em loop." : "Disparo 24h adicionado. Um produto a cada 2 min em loop.");
       setTimeout(() => setFeedback(""), 5000);
       setSelectedListaId("");
       setKeywords("");
+      setSelectedListaOfertasId("");
       setSubId1("");
       setSubId2("");
       setSubId3("");
@@ -312,7 +340,7 @@ export default function GruposVendaPage() {
     } finally {
       setContinuoTogglingId(null);
     }
-  }, [selectedListaId, keywords, subId1, subId2, subId3, loadContinuo]);
+  }, [selectedListaId, selectedListaOfertasId, keywords, subId1, subId2, subId3, loadContinuo]);
 
   const handleRemoveContinuo = useCallback(
     async (id: string) => {
@@ -434,6 +462,28 @@ export default function GruposVendaPage() {
             ))}
           </ul>
         )}
+        <div className="mt-4 pt-4 border-t border-dark-border">
+          <label className="block text-xs text-text-secondary mb-2">Lista de ofertas (para disparo 24h)</label>
+          {loadingListasOfertas ? (
+            <p className="text-text-secondary text-sm flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Carregando listas de ofertas...
+            </p>
+          ) : (
+            <select
+              value={selectedListaOfertasId}
+              onChange={(e) => setSelectedListaOfertasId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-bg text-text-primary text-sm focus:outline-none focus:border-shopee-orange"
+            >
+              <option value="">Selecione uma lista de ofertas (opcional)</option>
+              {listasOfertas.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nome} ({l.totalItens} itens)
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         {saving && (
           <p className="text-sm text-text-secondary mt-2 flex items-center gap-1">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -450,8 +500,7 @@ export default function GruposVendaPage() {
           Disparar ofertas
         </h2>
         <p className="text-text-secondary text-xs mb-3">
-          Escolha a lista de grupos, as keywords e os Sub IDs. Disparo uma vez ou adicione um disparo 24h (1 produto a
-          cada 2 min em loop).
+          Escolha a lista de grupos. Para disparo uma vez: use keywords. Para disparo 24h: use keywords ou selecione uma lista de ofertas (à esquerda); 1 produto a cada 2 min em loop.
         </p>
         <div className="mb-4">
           <label className="block text-xs text-text-secondary mb-1">Lista de grupos</label>
@@ -523,7 +572,7 @@ export default function GruposVendaPage() {
           <button
             type="button"
             onClick={handleAddContinuo}
-            disabled={continuoTogglingId === "new" || !selectedListaId || !keywords.trim()}
+            disabled={continuoTogglingId === "new" || !selectedListaId || (!keywords.trim() && !selectedListaOfertasId)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {continuoTogglingId === "new" ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
@@ -580,9 +629,15 @@ export default function GruposVendaPage() {
                 <span className="text-xs text-text-secondary">
                   Sub IDs: {[c.subId1, c.subId2, c.subId3].filter(Boolean).join(", ") || "—"}
                 </span>
-                <span className="text-xs text-text-secondary truncate max-w-[180px]" title={c.keywords.join(", ")}>
-                  Keywords: {c.keywords.slice(0, 2).join(", ")}{c.keywords.length > 2 ? "…" : ""}
-                </span>
+                {c.listaOfertasNome ? (
+                  <span className="text-xs text-text-secondary">
+                    Lista de ofertas: {c.listaOfertasNome}
+                  </span>
+                ) : (
+                  <span className="text-xs text-text-secondary truncate max-w-[180px]" title={c.keywords.join(", ")}>
+                    Keywords: {c.keywords.slice(0, 2).join(", ")}{c.keywords.length > 2 ? "…" : ""}
+                  </span>
+                )}
                 {c.ultimoDisparoAt && (
                   <span className="text-xs text-text-secondary">
                     Último: {new Date(c.ultimoDisparoAt).toLocaleString("pt-BR")}

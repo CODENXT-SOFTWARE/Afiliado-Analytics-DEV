@@ -14,6 +14,7 @@ import {
   Megaphone,
   ShoppingBag,
   MessageCircle,
+  ListChecks,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -64,6 +65,11 @@ const sidebarNavItems = [
     title: "Grupos de Venda",
     href: "/dashboard/grupos-venda",
     icon: <MessageCircle className="h-5 w-5" />,
+  },
+  {
+    title: "Minha Lista de Ofertas",
+    href: "/dashboard/minha-lista-ofertas",
+    icon: <ListChecks className="h-5 w-5" />,
   },
 ];
 

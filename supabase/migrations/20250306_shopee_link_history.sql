@@ -13,8 +13,16 @@ CREATE TABLE IF NOT EXISTS shopee_link_history (
   image_url text NOT NULL DEFAULT '',
   commission_rate numeric(5,4) NOT NULL DEFAULT 0,
   commission_value numeric(10,2) NOT NULL DEFAULT 0,
+  price_shopee numeric(10,2),
+  price_shopee_original numeric(10,2),
+  price_shopee_discount_rate numeric(5,2),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Garantir colunas de preço para quem já tinha a tabela antes
+ALTER TABLE shopee_link_history ADD COLUMN IF NOT EXISTS price_shopee numeric(10,2);
+ALTER TABLE shopee_link_history ADD COLUMN IF NOT EXISTS price_shopee_original numeric(10,2);
+ALTER TABLE shopee_link_history ADD COLUMN IF NOT EXISTS price_shopee_discount_rate numeric(5,2);
 
 CREATE INDEX IF NOT EXISTS idx_shopee_link_history_user_created ON shopee_link_history(user_id, created_at DESC);
 

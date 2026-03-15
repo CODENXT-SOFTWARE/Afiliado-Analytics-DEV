@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const { data: configs, error: configError } = await supabase
     .from("grupos_venda_continuo")
-    .select("id, user_id, instance_id, lista_id, keywords, sub_id_1, sub_id_2, sub_id_3, proximo_indice")
+    .select("id, user_id, instance_id, lista_id, lista_ofertas_id, keywords, sub_id_1, sub_id_2, sub_id_3, proximo_indice")
     .eq("ativo", true);
 
   if (configError || !configs?.length) {
@@ -49,28 +49,18 @@ export async function GET(req: NextRequest) {
     const userId = cfg.user_id as string;
     const instanceId = cfg.instance_id as string;
     const listaId = (cfg as { lista_id?: string | null }).lista_id ?? null;
+    const listaOfertasId = (cfg as { lista_ofertas_id?: string | null }).lista_ofertas_id ?? null;
     const keywords = (cfg.keywords as string[]) ?? [];
     const proximoIndice = Number(cfg.proximo_indice) ?? 0;
     const subIds = [cfg.sub_id_1, cfg.sub_id_2, cfg.sub_id_3].filter(Boolean) as string[];
 
-    if (keywords.length === 0) {
+    const isListaOfertasMode = !!listaOfertasId;
+    if (!isListaOfertasMode && keywords.length === 0) {
       results.push({ userId, ok: false, error: "Sem keywords" });
       continue;
     }
 
-    const keyword = keywords[proximoIndice % keywords.length];
-    const nextIndex = (proximoIndice + 1) % keywords.length;
-
     try {
-      const { data: profile } = await supabase.from("profiles").select("shopee_app_id, shopee_api_key").eq("id", userId).single();
-      const appId = (profile as { shopee_app_id?: string } | null)?.shopee_app_id?.trim();
-      const secret = (profile as { shopee_api_key?: string } | null)?.shopee_api_key?.trim();
-      if (!appId || !secret) {
-        results.push({ userId, keyword, ok: false, error: "Shopee não configurado" });
-        await supabase.from("grupos_venda_continuo").update({ proximo_indice: nextIndex, ultimo_disparo_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", cfg.id);
-        continue;
-      }
-
       const { data: instance } = await supabase.from("evolution_instances").select("nome_instancia, hash").eq("id", instanceId).single();
       const instanceName = (instance as { nome_instancia?: string } | null)?.nome_instancia ?? "";
       const hash = (instance as { hash?: string | null } | null)?.hash ?? "";
@@ -80,8 +70,88 @@ export async function GET(req: NextRequest) {
         : await supabase.from("grupos_venda").select("group_id").eq("user_id", userId).eq("instance_id", instanceId);
       const groupIds = (groups ?? []).map((g: { group_id: string }) => g.group_id);
       if (groupIds.length === 0) {
-        results.push({ userId, keyword, ok: false, error: "Nenhum grupo salvo" });
-        await supabase.from("grupos_venda_continuo").update({ proximo_indice: nextIndex, updated_at: new Date().toISOString() }).eq("id", cfg.id);
+        results.push({ userId, ok: false, error: "Nenhum grupo salvo" });
+        continue;
+      }
+
+      if (isListaOfertasMode) {
+        const { data: itens } = await supabase
+          .from("minha_lista_ofertas")
+          .select("id, product_name, image_url, price_original, price_promo, discount_rate, converter_link")
+          .eq("lista_id", listaOfertasId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true });
+        const items = (itens ?? []) as { product_name: string; image_url: string; price_original: number | null; price_promo: number | null; discount_rate: number | null; converter_link: string }[];
+        if (items.length === 0) {
+          results.push({ userId, ok: false, error: "Lista de ofertas vazia" });
+          continue;
+        }
+        const idx = proximoIndice % items.length;
+        const nextIndex = (proximoIndice + 1) % items.length;
+        const item = items[idx];
+        const linkAfiliado = item.converter_link?.trim() || "";
+        if (!linkAfiliado) {
+          results.push({ userId, ok: false, error: "Produto sem link" });
+          await supabase.from("grupos_venda_continuo").update({ proximo_indice: nextIndex, updated_at: new Date().toISOString() }).eq("id", cfg.id);
+          continue;
+        }
+        const nomeProduto = item.product_name ?? "";
+        const priceMin = item.price_promo ?? 0;
+        const priceMax = item.price_promo ?? 0;
+        const rate = item.discount_rate ?? 0;
+        const precoPor = priceMin || priceMax;
+        const precoRiscado = (item.price_original ?? priceMax) || 0;
+        const valor = precoPor;
+        const formatBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 }).format(n);
+        const descricao =
+          `✨ ${nomeProduto}\n\n` +
+          `💰 APROVEITE:${rate > 0 ? ` _${Math.round(rate)}% de DESCONTO!!!!_` : ""} \n\n  🔴 De: ~${formatBRL(precoRiscado)}~ \n\n  🔥 Por: *${formatBRL(precoPor)}* 😱\n\n` +
+          `🏷️ PROMOÇÃO - CLIQUE NO LINK 👇\n\n` +
+          linkAfiliado;
+        const imagem = item.image_url ?? "";
+
+        const whRes = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            instanceName,
+            hash,
+            groupIds,
+            imagem,
+            descricao,
+            valor,
+            linkAfiliado,
+            desconto: rate > 0 ? Math.round(rate) : null,
+            precoRiscado: precoRiscado > 0 ? precoRiscado : null,
+            precoPor: precoPor > 0 ? precoPor : null,
+          }),
+        });
+
+        if (!whRes.ok) {
+          results.push({ userId, ok: false, error: `Webhook ${whRes.status}` });
+        } else {
+          results.push({ userId, keyword: nomeProduto.slice(0, 30), ok: true });
+        }
+        await supabase
+          .from("grupos_venda_continuo")
+          .update({
+            proximo_indice: nextIndex,
+            ultimo_disparo_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", cfg.id);
+        continue;
+      }
+
+      const keyword = keywords[proximoIndice % keywords.length];
+      const nextIndex = (proximoIndice + 1) % keywords.length;
+
+      const { data: profile } = await supabase.from("profiles").select("shopee_app_id, shopee_api_key").eq("id", userId).single();
+      const appId = (profile as { shopee_app_id?: string } | null)?.shopee_app_id?.trim();
+      const secret = (profile as { shopee_api_key?: string } | null)?.shopee_api_key?.trim();
+      if (!appId || !secret) {
+        results.push({ userId, keyword, ok: false, error: "Shopee não configurado" });
+        await supabase.from("grupos_venda_continuo").update({ proximo_indice: nextIndex, ultimo_disparo_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", cfg.id);
         continue;
       }
 
@@ -95,6 +165,7 @@ export async function GET(req: NextRequest) {
               imageUrl
               priceMin
               priceMax
+              priceDiscountRate
             }
           }
         }
@@ -107,8 +178,13 @@ export async function GET(req: NextRequest) {
       });
       const jsonProduct = (await resProduct.json()) as { data?: { productOfferV2?: { nodes?: unknown[] } }; errors?: { message?: string }[] };
       const nodes = jsonProduct?.data?.productOfferV2?.nodes ?? [];
-      const product = nodes[0] as { productLink?: string; offerLink?: string; productName?: string; imageUrl?: string; priceMin?: number; priceMax?: number } | undefined;
-      const originUrl = product?.productLink || product?.offerLink || "";
+      const product = nodes[0] as { productLink?: string; offerLink?: string; productName?: string; imageUrl?: string; priceMin?: number; priceMax?: number; priceDiscountRate?: number } | undefined;
+      if (!product) {
+        results.push({ userId, keyword, ok: false, error: "Nenhum produto encontrado" });
+        await supabase.from("grupos_venda_continuo").update({ proximo_indice: nextIndex, ultimo_disparo_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", cfg.id);
+        continue;
+      }
+      const originUrl = product.productLink || product.offerLink || "";
 
       if (!originUrl) {
         results.push({ userId, keyword, ok: false, error: "Nenhum produto encontrado" });
@@ -132,14 +208,39 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      const valor = product.priceMin ?? product.priceMax ?? 0;
-      const descricao = product.productName ?? "";
+      const priceMin = product.priceMin ?? 0;
+      const priceMax = product.priceMax ?? 0;
+      const rate = product.priceDiscountRate ?? 0;
+      const precoPor = priceMin || priceMax;
+      const precoRiscado =
+        rate > 0 && rate < 100 && priceMin > 0
+          ? Math.round((priceMin / (1 - rate / 100)) * 100) / 100
+          : priceMax || 0;
+      const valor = precoPor;
+      const formatBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 }).format(n);
+      const nomeProduto = product.productName ?? "";
+      const descricao =
+        `✨ ${nomeProduto}\n\n` +
+        `💰 APROVEITE:${rate > 0 ? ` _${Math.round(rate)}% de DESCONTO!!!!_` : ""} \n\n  🔴 De: ~${formatBRL(precoRiscado)}~ \n\n  🔥 Por: *${formatBRL(precoPor)}* 😱\n\n` +
+        `🏷️ PROMOÇÃO - CLIQUE NO LINK 👇\n\n` +
+        linkAfiliado;
       const imagem = product.imageUrl ?? "";
 
       const whRes = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instanceName, hash, groupIds, imagem, descricao, valor, linkAfiliado }),
+        body: JSON.stringify({
+          instanceName,
+          hash,
+          groupIds,
+          imagem,
+          descricao,
+          valor,
+          linkAfiliado,
+          desconto: rate > 0 ? Math.round(rate) : null,
+          precoRiscado: precoRiscado > 0 ? precoRiscado : null,
+          precoPor: precoPor > 0 ? precoPor : null,
+        }),
       });
 
       if (!whRes.ok) {
@@ -157,7 +258,7 @@ export async function GET(req: NextRequest) {
         })
         .eq("id", cfg.id);
     } catch (e) {
-      results.push({ userId, keyword, ok: false, error: e instanceof Error ? e.message : "Erro" });
+      results.push({ userId, ok: false, error: e instanceof Error ? e.message : "Erro" });
     }
   }
 

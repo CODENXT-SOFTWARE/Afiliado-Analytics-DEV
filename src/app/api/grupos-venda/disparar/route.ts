@@ -103,8 +103,22 @@ export async function POST(req: Request) {
         if (!linkRes.ok) throw new Error(linkData?.error ?? "Falha ao gerar link");
         const linkAfiliado = linkData?.shortLink ?? "";
 
-        const valor = product.priceMin ?? product.priceMax ?? 0;
-        const descricao = product.productName ?? "";
+        const priceMin = product.priceMin ?? 0;
+        const priceMax = product.priceMax ?? 0;
+        const rate = product.priceDiscountRate ?? 0;
+        const precoPor = priceMin || priceMax;
+        const precoRiscado =
+          rate > 0 && rate < 100 && priceMin > 0
+            ? Math.round((priceMin / (1 - rate / 100)) * 100) / 100
+            : priceMax || 0;
+        const valor = precoPor;
+        const formatBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 }).format(n);
+        const nomeProduto = product.productName ?? "";
+        const descricao =
+          `✨ ${nomeProduto}\n\n` +
+          `💰 APROVEITE:${rate > 0 ? ` _${Math.round(rate)}% de DESCONTO!!!!_` : ""} \n\n  🔴 De: ~${formatBRL(precoRiscado)}~ \n\n  🔥 Por: *${formatBRL(precoPor)}* 😱\n\n` +
+          `🏷️ PROMOÇÃO - CLIQUE NO LINK 👇\n\n` +
+          linkAfiliado;
         const imagem = product.imageUrl ?? "";
 
         const payload = {
@@ -115,6 +129,9 @@ export async function POST(req: Request) {
           descricao,
           valor,
           linkAfiliado,
+          desconto: rate > 0 ? Math.round(rate) : null,
+          precoRiscado: precoRiscado > 0 ? precoRiscado : null,
+          precoPor: precoPor > 0 ? precoPor : null,
         };
 
         const whRes = await fetch(WEBHOOK_URL, {

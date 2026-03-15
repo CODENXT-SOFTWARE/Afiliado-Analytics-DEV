@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
     let query = supabase
       .from("shopee_link_history")
-      .select("id, short_link, origin_url, sub_id_1, sub_id_2, sub_id_3, observation, product_name, slug, image_url, commission_rate, commission_value, created_at", { count: "exact" })
+      .select("id, short_link, origin_url, sub_id_1, sub_id_2, sub_id_3, observation, product_name, slug, image_url, commission_rate, commission_value, price_shopee, price_shopee_original, price_shopee_discount_rate, created_at", { count: "exact" })
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .range(from, to);
@@ -58,6 +58,9 @@ export async function GET(req: Request) {
       imageUrl: r.image_url ?? "",
       commissionRate: Number(r.commission_rate) ?? 0,
       commissionValue: Number(r.commission_value) ?? 0,
+      priceShopee: r.price_shopee != null ? Number(r.price_shopee) : null,
+      priceShopeeOriginal: r.price_shopee_original != null ? Number(r.price_shopee_original) : null,
+      priceShopeeDiscountRate: r.price_shopee_discount_rate != null ? Number(r.price_shopee_discount_rate) : null,
       createdAt: r.created_at,
     }));
 
@@ -77,6 +80,9 @@ export async function POST(req: Request) {
     const shortLink = String(body?.shortLink ?? "").trim();
     if (!shortLink) return NextResponse.json({ error: "shortLink é obrigatório" }, { status: 400 });
 
+    const priceShopee = body?.priceShopee != null ? Number(body.priceShopee) : null;
+    const priceShopeeOriginal = body?.priceShopeeOriginal != null ? Number(body.priceShopeeOriginal) : null;
+    const priceShopeeDiscountRate = body?.priceShopeeDiscountRate != null ? Number(body.priceShopeeDiscountRate) : null;
     const { error } = await supabase.from("shopee_link_history").insert({
       user_id: user.id,
       short_link: shortLink,
@@ -90,6 +96,9 @@ export async function POST(req: Request) {
       image_url: String(body?.imageUrl ?? "").trim(),
       commission_rate: Number(body?.commissionRate) || 0,
       commission_value: Number(body?.commissionValue) || 0,
+      price_shopee: priceShopee,
+      price_shopee_original: priceShopeeOriginal,
+      price_shopee_discount_rate: priceShopeeDiscountRate,
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

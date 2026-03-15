@@ -8,8 +8,8 @@ import {
   Search,
   ExternalLink,
   ShoppingBag,
-  Target,
   Hand,
+  ListPlus,
   AlertCircle,
   Loader2,
   ChevronLeft,
@@ -20,6 +20,8 @@ import {
   MessageCircle,
   Download,
   TrendingUp,
+  X,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -52,6 +54,9 @@ type HistoryEntry = {
   imageUrl: string;
   commissionRate: number;
   commissionValue: number;
+  priceShopee: number | null;
+  priceShopeeOriginal: number | null;
+  priceShopeeDiscountRate: number | null;
   createdAt: string;
 };
 
@@ -108,6 +113,14 @@ export default function GeradorLinksShopeePage() {
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [addToListFeedback, setAddToListFeedback] = useState<string | null>(null);
+  const [linksInOfferList, setLinksInOfferList] = useState<Set<string>>(new Set());
+  const [addToListModal, setAddToListModal] = useState<{ open: boolean; entries: HistoryEntry[] }>({ open: false, entries: [] });
+  const [selectedHistoryIds, setSelectedHistoryIds] = useState<Set<string>>(new Set());
+  const [listasOfertas, setListasOfertas] = useState<{ id: string; nome: string; totalItens: number }[]>([]);
+  const [novaListaNome, setNovaListaNome] = useState("");
+  const [selectedListaId, setSelectedListaId] = useState<string | null>(null);
+  const [addToListLoading, setAddToListLoading] = useState(false);
   const [hasApiKeys, setHasApiKeys] = useState<boolean | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const configCardRef = useRef<HTMLDivElement>(null);
@@ -173,6 +186,22 @@ export default function GeradorLinksShopeePage() {
   useEffect(() => {
     loadHistory(historyPage, historySearchDebounced);
   }, [historyPage, historySearchDebounced, loadHistory]);
+
+  const loadLinksInOfferList = useCallback(async () => {
+    try {
+      const res = await fetch("/api/shopee/minha-lista-ofertas");
+      const json = await res.json();
+      if (!res.ok) return;
+      const list = Array.isArray(json?.data) ? json.data : [];
+      setLinksInOfferList(new Set(list.map((o: { converterLink?: string }) => (o.converterLink ?? "").trim()).filter(Boolean)));
+    } catch {
+      //
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLinksInOfferList();
+  }, [loadLinksInOfferList]);
 
   const handleSearch = useCallback(async (term?: string) => {
     const trimmed = (term ?? inputValue).trim();
@@ -285,6 +314,17 @@ export default function GeradorLinksShopeePage() {
       if (!res.ok) throw new Error(data?.error ?? "Erro ao converter link");
       const shortLink = data?.shortLink ?? "";
       const slug = extractSlugFromUrl(originUrl);
+      const rate = selectedProduct?.priceDiscountRate ?? 0;
+      const priceMin = selectedProduct?.priceMin ?? 0;
+      const priceMax = selectedProduct?.priceMax ?? 0;
+      const pricePromo = priceMin;
+      const priceOriginal =
+        rate > 0 && rate < 100 && priceMin > 0
+          ? Math.round((priceMin / (1 - rate / 100)) * 100) / 100
+          : priceMax > 0
+            ? priceMax
+            : null;
+
       const postRes = await fetch("/api/shopee/link-history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -300,6 +340,9 @@ export default function GeradorLinksShopeePage() {
           imageUrl: selectedProduct?.imageUrl ?? "",
           commissionRate: selectedProduct?.commissionRate ?? 0,
           commissionValue: selectedProduct?.commission ?? 0,
+          priceShopee: pricePromo || null,
+          priceShopeeOriginal: priceOriginal,
+          priceShopeeDiscountRate: rate || null,
         }),
       });
       if (!postRes.ok) {
@@ -567,6 +610,111 @@ export default function GeradorLinksShopeePage() {
     },
     [historyPage, historySearchDebounced, loadHistory]
   );
+
+  const openAddToListModal = useCallback((entriesToAdd: HistoryEntry[]) => {
+    if (entriesToAdd.length === 0) return;
+    setAddToListModal({ open: true, entries: entriesToAdd });
+    setSelectedListaId(null);
+    setNovaListaNome("");
+  }, []);
+
+  const toggleHistorySelect = useCallback((id: string) => {
+    setSelectedHistoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAllHistory = useCallback(() => {
+    if (history.length === 0) return;
+    setSelectedHistoryIds(new Set(history.map((h) => h.id)));
+  }, [history]);
+
+  const clearHistorySelection = useCallback(() => {
+    setSelectedHistoryIds(new Set());
+  }, []);
+
+  const loadListasOfertas = useCallback(async () => {
+    try {
+      const res = await fetch("/api/shopee/minha-lista-ofertas/listas");
+      const json = await res.json();
+      if (!res.ok) return;
+      setListasOfertas(Array.isArray(json?.data) ? json.data : []);
+    } catch {
+      setListasOfertas([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (addToListModal.open) loadListasOfertas();
+  }, [addToListModal.open, loadListasOfertas]);
+
+  const confirmAddToList = useCallback(async () => {
+    const entries = addToListModal.entries;
+    if (!entries.length) return;
+    if (!selectedListaId && !novaListaNome.trim()) {
+      setAddToListFeedback("Selecione uma lista ou crie uma nova.");
+      return;
+    }
+    setAddToListLoading(true);
+    setAddToListFeedback(null);
+    try {
+      let targetListaId = selectedListaId;
+      if (!targetListaId && novaListaNome.trim()) {
+        const createRes = await fetch("/api/shopee/minha-lista-ofertas/listas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome: novaListaNome.trim() }),
+        });
+        const createJson = await createRes.json();
+        if (!createRes.ok) throw new Error(createJson?.error ?? "Erro ao criar lista");
+        targetListaId = createJson?.data?.id;
+      }
+      if (!targetListaId) throw new Error("Selecione ou crie uma lista.");
+      let added = 0;
+      for (const entry of entries) {
+        const res = await fetch("/api/shopee/minha-lista-ofertas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            listaId: targetListaId,
+            imageUrl: entry.imageUrl ?? "",
+            productName: entry.productName ?? "",
+            converterLink: entry.shortLink ?? "",
+            priceOriginal: entry.priceShopeeOriginal ?? undefined,
+            pricePromo: entry.priceShopee ?? undefined,
+            discountRate: entry.priceShopeeDiscountRate ?? undefined,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error ?? "Erro ao adicionar");
+        }
+        setLinksInOfferList((prev) => new Set(prev).add(entry.shortLink ?? ""));
+        added++;
+      }
+      setAddToListModal({ open: false, entries: [] });
+      setSelectedHistoryIds((prev) => {
+        const next = new Set(prev);
+        entries.forEach((e) => next.delete(e.id));
+        return next;
+      });
+      setAddToListFeedback(added === 1 ? "Adicionado à lista!" : `${added} produtos adicionados à lista!`);
+      setTimeout(() => setAddToListFeedback(null), 3000);
+    } catch (e) {
+      setAddToListFeedback(e instanceof Error ? e.message : "Erro ao adicionar");
+    } finally {
+      setAddToListLoading(false);
+    }
+  }, [addToListModal.entries, selectedListaId, novaListaNome]);
+
+  const closeAddToListModal = useCallback(() => {
+    setAddToListModal({ open: false, entries: [] });
+    setSelectedListaId(null);
+    setNovaListaNome("");
+  }, []);
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary p-4 sm:p-6">
@@ -1038,6 +1186,40 @@ export default function GeradorLinksShopeePage() {
               />
             </div>
           </div>
+          {addToListFeedback && (
+            <p className={`mb-4 text-sm ${addToListFeedback.startsWith("Adicionado") || addToListFeedback.includes("adicionados") ? "text-emerald-400" : "text-amber-400"}`}>
+              {addToListFeedback}
+            </p>
+          )}
+          {history.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={selectAllHistory}
+                className="text-xs px-2 py-1.5 rounded-md border border-dark-border text-text-secondary hover:bg-dark-bg hover:text-shopee-orange"
+              >
+                Selecionar todos
+              </button>
+              {selectedHistoryIds.size > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={clearHistorySelection}
+                    className="text-xs px-2 py-1.5 rounded-md border border-dark-border text-text-secondary hover:bg-dark-bg"
+                  >
+                    Limpar seleção
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openAddToListModal(history.filter((h) => selectedHistoryIds.has(h.id)))}
+                    className="text-xs px-3 py-1.5 rounded-md bg-shopee-orange text-white font-medium hover:opacity-90"
+                  >
+                    Adicionar selecionados à lista ({selectedHistoryIds.size})
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           {historyLoading && history.length === 0 ? (
             <p className="text-sm text-text-secondary py-6 text-center flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
@@ -1052,6 +1234,14 @@ export default function GeradorLinksShopeePage() {
                     key={h.id}
                     className="flex flex-wrap items-start gap-3 p-3 rounded-lg border border-dark-border bg-dark-bg hover:border-dark-border"
                   >
+                    <label className="flex items-center pt-1 cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedHistoryIds.has(h.id)}
+                        onChange={() => toggleHistorySelect(h.id)}
+                        className="rounded border-dark-border bg-dark-card text-shopee-orange focus:ring-shopee-orange h-4 w-4"
+                      />
+                    </label>
                     {h.imageUrl ? (
                       <img src={h.imageUrl} alt="" className="w-14 h-14 object-contain rounded bg-white/5 flex-shrink-0" />
                     ) : (
@@ -1085,11 +1275,15 @@ export default function GeradorLinksShopeePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigator.clipboard.writeText(h.slug || h.originUrl)}
-                        className="p-2 rounded-md bg-dark-card border border-dark-border text-text-secondary hover:text-shopee-orange hover:border-shopee-orange/50 transition-colors"
-                        title="Copiar slug/código (Facebook Ads)"
+                        onClick={() => openAddToListModal([h])}
+                        className={`p-2 rounded-md border transition-colors ${
+                          linksInOfferList.has(h.shortLink ?? "")
+                            ? "bg-emerald-500/10 border-emerald-400/50 text-emerald-400 hover:border-emerald-400"
+                            : "bg-dark-card border-dark-border text-text-secondary hover:text-shopee-orange hover:border-shopee-orange/50"
+                        }`}
+                        title={linksInOfferList.has(h.shortLink ?? "") ? "Já está na Minha Lista de Ofertas" : "Adicionar a Minha Lista de Produtos"}
                       >
-                        <Target className="h-4 w-4" />
+                        <ListPlus className="h-4 w-4" />
                       </button>
                       <a
                         href={h.shortLink}
@@ -1143,6 +1337,89 @@ export default function GeradorLinksShopeePage() {
           )}
         </div>
       </div>
+
+      {/* Modal Adicionar a uma lista */}
+      {addToListModal.open && addToListModal.entries.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={closeAddToListModal}>
+          <div className="bg-dark-card border border-dark-border rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-dark-border flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-text-primary">
+                Adicionar à lista
+                {addToListModal.entries.length > 1 && (
+                  <span className="ml-2 text-sm font-normal text-text-secondary">({addToListModal.entries.length} produtos)</span>
+                )}
+              </h3>
+              <button type="button" onClick={closeAddToListModal} className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-dark-bg transition-colors" aria-label="Fechar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              <div>
+                <p className="text-sm font-medium text-text-primary mb-2">Criar nova lista</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={novaListaNome}
+                    onChange={(e) => { setNovaListaNome(e.target.value); setSelectedListaId(null); }}
+                    placeholder="Ex: Black Friday, Animes..."
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-dark-border bg-dark-bg text-text-primary placeholder-text-secondary/70 focus:outline-none focus:ring-2 focus:ring-shopee-orange/50 focus:border-shopee-orange"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!novaListaNome.trim()) return;
+                      const res = await fetch("/api/shopee/minha-lista-ofertas/listas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nome: novaListaNome.trim() }) });
+                      const json = await res.json();
+                      if (res.ok && json?.data?.id) { setSelectedListaId(json.data.id); loadListasOfertas(); }
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-dark-bg border border-dark-border text-text-primary hover:border-shopee-orange hover:text-shopee-orange transition-colors flex items-center gap-2 shrink-0"
+                  >
+                    <Plus className="h-4 w-4" /> Criar
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-text-primary mb-2">Ou escolha uma lista existente</p>
+                <ul className="max-h-48 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border bg-dark-bg">
+                  {listasOfertas.length === 0 ? (
+                    <li className="px-4 py-4 text-sm text-text-secondary text-center">Nenhuma lista. Crie uma acima.</li>
+                  ) : (
+                    listasOfertas.map((l) => (
+                      <li key={l.id}>
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedListaId(l.id); setNovaListaNome(""); }}
+                          className={`w-full text-left px-4 py-3 flex items-center justify-between gap-2 transition-colors ${selectedListaId === l.id ? "bg-shopee-orange/15 text-shopee-orange border-l-4 border-l-shopee-orange" : "hover:bg-white/5 text-text-primary"}`}
+                        >
+                          <span className="font-medium">{l.nome}</span>
+                          <span className="text-xs text-text-secondary">{l.totalItens} itens</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            <div className="p-5 pt-0 flex gap-3 justify-end">
+              <button type="button" onClick={closeAddToListModal} className="px-5 py-2.5 rounded-xl border border-dark-border text-text-secondary hover:bg-dark-bg transition-colors">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmAddToList}
+                disabled={addToListLoading || (!selectedListaId && !novaListaNome.trim())}
+                className="px-5 py-2.5 rounded-xl bg-shopee-orange text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-opacity"
+              >
+                {addToListLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {addToListModal.entries.length === 1 ? "Adicionar" : `Adicionar ${addToListModal.entries.length} produtos`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

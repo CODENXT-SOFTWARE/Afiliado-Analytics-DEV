@@ -18,27 +18,37 @@ export async function GET() {
 
     const { data: rows, error } = await supabase
       .from("grupos_venda_continuo")
-      .select("id, lista_id, instance_id, keywords, sub_id_1, sub_id_2, sub_id_3, ativo, proximo_indice, ultimo_disparo_at, updated_at")
+      .select("id, lista_id, instance_id, lista_ofertas_id, keywords, sub_id_1, sub_id_2, sub_id_3, ativo, proximo_indice, ultimo_disparo_at, updated_at")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const list = (rows ?? []) as { id: string; lista_id: string | null; instance_id: string; keywords: string[]; sub_id_1: string; sub_id_2: string; sub_id_3: string; ativo: boolean; proximo_indice: number; ultimo_disparo_at: string | null; updated_at: string }[];
+    type Row = { id: string; lista_id: string | null; instance_id: string; lista_ofertas_id?: string | null; keywords: string[]; sub_id_1: string; sub_id_2: string; sub_id_3: string; ativo: boolean; proximo_indice: number; ultimo_disparo_at: string | null; updated_at: string };
+    const list = (rows ?? []) as Row[];
     const listaIds = [...new Set(list.map((r) => r.lista_id).filter(Boolean))] as string[];
     const listasMap: Record<string, string> = {};
     if (listaIds.length > 0) {
       const { data: listas } = await supabase.from("listas_grupos_venda").select("id, nome_lista").in("id", listaIds);
       (listas ?? []).forEach((l: { id: string; nome_lista: string }) => { listasMap[l.id] = l.nome_lista; });
     }
+    const listaOfertasIds = [...new Set(list.map((r) => r.lista_ofertas_id).filter(Boolean))] as string[];
+    const listasOfertasMap: Record<string, string> = {};
+    if (listaOfertasIds.length > 0) {
+      const { data: listasOfertas } = await supabase.from("listas_ofertas").select("id, nome").in("id", listaOfertasIds);
+      (listasOfertas ?? []).forEach((l: { id: string; nome: string }) => { listasOfertasMap[l.id] = l.nome ?? ""; });
+    }
 
     const data = list.map((r) => {
       const keywords = Array.isArray(r.keywords) ? r.keywords : [];
       const idx = r.proximo_indice ?? 0;
+      const listaOfertasId = r.lista_ofertas_id ?? null;
       return {
         id: r.id,
         listaId: r.lista_id,
         listaNome: (r.lista_id && listasMap[r.lista_id]) || "—",
+        listaOfertasId,
+        listaOfertasNome: (listaOfertasId && listasOfertasMap[listaOfertasId]) || null,
         instanceId: r.instance_id,
         keywords,
         subId1: r.sub_id_1 ?? "",
@@ -67,6 +77,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const id = typeof body.id === "string" ? body.id.trim() : "";
     const listaId = typeof body.listaId === "string" ? body.listaId.trim() : "";
+    const listaOfertasId = typeof body.listaOfertasId === "string" ? body.listaOfertasId.trim() || null : null;
     const ativo = body.ativo === true || body.ativo === "true";
     const keywordsRaw = body.keywords;
     const keywords: string[] = Array.isArray(keywordsRaw)
@@ -98,8 +109,15 @@ export async function POST(req: Request) {
       });
     }
 
-    if (!listaId) return NextResponse.json({ error: "listaId é obrigatório para ativar." }, { status: 400 });
-    if (keywords.length === 0) return NextResponse.json({ error: "Informe ao menos uma keyword." }, { status: 400 });
+    if (!listaId) return NextResponse.json({ error: "Lista de grupos é obrigatória." }, { status: 400 });
+    const isListaOfertasMode = !!listaOfertasId;
+    if (!isListaOfertasMode && keywords.length === 0) return NextResponse.json({ error: "Informe ao menos uma keyword ou selecione uma lista de ofertas." }, { status: 400 });
+    if (isListaOfertasMode) {
+      const { data: listaOferta } = await supabase.from("listas_ofertas").select("id").eq("id", listaOfertasId).eq("user_id", user.id).single();
+      if (!listaOferta) return NextResponse.json({ error: "Lista de ofertas não encontrada." }, { status: 404 });
+      const { count } = await supabase.from("minha_lista_ofertas").select("id", { count: "exact", head: true }).eq("lista_id", listaOfertasId).eq("user_id", user.id);
+      if (!count || count < 1) return NextResponse.json({ error: "A lista de ofertas está vazia. Adicione produtos à lista primeiro." }, { status: 400 });
+    }
 
     const { data: lista } = await supabase
       .from("listas_grupos_venda")
@@ -117,20 +135,23 @@ export async function POST(req: Request) {
       .eq("lista_id", listaId);
     if (!groups?.length) return NextResponse.json({ error: "Nenhum grupo nesta lista. Adicione grupos à lista primeiro." }, { status: 400 });
 
+    const payloadContinuo = {
+      lista_id: listaId,
+      instance_id: instanceId,
+      keywords: isListaOfertasMode ? [] : keywords,
+      lista_ofertas_id: listaOfertasId || null,
+      sub_id_1: subId1,
+      sub_id_2: subId2,
+      sub_id_3: subId3,
+      ativo: true,
+      proximo_indice: 0,
+      updated_at: now,
+    };
+
     if (id) {
       const { data: updated, error } = await supabase
         .from("grupos_venda_continuo")
-        .update({
-          lista_id: listaId,
-          instance_id: instanceId,
-          keywords,
-          sub_id_1: subId1,
-          sub_id_2: subId2,
-          sub_id_3: subId3,
-          ativo: true,
-          proximo_indice: 0,
-          updated_at: now,
-        })
+        .update(payloadContinuo)
         .eq("id", id)
         .eq("user_id", user.id)
         .select("id, ativo, proximo_indice, ultimo_disparo_at")
@@ -149,15 +170,7 @@ export async function POST(req: Request) {
       .from("grupos_venda_continuo")
       .insert({
         user_id: user.id,
-        lista_id: listaId,
-        instance_id: instanceId,
-        keywords,
-        sub_id_1: subId1,
-        sub_id_2: subId2,
-        sub_id_3: subId3,
-        ativo: true,
-        proximo_indice: 0,
-        updated_at: now,
+        ...payloadContinuo,
       })
       .select("id, ativo, proximo_indice, ultimo_disparo_at")
       .single();
