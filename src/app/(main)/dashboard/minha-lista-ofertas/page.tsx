@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Search,
 } from "lucide-react";
+import ConfirmModal from "@/app/components/ui/ConfirmModal";
 
 type Lista = {
   id: string;
@@ -51,6 +52,15 @@ export default function MinhaListaOfertasPage() {
   const [expandedListas, setExpandedListas] = useState<Set<string>>(new Set());
   const [filterByLista, setFilterByLista] = useState<Record<string, string>>({});
   const [pageByLista, setPageByLista] = useState<Record<string, number>>({});
+  const [confirmState, setConfirmState] = useState<{
+    type: "deleteItem" | "emptyList" | "deleteList";
+    title: string;
+    message: string;
+    confirmLabel: string;
+    variant: "danger" | "default";
+    payload: { itemId?: string; listaId: string };
+  } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const ITEMS_PER_PAGE = 5;
 
   const loadListas = useCallback(async () => {
@@ -90,48 +100,78 @@ export default function MinhaListaOfertasPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listas]);
 
-  const handleDeleteItem = async (itemId: string, listaId: string) => {
-    if (!confirm("Remover este produto da lista?")) return;
-    try {
-      const res = await fetch(`/api/shopee/minha-lista-ofertas?id=${itemId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erro ao remover");
-      setItemsByLista((prev) => ({
-        ...prev,
-        [listaId]: (prev[listaId] ?? []).filter((i) => i.id !== itemId),
-      }));
-      setListas((prev) => prev.map((l) => (l.id === listaId ? { ...l, totalItens: Math.max(0, (l.totalItens ?? 0) - 1) } : l)));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao remover");
-    }
+  const handleDeleteItemClick = (itemId: string, listaId: string) => {
+    setConfirmState({
+      type: "deleteItem",
+      title: "Remover produto",
+      message: "Remover este produto da lista?",
+      confirmLabel: "Remover",
+      variant: "danger",
+      payload: { itemId, listaId },
+    });
   };
 
-  const handleEmptyList = async (listaId: string) => {
-    if (!confirm("Remover todos os produtos desta lista? A lista continuará existindo.")) return;
-    try {
-      const res = await fetch(`/api/shopee/minha-lista-ofertas?lista_id=${listaId}&empty=1`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erro ao esvaziar");
-      setItemsByLista((prev) => ({ ...prev, [listaId]: [] }));
-      setListas((prev) => prev.map((l) => (l.id === listaId ? { ...l, totalItens: 0 } : l)));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao esvaziar");
-    }
+  const handleEmptyListClick = (listaId: string) => {
+    setConfirmState({
+      type: "emptyList",
+      title: "Esvaziar lista",
+      message: "Remover todos os produtos desta lista? A lista continuará existindo.",
+      confirmLabel: "Esvaziar",
+      variant: "danger",
+      payload: { listaId },
+    });
   };
 
-  const handleDeleteList = async (listaId: string) => {
-    if (!confirm("Apagar esta lista e todos os produtos? Não é possível desfazer.")) return;
-    try {
-      const res = await fetch(`/api/shopee/minha-lista-ofertas/listas?id=${listaId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erro ao apagar lista");
-      setListas((prev) => prev.filter((l) => l.id !== listaId));
-      setItemsByLista((prev) => {
-        const next = { ...prev };
-        delete next[listaId];
-        return next;
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao apagar lista");
-    }
+  const handleDeleteListClick = (listaId: string) => {
+    setConfirmState({
+      type: "deleteList",
+      title: "Apagar lista",
+      message: "Apagar esta lista e todos os produtos? Não é possível desfazer.",
+      confirmLabel: "Apagar",
+      variant: "danger",
+      payload: { listaId },
+    });
   };
+
+  const runConfirmAction = useCallback(async () => {
+    if (!confirmState) return;
+    const { type, payload } = confirmState;
+    setConfirmLoading(true);
+    try {
+      if (type === "deleteItem" && payload.itemId) {
+        const res = await fetch(`/api/shopee/minha-lista-ofertas?id=${payload.itemId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Erro ao remover");
+        setItemsByLista((prev) => ({
+          ...prev,
+          [payload.listaId]: (prev[payload.listaId] ?? []).filter((i) => i.id !== payload.itemId),
+        }));
+        setListas((prev) => prev.map((l) => (l.id === payload.listaId ? { ...l, totalItens: Math.max(0, (l.totalItens ?? 0) - 1) } : l)));
+      } else if (type === "emptyList") {
+        const res = await fetch(`/api/shopee/minha-lista-ofertas?lista_id=${payload.listaId}&empty=1`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Erro ao esvaziar");
+        setItemsByLista((prev) => ({ ...prev, [payload.listaId]: [] }));
+        setListas((prev) => prev.map((l) => (l.id === payload.listaId ? { ...l, totalItens: 0 } : l)));
+      } else if (type === "deleteList") {
+        const res = await fetch(`/api/shopee/minha-lista-ofertas/listas?id=${payload.listaId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Erro ao apagar lista");
+        setListas((prev) => prev.filter((l) => l.id !== payload.listaId));
+        setItemsByLista((prev) => {
+          const next = { ...prev };
+          delete next[payload.listaId];
+          return next;
+        });
+      }
+      setConfirmState(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro na ação");
+    } finally {
+      setConfirmLoading(false);
+    }
+  }, [confirmState]);
+
+  const handleConfirmCancel = useCallback(() => {
+    if (!confirmLoading) setConfirmState(null);
+  }, [confirmLoading]);
 
   const copyLink = (link: string) => {
     navigator.clipboard.writeText(link).then(() => {}).catch(() => {});
@@ -230,7 +270,7 @@ export default function MinhaListaOfertasPage() {
                     <span className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEmptyList(lista.id); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEmptyListClick(lista.id); }}
                         disabled={(itemsByLista[lista.id]?.length ?? 0) === 0}
                         className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-dark-border text-text-secondary text-xs hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-400/50 disabled:opacity-40"
                         title="Esvaziar lista"
@@ -239,7 +279,7 @@ export default function MinhaListaOfertasPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteList(lista.id); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteListClick(lista.id); }}
                         className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-dark-border text-text-secondary text-xs hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/50"
                         title="Apagar lista"
                       >
@@ -320,7 +360,7 @@ export default function MinhaListaOfertasPage() {
                                     </a>
                                     <button
                                       type="button"
-                                      onClick={() => handleDeleteItem(item.id, lista.id)}
+                                      onClick={() => handleDeleteItemClick(item.id, lista.id)}
                                       className="text-xs text-red-400 hover:underline flex items-center gap-1 ml-auto"
                                     >
                                       <Trash2 className="h-3 w-3" /> Remover
@@ -363,6 +403,20 @@ export default function MinhaListaOfertasPage() {
               );
             })}
           </ul>
+        )}
+
+        {confirmState && (
+          <ConfirmModal
+            open={!!confirmState}
+            title={confirmState.title}
+            message={confirmState.message}
+            confirmLabel={confirmState.confirmLabel}
+            cancelLabel="Cancelar"
+            variant={confirmState.variant}
+            loading={confirmLoading}
+            onConfirm={runConfirmAction}
+            onCancel={handleConfirmCancel}
+          />
         )}
       </div>
     </div>

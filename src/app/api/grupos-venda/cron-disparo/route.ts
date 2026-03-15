@@ -155,9 +155,11 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
+      // Busca até 30 produtos pela keyword (listType 1 = ofertas), filtra só em promoção e escolhe 1 aleatório
+      const limit = 30;
       const queryProduct = `
         query {
-          productOfferV2(keyword: "${keyword.replace(/"/g, '\\"')}", listType: 1, sortType: 2, page: 1, limit: 1) {
+          productOfferV2(keyword: "${keyword.replace(/"/g, '\\"')}", listType: 1, sortType: 2, page: 1, limit: ${limit}) {
             nodes {
               productName
               productLink
@@ -178,7 +180,11 @@ export async function GET(req: NextRequest) {
       });
       const jsonProduct = (await resProduct.json()) as { data?: { productOfferV2?: { nodes?: unknown[] } }; errors?: { message?: string }[] };
       const nodes = jsonProduct?.data?.productOfferV2?.nodes ?? [];
-      const product = nodes[0] as { productLink?: string; offerLink?: string; productName?: string; imageUrl?: string; priceMin?: number; priceMax?: number; priceDiscountRate?: number } | undefined;
+      type ProductNode = { productLink?: string; offerLink?: string; productName?: string; imageUrl?: string; priceMin?: number; priceMax?: number; priceDiscountRate?: number };
+      const emPromocao = (nodes as ProductNode[]).filter((n) => (n.priceDiscountRate ?? 0) > 0);
+      const pool = emPromocao.length > 0 ? emPromocao : (nodes as ProductNode[]);
+      const randomIndex = pool.length > 0 ? Math.floor(Math.random() * pool.length) : 0;
+      const product = pool[randomIndex];
       if (!product) {
         results.push({ userId, keyword, ok: false, error: "Nenhum produto encontrado" });
         await supabase.from("grupos_venda_continuo").update({ proximo_indice: nextIndex, ultimo_disparo_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", cfg.id);

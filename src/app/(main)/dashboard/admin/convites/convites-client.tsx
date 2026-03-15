@@ -5,6 +5,7 @@ import { useSupabase } from "@/app/components/auth/AuthProvider";
 import { useState, useEffect, useCallback } from "react";
 import { UserPlus, Mail, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import LoadingOverlay from "@/app/components/ui/LoadingOverlay";
+import ConfirmModal from "@/app/components/ui/ConfirmModal";
 
 interface InvitedAffiliate {
   id: string;
@@ -24,6 +25,8 @@ export default function ConvitesClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchInvites = useCallback(async () => {
     if (!session) return;
@@ -88,10 +91,15 @@ export default function ConvitesClient() {
     }
   };
 
-  const handleDelete = async (emailToDelete: string) => {
-    if (!session || !confirm("Tem certeza que deseja excluir este convite?")) return;
+  const handleDeleteClick = (emailToDelete: string) => {
+    if (!session) return;
+    setDeleteConfirmEmail(emailToDelete);
+  };
 
-    setIsLoading(true);
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!session || !deleteConfirmEmail) return;
+
+    setDeleteLoading(true);
     try {
       const response = await fetch("/api/admin/invited-affiliates", {
         method: "DELETE",
@@ -99,11 +107,12 @@ export default function ConvitesClient() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ email: emailToDelete }),
+        body: JSON.stringify({ email: deleteConfirmEmail }),
       });
 
       if (response.ok) {
         setMessage({ type: "success", text: "Afiliado excluído com sucesso!" });
+        setDeleteConfirmEmail(null);
         fetchInvites();
       } else {
         setMessage({ type: "error", text: "Erro ao excluir afiliado" });
@@ -112,9 +121,9 @@ export default function ConvitesClient() {
       console.error("Erro ao excluir afiliado:", err);
       setMessage({ type: "error", text: "Erro ao excluir afiliado" });
     } finally {
-      setIsLoading(false);
+      setDeleteLoading(false);
     }
-  };
+  }, [session, deleteConfirmEmail, fetchInvites]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -276,7 +285,7 @@ export default function ConvitesClient() {
                   </div>
 
                   <button
-                    onClick={() => handleDelete(invite.email)}
+                    onClick={() => handleDeleteClick(invite.email)}
                     className="p-2 rounded-md bg-dark-bg text-text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors self-end sm:self-auto"
                     title="Excluir"
                   >
@@ -288,6 +297,20 @@ export default function ConvitesClient() {
           )}
         </div>
       </div>
+
+      {deleteConfirmEmail && (
+        <ConfirmModal
+          open={!!deleteConfirmEmail}
+          title="Excluir convite"
+          message="Tem certeza que deseja excluir este convite?"
+          confirmLabel="Excluir"
+          cancelLabel="Cancelar"
+          variant="danger"
+          loading={deleteLoading}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => !deleteLoading && setDeleteConfirmEmail(null)}
+        />
+      )}
     </>
   );
 }

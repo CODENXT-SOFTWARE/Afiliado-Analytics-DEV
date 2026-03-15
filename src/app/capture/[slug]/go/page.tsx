@@ -125,40 +125,56 @@ const hasGroup = true;
 const inviteCode = ${JSON.stringify(inviteCode)};
 const universalLink = ${JSON.stringify(universalLink)};
 
+function showToast(msg) {
+  var overlay = document.createElement("div");
+  overlay.id = "app-toast-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);";
+  var card = document.createElement("div");
+  card.style.cssText = "max-width:360px;width:100%;background:#27272A;border:1px solid #27272A;border-radius:12px;padding:20px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);";
+  var p = document.createElement("p");
+  p.style.cssText = "margin:0 0 16px;font-size:14px;line-height:1.5;color:#E9E9E9;";
+  p.textContent = msg;
+  var btn = document.createElement("button");
+  btn.textContent = "OK";
+  btn.style.cssText = "width:100%;padding:10px 16px;background:#EE4D2D;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;";
+  btn.onclick = function(){ var o = document.getElementById("app-toast-overlay"); if(o) o.remove(); };
+  card.appendChild(p);
+  card.appendChild(btn);
+  overlay.appendChild(card);
+  overlay.onclick = function(e){ if(e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
 function enterGroup(){
-  if (!hasGroup) return alert("Grupo indisponível no momento.");
+  if (!hasGroup) return showToast("Grupo indisponível no momento.");
   window.location.href = "whatsapp://chat/?code=" + inviteCode;
-  setTimeout(() => window.location.href = universalLink, 500);
+  setTimeout(function(){ window.location.href = universalLink; }, 500);
 }
 
 function copyToClipboard(text){
-  // Tenta clipboard API moderna
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text)
-      .then(() => alert("Link copiado!"))
-      .catch(() => fallbackCopy(text));
+      .then(function(){ showToast("Link copiado!"); })
+      .catch(function(){ fallbackCopy(text); });
   } else {
     fallbackCopy(text);
   }
 }
 
 function fallbackCopy(text){
-  // Fallback para navegadores antigos ou contextos inseguros
   var input = document.createElement("input");
   input.value = text;
   input.style.position = "fixed";
   input.style.opacity = "0";
   document.body.appendChild(input);
   input.select();
-  input.setSelectionRange(0, 99999); // Mobile
-  
+  input.setSelectionRange(0, 99999);
   try {
     document.execCommand("copy");
-    alert("Link copiado!");
+    showToast("Link copiado!");
   } catch(e) {
-    alert("Não foi possível copiar. Link: " + text);
+    showToast("Não foi possível copiar. Link: " + text);
   }
-  
   document.body.removeChild(input);
 }
             `,
