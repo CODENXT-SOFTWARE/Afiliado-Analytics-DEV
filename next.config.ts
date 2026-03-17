@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
   turbopack: { root },
   outputFileTracingRoot: root,
 
+  webpack: (config) => {
+    config.module ??= {};
+    (config.module as { exprContextCritical?: boolean }).exprContextCritical = false;
+    return config;
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "i.pravatar.cc", port: "", pathname: "/**" },
@@ -33,6 +39,20 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        // Proxy FFmpeg UMD (mesma origem para Worker evitar CORS no editor de vídeo)
+        {
+          source: "/ffmpeg/:path*",
+          destination: "https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/:path*",
+        },
+        {
+          source: "/ffmpeg-core/:path*",
+          destination: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/:path*",
+        },
+        // Fonte para legendas no export (evita CORS)
+        {
+          source: "/fonts/subtitle-font.ttf",
+          destination: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto-Regular.ttf",
+        },
         // https://s.afiliadoanalytics.com.br/<slug>/go  ->  /capture/<slug>/go
         {
           source: `${SLUG_SOURCE}/go`,
