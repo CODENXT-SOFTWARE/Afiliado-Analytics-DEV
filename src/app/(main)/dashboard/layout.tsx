@@ -73,7 +73,7 @@ const sidebarNavItems = [
     icon: <ListChecks className="h-5 w-5" />,
   },
   {
-    title: "Editor de Vídeo",
+    title: "Gerador de Criativos",
     href: "/dashboard/video-editor",
     icon: <Film className="h-5 w-5" />,
   },
