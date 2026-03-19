@@ -86,7 +86,7 @@ export async function scrape(url: string): Promise<ScrapeResult> {
     const images = new Set<string>();
     const apiVideoUrls: string[] = [];
 
-    function extractFromData(data: any) {
+    const extractFromData = (data: any) => {
       if (!data || typeof data !== "object") return;
       const list = data.video_info_list ?? data.video_info ?? data.videos ?? data.video_list ?? [];
       const arr = Array.isArray(list) ? list : [list].filter(Boolean);
@@ -112,7 +112,7 @@ export async function scrape(url: string): Promise<ScrapeResult> {
           if (!isJunk(u)) images.add(u);
         }
       }
-    }
+    };
 
     const CDN_RE = /susercontent\.com|cv\.shopee|cvf\.shopee|down-.*\.img|down-.*\.vod|shopee\.(com|com\.br)|vod\.shopee/i;
 
