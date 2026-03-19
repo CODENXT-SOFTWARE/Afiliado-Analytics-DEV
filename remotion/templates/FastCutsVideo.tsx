@@ -4,11 +4,13 @@ import type { VideoInputProps } from "../types";
 import { MediaScene } from "../components/MediaScene";
 import { AnimatedCaption } from "../components/AnimatedCaption";
 import { CTASlide } from "../components/CTASlide";
+import { interleaveMedia } from "../utils";
 
 export const FastCutsVideo: React.FC<VideoInputProps> = (props) => {
-  const { media, voiceoverSrc, musicSrc, musicVolume, captions, subtitleTheme, ctaText, productName, durationInFrames } = props;
+  const { media: rawMedia, voiceoverSrc, musicSrc, musicVolume, captions, subtitleTheme, ctaText, productName, durationInFrames } = props;
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
+  const media = interleaveMedia(rawMedia);
 
   const ctaDuration = Math.round(fps * 2);
   const contentFrames = durationInFrames - ctaDuration;

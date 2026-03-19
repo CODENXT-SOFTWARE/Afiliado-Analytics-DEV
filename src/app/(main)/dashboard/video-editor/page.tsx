@@ -16,6 +16,18 @@ import {
 } from "../../../../../remotion/types";
 
 type Voice = { voice_id: string; name: string; preview_url: string | null; labels: Record<string, string> };
+type MusicTrack = { id: string; name: string; artist: string; duration: number; audioUrl: string; downloadUrl: string; coverUrl: string };
+
+const MUSIC_GENRES = [
+  { value: "energetic", label: "Energética" },
+  { value: "calm", label: "Calma" },
+  { value: "happy", label: "Feliz" },
+  { value: "dramatic", label: "Dramática" },
+  { value: "chill", label: "Chill" },
+  { value: "lofi", label: "Lo-fi" },
+  { value: "corporate", label: "Corporativa" },
+  { value: "cinematic", label: "Cinematográfica" },
+] as const;
 
 const STEPS = [
   { id: 1, title: "Mídia", icon: ImageIcon },
@@ -112,6 +124,13 @@ export default function VideoEditorPage() {
   const [price, setPrice] = useState("");
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
   const [musicVolume, setMusicVolume] = useState(0.15);
+  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [musicGenre, setMusicGenre] = useState("energetic");
+  const [loadingMusic, setLoadingMusic] = useState(false);
+  const [musicLibraryError, setMusicLibraryError] = useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
+  const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
+  const musicPreviewRef = useRef<HTMLAudioElement | null>(null);
 
   // ── Step 4 ──
   const [error, setError] = useState<string | null>(null);
@@ -268,7 +287,64 @@ export default function VideoEditorPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setMusicUrl(URL.createObjectURL(file));
+    setSelectedTrack(null);
   }, []);
+
+  // ── Music library ──
+  const fetchMusicTracks = useCallback(async (genre: string) => {
+    setLoadingMusic(true);
+    setMusicLibraryError(null);
+    try {
+      const res = await fetch(`/api/video-editor/music-library?genre=${genre}&limit=12`);
+      const json = await res.json();
+      if (!res.ok) {
+        setMusicTracks([]);
+        setMusicLibraryError(
+          json?.error ||
+            "Biblioteca indisponível no momento. Você ainda pode enviar seu MP3."
+        );
+        return;
+      }
+      setMusicTracks(json.tracks ?? []);
+      if ((json.tracks ?? []).length === 0) {
+        setMusicLibraryError(
+          "Nenhuma música encontrada para esse estilo. Tente outro gênero."
+        );
+      }
+    } catch {
+      setMusicTracks([]);
+      setMusicLibraryError(
+        "Não foi possível carregar a biblioteca agora. Você pode enviar seu MP3."
+      );
+    } finally { setLoadingMusic(false); }
+  }, []);
+
+  const handlePreviewTrack = useCallback((track: MusicTrack) => {
+    if (previewingTrackId === track.id) {
+      musicPreviewRef.current?.pause();
+      setPreviewingTrackId(null);
+      return;
+    }
+    if (musicPreviewRef.current) musicPreviewRef.current.pause();
+    const audio = new Audio(track.audioUrl);
+    audio.volume = 0.5;
+    audio.play();
+    audio.onended = () => setPreviewingTrackId(null);
+    musicPreviewRef.current = audio;
+    setPreviewingTrackId(track.id);
+  }, [previewingTrackId]);
+
+  const handleSelectTrack = useCallback((track: MusicTrack) => {
+    if (musicPreviewRef.current) { musicPreviewRef.current.pause(); setPreviewingTrackId(null); }
+    setMusicUrl(track.audioUrl);
+    setSelectedTrack(track);
+  }, []);
+
+  useEffect(() => {
+    if (step === 2 && musicTracks.length === 0 && !loadingMusic) {
+      fetchMusicTracks(musicGenre);
+    }
+  }, [step, musicTracks.length, loadingMusic, fetchMusicTracks, musicGenre]);
 
   const videoCount = mediaAssets.filter(a => a.type === "video").length;
   const imageCount = mediaAssets.filter(a => a.type === "image").length;
@@ -715,31 +791,106 @@ export default function VideoEditorPage() {
                   </div>
                 )}
 
-              {/* Music — mesmo estilo do botão Mídia "Ou envie seus próprios arquivos" */}
+              {/* Music — Biblioteca + Upload */}
               <div className="mt-auto pt-2 border-t border-dark-border/40">
                 <div className="flex items-center gap-1.5 mb-2">
                   <label className="text-[11px] font-semibold text-text-secondary/60 uppercase tracking-wide">Música de fundo (opcional)</label>
-                  <Tooltip text="Envie um MP3 para tocar em segundo plano. Use o slider abaixo para ajustar o volume em relação à narração." wide />
+                  <Tooltip text="Escolha uma música royalty-free da biblioteca ou envie seu próprio MP3. Use o slider para ajustar o volume." wide />
+                </div>
+
+                {/* Selected track display */}
+                {selectedTrack && (
+                  <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/8 px-3 py-2 mb-2">
+                    <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-text-primary truncate">{selectedTrack.name}</p>
+                      <p className="text-[10px] text-text-secondary/50">{selectedTrack.artist} · {Math.floor(selectedTrack.duration / 60)}:{String(selectedTrack.duration % 60).padStart(2, "0")}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                  <label className={`group flex-1 flex items-center justify-center gap-2.5 rounded-xl border-2 border-dashed cursor-pointer py-3.5 transition-all ${
-                    musicUrl
-                      ? "border-emerald-500/30 bg-emerald-500/6 hover:bg-emerald-500/10"
-                      : "border-shopee-orange/50 bg-shopee-orange/10 hover:border-shopee-orange/60 hover:bg-shopee-orange/50"
-                  }`}>
-                    {musicUrl
-                      ? <><Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" /><span className="text-xs text-emerald-300 font-medium">Música carregada</span></>
-                      : <><Music className="h-3.5 w-3.5 text-shopee-orange/80 group-hover:text-shopee-orange/95 transition-colors shrink-0" /><span className="text-xs text-shopee-orange/70 group-hover:text-shopee-orange/95 transition-colors">Ou envie MP3 de fundo</span></>
-                    }
-                    <input type="file" accept="audio/*" className="hidden" onChange={handleMusicUpload} />
-                  </label>
-                  {musicUrl && (
-                    <button type="button" onClick={() => setMusicUrl(null)}
-                      className="p-2.5 rounded-xl border border-dark-border/50 text-text-secondary/50 hover:text-red-400 hover:border-red-500/30 transition-all">
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <button type="button" onClick={() => { setMusicUrl(null); setSelectedTrack(null); }}
+                      className="p-1.5 rounded-lg text-text-secondary/50 hover:text-red-400 transition-colors">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Genre selector + search */}
+                {!selectedTrack && (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <select value={musicGenre} onChange={(e) => { setMusicGenre(e.target.value); fetchMusicTracks(e.target.value); }} className={`${selectCls} flex-1`}>
+                        {MUSIC_GENRES.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                      </select>
+                      <button type="button" onClick={() => fetchMusicTracks(musicGenre)} disabled={loadingMusic}
+                        className={`${btnPrimary} px-3`}>
+                        {loadingMusic ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
                       </button>
-                  )}
                     </div>
+
+                    {/* Track list */}
+                    {musicTracks.length > 0 && (
+                      <div className="max-h-[180px] overflow-y-auto rounded-xl border border-dark-border/40 divide-y divide-dark-border/20 scrollbar-shopee">
+                        {musicTracks.map((track) => (
+                          <div key={track.id} className="flex items-center gap-2 px-3 py-2 hover:bg-white/3 transition-colors">
+                            <button type="button" onClick={() => handlePreviewTrack(track)}
+                              className="w-7 h-7 rounded-lg bg-dark-bg flex items-center justify-center shrink-0 hover:bg-shopee-orange/20 transition-colors">
+                              {previewingTrackId === track.id
+                                ? <div className="w-2.5 h-2.5 rounded-sm bg-shopee-orange" />
+                                : <Play className="h-3 w-3 text-text-secondary ml-0.5" />
+                              }
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-text-primary truncate">{track.name}</p>
+                              <p className="text-[10px] text-text-secondary/50 truncate">{track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}</p>
+                            </div>
+                            <button type="button" onClick={() => handleSelectTrack(track)}
+                              className="text-[10px] font-bold text-shopee-orange hover:text-shopee-orange/80 px-2 py-1 rounded-lg hover:bg-shopee-orange/10 transition-all shrink-0">
+                              Usar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {!loadingMusic && musicTracks.length === 0 && (
+                      <p className="text-[10px] text-text-secondary/40 text-center py-2">Selecione um gênero e clique em buscar</p>
+                    )}
+                    {loadingMusic && (
+                      <div className="flex items-center justify-center gap-2 py-3">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-text-secondary/50" />
+                        <span className="text-xs text-text-secondary/50">Buscando músicas…</span>
+                      </div>
+                    )}
+                    {musicLibraryError && !loadingMusic && (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                          {musicLibraryError}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => fetchMusicTracks(musicGenre)}
+                          className="mt-2 text-[10px] font-semibold text-amber-200 hover:text-amber-100 transition-colors"
+                        >
+                          Tentar novamente
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Upload own MP3 */}
+                <label className={`group flex items-center justify-center gap-2.5 rounded-xl border-2 border-dashed cursor-pointer py-2.5 transition-all mt-2 ${
+                  musicUrl && !selectedTrack
+                    ? "border-emerald-500/30 bg-emerald-500/6 hover:bg-emerald-500/10"
+                    : "border-dark-border/40 hover:border-dark-border/60 bg-transparent hover:bg-white/3"
+                }`}>
+                  {musicUrl && !selectedTrack
+                    ? <><Check className="h-3 w-3 text-emerald-400 shrink-0" /><span className="text-[10px] text-emerald-300 font-medium">MP3 carregado</span></>
+                    : <><Upload className="h-3 w-3 text-text-secondary/40 group-hover:text-text-secondary/60 transition-colors shrink-0" /><span className="text-[10px] text-text-secondary/40 group-hover:text-text-secondary/60 transition-colors">Ou envie seu próprio MP3</span></>
+                  }
+                  <input type="file" accept="audio/*" className="hidden" onChange={handleMusicUpload} />
+                </label>
+
+                {/* Volume slider */}
                 {musicUrl && (
                   <div className="flex items-center gap-3 mt-2.5">
                     <Volume2 className="h-3 w-3 text-text-secondary/40 shrink-0" />

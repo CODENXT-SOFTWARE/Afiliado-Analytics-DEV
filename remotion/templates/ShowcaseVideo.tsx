@@ -8,12 +8,14 @@ import { MediaScene } from "../components/MediaScene";
 import { AnimatedCaption } from "../components/AnimatedCaption";
 import { PriceTag } from "../components/PriceTag";
 import { CTASlide } from "../components/CTASlide";
+import { interleaveMedia } from "../utils";
 
 const EFFECTS = ["zoomIn", "zoomOut", "panLeft", "panRight"] as const;
 
 export const ShowcaseVideo: React.FC<VideoInputProps> = (props) => {
-  const { media, voiceoverSrc, musicSrc, musicVolume, captions, subtitleTheme, price, ctaText, productName, durationInFrames } = props;
+  const { media: rawMedia, voiceoverSrc, musicSrc, musicVolume, captions, subtitleTheme, price, ctaText, productName, durationInFrames } = props;
   const { fps } = useVideoConfig();
+  const media = interleaveMedia(rawMedia);
 
   const ctaDuration = Math.round(fps * 2.5);
   const contentFrames = durationInFrames - ctaDuration;

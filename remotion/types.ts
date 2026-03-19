@@ -15,7 +15,10 @@ export type VideoStyleId =
   | "storytelling"
   | "fastCuts"
   | "beforeAfter"
-  | "reviewRapido";
+  | "reviewRapido"
+  | "ugcStyle"
+  | "flashSale"
+  | "unboxing";
 
 export type SubtitleTheme = {
   fontFamily: string;
@@ -90,6 +93,51 @@ export const SUBTITLE_THEMES: Record<string, SubtitleTheme> = {
     bgColor: "transparent",
     position: "center",
   },
+  hormozi: {
+    fontFamily: "Impact, sans-serif",
+    fontSize: 64,
+    color: "#FFFFFF",
+    strokeColor: "#000000",
+    strokeWidth: 6,
+    bgColor: "transparent",
+    position: "center",
+  },
+  karaoke: {
+    fontFamily: "Arial Black, sans-serif",
+    fontSize: 48,
+    color: "#FFD700",
+    strokeColor: "#000000",
+    strokeWidth: 3,
+    bgColor: "transparent",
+    position: "bottom",
+  },
+  retro: {
+    fontFamily: "Impact, sans-serif",
+    fontSize: 50,
+    color: "#FF69B4",
+    strokeColor: "#4B0082",
+    strokeWidth: 4,
+    bgColor: "transparent",
+    position: "center",
+  },
+  editorial: {
+    fontFamily: "Georgia, serif",
+    fontSize: 36,
+    color: "#F0F0F0",
+    strokeColor: "#000000",
+    strokeWidth: 1,
+    bgColor: "rgba(0,0,0,0.65)",
+    position: "bottom",
+  },
+  fire: {
+    fontFamily: "Impact, sans-serif",
+    fontSize: 54,
+    color: "#FF4500",
+    strokeColor: "#8B0000",
+    strokeWidth: 4,
+    bgColor: "transparent",
+    position: "center",
+  },
 };
 
 export const VIDEO_STYLES: Record<VideoStyleId, { label: string; description: string }> = {
@@ -107,10 +155,22 @@ export const VIDEO_STYLES: Record<VideoStyleId, { label: string; description: st
   },
   beforeAfter: {
     label: "Antes & Depois",
-    description: "Comparação lado a lado com transição slide",
+    description: "Comparação lado a lado com transição wipe horizontal",
   },
   reviewRapido: {
     label: "Review Rápido",
-    description: "Mix de imagens e vídeos com overlay de avaliação",
+    description: "Mix de mídias com overlay de estrelas e avaliação",
+  },
+  ugcStyle: {
+    label: "UGC Orgânico",
+    description: "Estilo casual com tremor de câmera e bordas arredondadas",
+  },
+  flashSale: {
+    label: "Flash Sale",
+    description: "Urgência com timer animado, cores vibrantes e shake",
+  },
+  unboxing: {
+    label: "Unboxing Reveal",
+    description: "Revelação misteriosa com blur, zoom dramático e suspense",
   },
 };
