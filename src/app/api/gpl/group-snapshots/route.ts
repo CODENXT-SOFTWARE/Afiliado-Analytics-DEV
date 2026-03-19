@@ -115,13 +115,14 @@ export async function POST(req: Request) {
       (existingCumulative ?? []).map((r) => [r.group_id, { novos: r.total_novos ?? 0, saidas: r.total_saidas ?? 0 }])
     );
     const now = new Date().toISOString();
-    const allGroupIds = new Set([...payload.map((g) => g.id), ...novosDelta.keys(), ...saidasDelta.keys()]);
+    type GroupRow = { id: string; nome: string; qtdMembros: number };
+    const allGroupIds = new Set([...payload.map((g: GroupRow) => g.id), ...novosDelta.keys(), ...saidasDelta.keys()]);
     for (const g of payload) {
       if (!allGroupIds.has(g.id)) allGroupIds.add(g.id);
     }
     for (const gid of allGroupIds) {
-      const gPayload = payload.find((p) => p.id === gid);
-      const nome = gPayload?.nome ?? previousGroups.find((p) => p.id === gid)?.nome ?? "";
+      const gPayload = payload.find((p: GroupRow) => p.id === gid);
+      const nome = gPayload?.nome ?? previousGroups.find((p: GroupRow) => p.id === gid)?.nome ?? "";
       const cur = cumMap.get(gid) ?? { novos: 0, saidas: 0 };
       const novos = cur.novos + (novosDelta.get(gid) ?? 0);
       const saidas = cur.saidas + (saidasDelta.get(gid) ?? 0);
