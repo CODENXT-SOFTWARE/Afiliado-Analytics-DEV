@@ -8,7 +8,7 @@
   },
   "crons": [
     { "path": "/api/cron/expire-subscriptions", "schedule": "0 5 * * *" },
-    { "path": "/api/grupos-venda/cron-disparo", "schedule": "*/2 * * * *" }
+    { "path": "/api/grupos-venda/cron-disparo", "schedule": "*/10 * * * *" }
   ],
   "rewrites": [
     {
