@@ -141,7 +141,7 @@ function DisparoCard({ c, togglingId, onToggle, onRemove }: {
 }) {
   const isActive = c.ativo;
   return (
-    <div className={cn("bg-[#222228] border rounded-xl p-3 sm:p-3.5 flex flex-col gap-2.5 transition-all min-w-0",
+    <div className={cn("bg-[#1c1c1f] border rounded-xl p-3 sm:p-3.5 flex flex-col gap-2.5 transition-all min-w-0",
       isActive ? "border-emerald-500/20 shadow-sm shadow-emerald-500/5" : "border-[#2c2c32] hover:border-[#3e3e3e]")}>
       <div className="flex items-start justify-between gap-1.5 min-w-0">
         <h3 className="text-[10px] font-bold text-white uppercase tracking-wide leading-tight line-clamp-2 flex-1 min-w-0">{c.listaNome}</h3>
@@ -150,7 +150,7 @@ function DisparoCard({ c, togglingId, onToggle, onRemove }: {
             <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" /> Ativo
           </span>
         ) : (
-          <span className="text-[8px] font-bold text-[#a0a0a0] bg-[#1c1c1f] border border-[#2c2c32] px-1.5 py-0.5 rounded-full shrink-0">Parado</span>
+          <span className="text-[8px] font-bold text-[#a0a0a0] bg-[#121214] border border-[#2c2c32] px-1.5 py-0.5 rounded-full shrink-0">Parado</span>
         )}
       </div>
       <div className="flex flex-col gap-1 flex-1 min-w-0">
@@ -202,7 +202,7 @@ function DisparoCard({ c, togglingId, onToggle, onRemove }: {
           </button>
         )}
         <button onClick={() => onRemove(c.id)}
-          className="text-[#a0a0a0] hover:text-red-400 transition bg-[#1c1c1f] border border-[#2c2c32] p-1.5 rounded-lg hover:border-red-400/20 shrink-0">
+          className="text-[#a0a0a0] hover:text-red-400 transition bg-[#121214] border border-[#2c2c32] p-1.5 rounded-lg hover:border-red-400/20 shrink-0">
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
@@ -551,7 +551,7 @@ export default function GruposVendaPage() {
         <>
           {/* Criar Nova Automação */}
           <button onClick={openWizard}
-            className="w-full flex items-center justify-between bg-[#1c1c1f] border border-[#2c2c32] hover:border-[#e24c30]/40 rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 transition-all group gap-3 text-left">
+            className="w-full flex items-center justify-between bg-[#27272a] border border-[#2c2c32] hover:border-[#e24c30]/40 rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 transition-all group gap-3 text-left">
             <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1 max-md:items-center">
               <div className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-[#e24c30]/10 border border-[#e24c30]/20 flex items-center justify-center shrink-0 group-hover:bg-[#e24c30]/20 group-hover:shadow-lg group-hover:shadow-[#e24c30]/15 transition-all">
                 <PlusCircle className="w-4 h-4 text-[#e24c30]" />
@@ -567,7 +567,7 @@ export default function GruposVendaPage() {
           </button>
 
           {/* Painel de Controle */}
-          <section className="bg-[#1c1c1f] border border-[#2c2c32] rounded-xl overflow-hidden">
+          <section className="bg-[#27272a] border border-[#2c2c32] rounded-xl overflow-hidden">
             <div className="px-4 sm:px-5 py-3.5 border-b border-[#2c2c32]">
               <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -581,7 +581,7 @@ export default function GruposVendaPage() {
                   <div className="relative flex-1 min-w-0">
                     <Search className="w-3 h-3 text-[#a0a0a0] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input type="text" value={panelSearch} onChange={(e) => setPanelSearch(e.target.value)} placeholder="Buscar disparo..."
-                      className="w-full bg-[#222228] border border-[#3e3e3e] rounded-lg pl-7 pr-7 py-2 sm:py-1.5 text-[10px] text-white placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition" />
+                      className="w-full bg-[#1c1c1f] border border-[#3e3e3e] rounded-lg pl-7 pr-7 py-2 sm:py-1.5 text-[10px] text-white placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition" />
                     {panelSearch && (
                       <button onClick={() => setPanelSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a0a0a0] hover:text-white transition">
                         <X className="w-2.5 h-2.5" />
@@ -633,15 +633,15 @@ export default function GruposVendaPage() {
               </div>
 
               {!continuoLoading && filteredDisparos.length > 0 && (
-                <div className="mt-4 pt-4 pb-1 border-t border-[#2c2c32] flex flex-col items-center gap-4 px-2 sm:px-4">
-                  <p className="text-[11px] text-[#a0a0a0] text-center leading-relaxed max-w-md">
+                <div className="mt-4 pt-4 pb-1 border-t border-[#2c2c32] flex flex-col items-center gap-4 lg:mt-3 lg:pt-3 lg:gap-2 px-2 sm:px-4">
+                  <p className="text-[11px] lg:text-[9px] text-[#a0a0a0] text-center leading-relaxed lg:leading-snug max-w-md">
                     Mostrando {(safePanelPage - 1) * panelPerPage + 1}–
                     {Math.min(safePanelPage * panelPerPage, filteredDisparos.length)} de {filteredDisparos.length} disparo
                     {filteredDisparos.length !== 1 ? "s" : ""}
                     <span className="text-[#686868]"> · Página {safePanelPage} de {panelTotalPages}</span>
                   </p>
                   <div
-                    className="flex items-center justify-center gap-2.5 sm:gap-3 flex-wrap w-full max-w-md mx-auto"
+                    className="flex items-center justify-center gap-2.5 sm:gap-3 lg:gap-1.5 flex-wrap w-full max-w-md mx-auto"
                     role="navigation"
                     aria-label="Paginação do painel"
                   >
@@ -649,10 +649,10 @@ export default function GruposVendaPage() {
                       type="button"
                       onClick={() => setPanelPage((p) => Math.max(1, p - 1))}
                       disabled={safePanelPage <= 1}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#121214] border border-[#2c2c32] flex items-center justify-center text-[#a0a0a0] hover:text-[#f0f0f2] hover:border-[#3e3e3e] disabled:opacity-30 transition shrink-0"
+                      className="w-9 h-9 sm:w-10 sm:h-10 lg:w-7 lg:h-7 rounded-xl lg:rounded-lg bg-[#1c1c1f] border border-[#2c2c32] flex items-center justify-center text-[#a0a0a0] hover:text-[#f0f0f2] hover:border-[#3e3e3e] disabled:opacity-30 transition shrink-0"
                       aria-label="Página anterior"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-4 h-4 lg:w-3 lg:h-3" />
                     </button>
                     {Array.from({ length: panelTotalPages }, (_, i) => i + 1)
                       .slice(Math.max(0, safePanelPage - 3), Math.min(panelTotalPages, safePanelPage + 2))
@@ -662,9 +662,9 @@ export default function GruposVendaPage() {
                           type="button"
                           onClick={() => setPanelPage(p)}
                           className={cn(
-                            "min-w-[2.25rem] h-9 sm:min-w-10 sm:h-10 px-2 rounded-xl text-[11px] sm:text-xs font-semibold transition shrink-0",
+                            "min-w-[2.25rem] h-9 sm:min-w-10 sm:h-10 lg:min-w-[1.625rem] lg:h-7 px-2 lg:px-1 rounded-xl lg:rounded-lg text-[11px] sm:text-xs lg:text-[10px] font-semibold transition shrink-0",
                             p === safePanelPage
-                              ? "bg-[#e24c30] text-white shadow-md shadow-[#e24c30]/25 scale-105"
+                              ? "bg-[#e24c30] text-white shadow-md shadow-[#e24c30]/25 scale-105 lg:scale-100 lg:shadow-sm"
                               : "bg-[#121214] border border-[#2c2c32] text-[#a0a0a0] hover:text-[#f0f0f2] hover:border-[#3e3e3e]",
                           )}
                         >
@@ -675,10 +675,10 @@ export default function GruposVendaPage() {
                       type="button"
                       onClick={() => setPanelPage((p) => Math.min(panelTotalPages, p + 1))}
                       disabled={safePanelPage >= panelTotalPages}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#121214] border border-[#2c2c32] flex items-center justify-center text-[#a0a0a0] hover:text-[#f0f0f2] hover:border-[#3e3e3e] disabled:opacity-30 transition shrink-0"
+                      className="w-9 h-9 sm:w-10 sm:h-10 lg:w-7 lg:h-7 rounded-xl lg:rounded-lg bg-[#121214] border border-[#2c2c32] flex items-center justify-center text-[#a0a0a0] hover:text-[#f0f0f2] hover:border-[#3e3e3e] disabled:opacity-30 transition shrink-0"
                       aria-label="Próxima página"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-4 h-4 lg:w-3 lg:h-3" />
                     </button>
                   </div>
                 </div>
@@ -703,7 +703,7 @@ export default function GruposVendaPage() {
             </div>
             <p className="hidden sm:block text-[11px] text-[#a0a0a0] leading-relaxed mt-1">{stepMeta[wizardStep].description}</p>
             {showStepInfo && (
-              <div className="sm:hidden mt-3 rounded-xl border border-[#2c2c32] bg-[#222228] px-3 py-2.5 text-[10px] text-[#a0a0a0] leading-relaxed">
+              <div className="sm:hidden mt-3 rounded-xl border border-[#2c2c32] bg-[#1c1c1f] px-3 py-2.5 text-[10px] text-[#a0a0a0] leading-relaxed">
                 {stepMeta[wizardStep].description}
               </div>
             )}
@@ -713,7 +713,7 @@ export default function GruposVendaPage() {
             {/* Step 1: Selecionar instância */}
             {wizardStep === 1 && (
               <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4 sm:gap-6">
-                <div className="bg-[#222228] border border-[#2c2c32] rounded-xl p-4 flex flex-col gap-2 h-fit max-md:hidden">
+                <div className="bg-[#1c1c1f] border border-[#2c2c32] rounded-xl p-4 flex flex-col gap-2 h-fit max-md:hidden">
                   <p className="text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest">💡 Sobre Instâncias</p>
                   <p className="text-[10px] text-[#a0a0a0] leading-relaxed">Cada instância representa um número de WhatsApp conectado à plataforma. Múltiplas instâncias permitem separar campanhas por conta.</p>
                 </div>
@@ -726,7 +726,7 @@ export default function GruposVendaPage() {
                       <button key={inst.id} onClick={() => setSelectedInstanceId(inst.id)}
                         className={cn("flex items-start sm:items-center gap-4 p-4 rounded-xl border-2 text-left transition-all min-w-0",
                           isSelected ? "border-[#e24c30] bg-[#e24c30]/5 shadow-lg shadow-[#e24c30]/10"
-                            : "border-[#2c2c32] bg-[#222228] hover:border-[#3e3e3e]")}>
+                            : "border-[#2c2c32] bg-[#1c1c1f] hover:border-[#3e3e3e]")}>
                         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-all",
                           isSelected ? "bg-[#e24c30]/10 border-[#e24c30]/30" : "bg-[#1c1c1f] border-[#2c2c32]")}>
                           <Smartphone className={cn("w-4 h-4", isSelected ? "text-[#e24c30]" : "text-[#a0a0a0]")} />
@@ -778,7 +778,7 @@ export default function GruposVendaPage() {
                       return (
                         <button key={list.id} onClick={() => setSelectedListaId(isSelected ? "" : list.id)}
                           className={cn("flex items-center gap-3 p-2.5 rounded-xl border-2 text-left transition-all min-w-0",
-                            isSelected ? "border-[#e24c30] bg-[#e24c30]/5" : "border-[#2c2c32] bg-[#222228] hover:border-[#3e3e3e]")}>
+                            isSelected ? "border-[#e24c30] bg-[#e24c30]/5" : "border-[#2c2c32] bg-[#1c1c1f] hover:border-[#3e3e3e]")}>
                           <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border",
                             isSelected ? "bg-[#e24c30]/10 border-[#e24c30]/30" : "bg-[#1c1c1f] border-[#2c2c32]")}>
                             <ListIcon className={cn("w-3.5 h-3.5", isSelected ? "text-[#e24c30]" : "text-[#a0a0a0]")} />
@@ -940,7 +940,7 @@ export default function GruposVendaPage() {
             {/* Step 4: Horário + Resumo */}
             {wizardStep === 4 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                <div className="bg-[#222228] border border-[#2c2c32] rounded-xl p-4 min-w-0">
+                <div className="bg-[#1c1c1f] border border-[#2c2c32] rounded-xl p-4 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                     <label className="flex items-center gap-1.5 text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest leading-relaxed">
                       <Clock className="w-2.5 h-2.5 text-[#e24c30] shrink-0" /> Horário de Funcionamento
@@ -975,7 +975,7 @@ export default function GruposVendaPage() {
                   )}
                 </div>
 
-                <div className="bg-[#222228] border border-[#2c2c32] rounded-xl min-w-0 overflow-hidden">
+                <div className="bg-[#1c1c1f] border border-[#2c2c32] rounded-xl min-w-0 overflow-hidden">
                   {/* Mobile: cabeçalho dropdown (começa recolhido) */}
                   <button
                     type="button"
