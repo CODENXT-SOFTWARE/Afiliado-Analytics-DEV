@@ -34,7 +34,7 @@ export async function getPlanTierForUser(
     .eq("id", userId)
     .single();
   const tier = data?.plan_tier;
-  if (tier === "pro" || tier === "padrao" || tier === "legacy") return tier;
+  if (tier === "pro" || tier === "padrao" || tier === "legacy" || tier === "staff") return tier;
   return "padrao";
 }
 

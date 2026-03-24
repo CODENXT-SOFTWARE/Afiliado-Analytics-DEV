@@ -3,7 +3,7 @@
  * `legacy` = mesmo comportamento que `padrao` (usuários antigos não ganham “tudo ilimitado”).
  */
 
-export type PlanTier = "legacy" | "padrao" | "pro";
+export type PlanTier = "legacy" | "padrao" | "pro" | "staff";
 
 export type GruposVendaLimits = {
   /** Campanhas ativas no máximo */
@@ -40,6 +40,8 @@ export type PlanEntitlements = {
   /** null = sem limite diário (feature desligada ou ilimitado) */
   videoExportsPerDay: number | null;
 };
+
+
 
 const PADRAO_LIMITS = {
   analiseComissoes: true,
@@ -87,15 +89,42 @@ const PRO_LIMITS = {
   videoExportsPerDay: 2,
 } as const satisfies PlanEntitlements;
 
+
+
+const STAFF_LIMITS = {
+  analiseComissoes: true,
+  analiseCliques: true,
+  meusLinks: true,
+  captureLinks: 5,
+  gpl: {
+    enabled: true,
+    showSummaryCards: true,
+    showGroupsCampaignsInstance: true,
+  },
+  geradorLinksShopee: true,
+  gruposVenda: {
+    maxActiveCampaigns: 20,
+    maxLists: null,
+    maxGroupsTotal: 20,
+  },
+  evolutionInstances: 10,
+  ati: true,
+  criarCampanhaMeta: true,
+  geradorCriativos: true,
+  videoExportsPerDay: 10,
+} as const satisfies PlanEntitlements;
+
 /** Mesma referência para legacy e padrao — alterar um não altera o outro em runtime se você clonar; aqui são iguais por definição. */
 export const LIMITS: Record<PlanTier, PlanEntitlements> = {
   legacy: { ...PADRAO_LIMITS, gpl: { ...PADRAO_LIMITS.gpl }, gruposVenda: { ...PADRAO_LIMITS.gruposVenda } },
   padrao: { ...PADRAO_LIMITS, gpl: { ...PADRAO_LIMITS.gpl }, gruposVenda: { ...PADRAO_LIMITS.gruposVenda } },
   pro: { ...PRO_LIMITS, gpl: { ...PRO_LIMITS.gpl }, gruposVenda: { ...PRO_LIMITS.gruposVenda } },
+  staff: { ...STAFF_LIMITS, gpl: { ...STAFF_LIMITS.gpl }, gruposVenda: { ...STAFF_LIMITS.gruposVenda } },
 };
 
 export function getEntitlementsForTier(tier: PlanTier | string | null | undefined): PlanEntitlements {
   if (tier === "pro") return LIMITS.pro;
+  if (tier === "staff") return LIMITS.staff;
   if (tier === "padrao" || tier === "legacy") return LIMITS.padrao;
   // fallback seguro até existir plan_tier no profile
   return LIMITS.legacy;

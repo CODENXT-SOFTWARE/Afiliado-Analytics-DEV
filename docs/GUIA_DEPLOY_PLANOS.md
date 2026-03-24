@@ -160,8 +160,65 @@ O sistema faz fallback para os IDs do plano (`plan_id`) e do produto (`product_i
 ### Posso adicionar novos checkouts no futuro?
 Sim! Basta editar o arquivo `src/lib/kiwify-plan-catalog.ts` e adicionar os novos checkout links nos arrays correspondentes.
 
+### E se eu usar checkout de afiliado (link do coprodutor/afiliado) e o cliente comprar por esse link?
+**Na prática, costuma funcionar normalmente.** O webhook da Kiwify continua sendo o seu (do produtor), com o mesmo **produto** e, na maioria dos casos, o mesmo **plano** (`Subscription.plan.id` e `Product.product_id`).
+
+O que pode mudar é só o campo **`checkout_link`**: às vezes vem um código **diferente** do link “oficial” que está na nossa lista (ex.: `Q1eE7t8`). Quando esse código **não** está cadastrado no código, o app **ignora** o checkout desconhecido e usa o **fallback**:
+
+1. `plan_id` (se estiver em `KIWIFY_PRO_PLAN_IDS` / `KIWIFY_PADRAO_PLAN_IDS` ou na lista legada)  
+2. `product_id` (lista legada → tratado como Padrão)  
+3. Se nada bater → **Padrão** (`padrao`)
+
+**O que fazer se um plano Pro vendido por afiliado cair como Padrão?**  
+- Confira no payload do webhook (ou no painel Kiwify) o **`plan.id`** da assinatura.  
+- Coloque esse UUID em `KIWIFY_PRO_PLAN_IDS` na Vercel **ou** adicione o `checkout_link` que o webhook envia na lista **Pro** em `kiwify-plan-catalog.ts`.
+
 ### E se eu quiser mudar os limites de um plano?
 Edite o arquivo `src/lib/plan-entitlements.ts`. Os limites estão claramente definidos nos objetos `PADRAO_LIMITS` e `PRO_LIMITS`.
+
+### Como adicionar um plano customizado (ex.: Enterprise) onde **eu** decido os acessos?
+
+Hoje o app só conhece três tiers: `legacy`, `padrao` e `pro`. Para um plano “Enterprise” ou totalmente sob medida, existem **dois caminhos**:
+
+---
+
+#### Opção A — Novo tier fixo no código (todos os Enterprise iguais)
+
+Use quando **todos** os clientes Enterprise tiverem **as mesmas regras** (ex.: “Pro + 10 sites de captura”).
+
+1. **Supabase** — incluir o novo valor no `CHECK` da coluna `plan_tier`:
+   ```sql
+   ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_plan_tier_check;
+   ALTER TABLE public.profiles ADD CONSTRAINT profiles_plan_tier_check
+     CHECK (plan_tier = ANY (ARRAY['legacy','padrao','pro','enterprise'::text]));
+   ```
+2. **Código** — em `src/lib/plan-entitlements.ts`:
+   - Amplie o tipo: `export type PlanTier = "legacy" | "padrao" | "pro" | "enterprise";`
+   - Crie `ENTERPRISE_LIMITS` (cópia de `PRO_LIMITS` ou os números que quiser).
+   - Adicione em `LIMITS` e em `getEntitlementsForTier()` o caso `enterprise`.
+3. **Hierarquia com outros planos** — em `src/lib/kiwify-plan-catalog.ts`, função `bestPlanTier`, defina a ordem (ex.: `enterprise` acima de `pro` se quiser que assinatura Enterprise vença Pro).
+4. **Kiwify** — se Enterprise for vendido por checkout, cadastre o `checkout_link` e/ou `plan_id` em `kiwify-plan-catalog.ts` (ou env vars) mapeando para `enterprise`.
+5. **Clientes “só manual”** — não precisa Kiwify: no Supabase, `UPDATE profiles SET plan_tier = 'enterprise' WHERE email = '...';`
+
+---
+
+#### Opção B — Acessos diferentes por cliente (sob medida)
+
+Use quando **cada** Enterprise tiver limites ou flags **diferentes** (um com ATI, outro sem, outro com 20 exports/dia).
+
+O modelo atual **não** guarda isso no banco; só o `plan_tier` inteiro. Para “eu decido por usuário”, o desenho usual é:
+
+1. **Nova coluna** em `profiles`, por exemplo `plan_entitlements_override jsonb` (nullable).
+2. Quando essa coluna **não** for `null`, o backend **mescla** esse JSON com o resultado de `getEntitlementsForTier(plan_tier)` (campos omitidos usam o tier; campos presentes sobrescrevem).
+3. O webhook da Kiwify **não** apaga esse JSON (só atualiza `plan_tier` a partir da assinatura), ou você marca clientes Enterprise com um tier fixo (`enterprise`) e o JSON só ajusta detalhes.
+
+Isso exige alterar `getEntitlementsForUser` em `plan-server.ts` e o endpoint `/api/me/entitlements` para ler o override. Se quiser esse caminho no código, peça para implementar no repositório.
+
+---
+
+**Resumo:**  
+- **Mesmas regras para todos os Enterprise** → Opção A (novo tier + migration do `CHECK`).  
+- **Regra diferente por conta** → Opção B (override em JSON no `profiles` + lógica de merge no servidor).
 
 ---
 

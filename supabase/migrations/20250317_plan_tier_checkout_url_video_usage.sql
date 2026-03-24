@@ -12,7 +12,7 @@ ALTER TABLE public.profiles
 
 ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_plan_tier_check
-  CHECK (plan_tier = ANY (ARRAY['legacy'::text, 'padrao'::text, 'pro'::text]));
+  CHECK (plan_tier = ANY (ARRAY['legacy'::text, 'padrao'::text, 'pro'::text, 'staff'::text]));
 
 -- 2) checkout_url em subscriptions
 ALTER TABLE public.subscriptions
