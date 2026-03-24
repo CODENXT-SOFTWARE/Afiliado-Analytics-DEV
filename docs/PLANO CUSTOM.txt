@@ -1,0 +1,115 @@
+=============CRIAR PLANO CUSTOMIZADO===============
+modofique o tipo de plano aceito em plan tier checkout ur vídeo usage do supabase
+
+
+-- ====================================================================
+-- Migration: plan_tier, checkout_url, video_export_usage
+-- SEGURO para rodar em produção — tudo usa IF NOT EXISTS / IF EXISTS.
+-- ====================================================================
+
+-- 1) plan_tier em profiles (default = 'padrao' para migrar todos os existentes)
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS plan_tier text NOT NULL DEFAULT 'padrao';
+
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_plan_tier_check;
+
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_plan_tier_check
+  CHECK (plan_tier = ANY (ARRAY['legacy'::text, 'padrao'::text, 'pro'::text, 'staff'::text, 'novoplano'::text] ));  <----
+
+-- 2) checkout_url em subscriptions
+ALTER TABLE public.subscriptions
+  ADD COLUMN IF NOT EXISTS checkout_url text;
+
+-- 3) Tabela de controle de exports de vídeo por dia
+CREATE TABLE IF NOT EXISTS public.video_export_usage (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  export_day  date NOT NULL DEFAULT CURRENT_DATE,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+-- Índice para consulta rápida: quantos exports o user fez hoje
+CREATE INDEX IF NOT EXISTS idx_video_export_usage_user_day
+  ON public.video_export_usage (user_id, export_day);
+
+-- RLS
+ALTER TABLE public.video_export_usage ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own exports" ON public.video_export_usage;
+CREATE POLICY "Users can view own exports"
+  ON public.video_export_usage FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own exports" ON public.video_export_usage;
+CREATE POLICY "Users can insert own exports"
+  ON public.video_export_usage FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+
+
+em src/lib/plan-server.ts
+
+adicione o tier === "novo plano"
+
+export async function getPlanTierForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<PlanTier> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("plan_tier")
+    .eq("id", userId)
+    .single();
+  const tier = data?.plan_tier;
+  if (tier === "pro" || tier === "padrao" || tier === "legacy" || tier === "staff" || tier === "novoplano") return tier;
+  return "padrao";
+}
+
+
+em src/lib/plan-entitlements.js
+
+adicione os novos limites
+
+export type PlanTier = "legacy" | "padrao" | "pro" | "staff";
+
+
+const STAFF_LIMITS = {
+  analiseComissoes: true,
+  analiseCliques: true,
+  meusLinks: true,
+  captureLinks: 5,
+  gpl: {
+    enabled: true,
+    showSummaryCards: true,
+    showGroupsCampaignsInstance: true,
+  },
+  geradorLinksShopee: true,
+  gruposVenda: {
+    maxActiveCampaigns: 20,
+    maxLists: null,
+    maxGroupsTotal: 20,
+  },
+  evolutionInstances: 10,
+  ati: true,
+  criarCampanhaMeta: true,
+  geradorCriativos: true,
+  videoExportsPerDay: 10,
+} as const satisfies PlanEntitlements;
+
+/** Mesma referência para legacy e padrao — alterar um não altera o outro em runtime se você clonar; aqui são iguais por definição. */
+export const LIMITS: Record<PlanTier, PlanEntitlements> = {
+  legacy: { ...PADRAO_LIMITS, gpl: { ...PADRAO_LIMITS.gpl }, gruposVenda: { ...PADRAO_LIMITS.gruposVenda } },
+  padrao: { ...PADRAO_LIMITS, gpl: { ...PADRAO_LIMITS.gpl }, gruposVenda: { ...PADRAO_LIMITS.gruposVenda } },
+  pro: { ...PRO_LIMITS, gpl: { ...PRO_LIMITS.gpl }, gruposVenda: { ...PRO_LIMITS.gruposVenda } },
+  staff: { ...STAFF_LIMITS, gpl: { ...STAFF_LIMITS.gpl }, gruposVenda: { ...STAFF_LIMITS.gruposVenda } },
+};
+
+export function getEntitlementsForTier(tier: PlanTier | string | null | undefined): PlanEntitlements {
+  if (tier === "pro") return LIMITS.pro;
+  if (tier === "staff") return LIMITS.staff;
+  if (tier === "padrao" || tier === "legacy") return LIMITS.padrao;
+  // fallback seguro até existir plan_tier no profile
+  return LIMITS.legacy;
+}
