@@ -242,3 +242,46 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+/** Zera total_novos e total_saidas acumulados do grupo (GPL). */
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json().catch(() => ({}));
+    const instanceId = String(body?.instance_id ?? "").trim();
+    const groupId = String(body?.group_id ?? "").trim();
+    const groupName = String(body?.group_name ?? "").trim();
+
+    if (!instanceId || !groupId) {
+      return NextResponse.json({ error: "instance_id e group_id são obrigatórios" }, { status: 400 });
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("gpl_group_cumulative").upsert(
+      {
+        user_id: user.id,
+        instance_id: instanceId,
+        group_id: groupId,
+        group_name: groupName,
+        total_novos: 0,
+        total_saidas: 0,
+        updated_at: now,
+      },
+      { onConflict: "user_id,instance_id,group_id" }
+    );
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erro ao limpar acumulado";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

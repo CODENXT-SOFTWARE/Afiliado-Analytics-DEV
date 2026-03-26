@@ -267,6 +267,8 @@ export default function GplCalculatorPage() {
   const [previousGroupsForComparison, setPreviousGroupsForComparison] = useState<WhatsAppGroup[] | null>(null);
   const [baseGroups, setBaseGroups] = useState<WhatsAppGroup[] | null>(null);
   const [groupCumulative, setGroupCumulative] = useState<Record<string, { total_novos: number; total_saidas: number }>>({});
+  const [gplActionsGroup, setGplActionsGroup] = useState<WhatsAppGroup | null>(null);
+  const [gplClearing, setGplClearing] = useState(false);
 
   const [traficoGruposCampaigns, setTraficoGruposCampaigns] = useState<TraficoGruposCampaignDetail[]>([]);
   const [traficoGruposLoading, setTraficoGruposLoading] = useState(false);
@@ -506,6 +508,53 @@ export default function GplCalculatorPage() {
       setGroups([]); setGroupsError(e instanceof Error ? e.message : "Erro ao buscar grupos"); setGroupsCache((prev) => ({ ...prev, [instanceId]: [] }));
     } finally { setGroupsLoading(false); }
   };
+
+  const refetchGroupCumulative = useCallback(async () => {
+    if (!selectedInstanceId) return;
+    const start = startDateApplied || getYesterday();
+    const end = endDateApplied || getYesterday();
+    const params = new URLSearchParams({ instance_id: selectedInstanceId });
+    if (start && end) {
+      params.set("start", start);
+      params.set("end", end);
+    }
+    try {
+      const res = await fetch(`/api/gpl/group-snapshots?${params.toString()}`, { cache: "no-store" });
+      const data = await res.json();
+      const cum = data.cumulative ?? [];
+      const cumMap: Record<string, { total_novos: number; total_saidas: number }> = {};
+      for (const c of cum) {
+        if (c?.group_id) cumMap[c.group_id] = { total_novos: Number(c.total_novos ?? 0), total_saidas: Number(c.total_saidas ?? 0) };
+      }
+      setGroupCumulative(cumMap);
+    } catch {
+      // ignore
+    }
+  }, [selectedInstanceId, startDateApplied, endDateApplied]);
+
+  async function handleGplClearGroupCumulative() {
+    if (!gplActionsGroup || !selectedInstanceId) return;
+    setGplClearing(true);
+    try {
+      const res = await fetch("/api/gpl/group-snapshots", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instance_id: selectedInstanceId,
+          group_id: gplActionsGroup.id,
+          group_name: gplActionsGroup.nome,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Erro ao limpar dados");
+      setGplActionsGroup(null);
+      await refetchGroupCumulative();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Erro ao limpar dados");
+    } finally {
+      setGplClearing(false);
+    }
+  }
 
   const filteredGroups = useMemo(() => {
     const q = normalizeStr(groupSearchFilter);
@@ -944,21 +993,35 @@ export default function GplCalculatorPage() {
                           const isSelected = selectedGroupIds.has(g.id);
                   return (
                             <div key={g.id}
-                              className={cn("bg-[#1c1c1f] border p-3 rounded-lg flex flex-col hover:border-text-secondary transition cursor-pointer",
+                              className={cn("relative bg-[#1c1c1f] border p-3 rounded-lg flex flex-col hover:border-text-secondary transition cursor-pointer",
                                 evasao ? "border-[#5c3429]" : isSelected ? "border-shopee-orange/40 bg-shopee-orange/5" : "border-dark-border")}
                               onClick={() => toggleGroupSelection(g.id)}>
                               <div className="flex items-center justify-between w-full gap-2">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <OrangeCheckbox checked={isSelected} onChange={() => toggleGroupSelection(g.id)} />
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <OrangeCheckbox checked={isSelected} onChange={() => toggleGroupSelection(g.id)} />
+                                  </div>
                                   <span className="text-xs font-bold break-words">{g.nome}</span>
                     </div>
                                 <span className="text-[10px] text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded font-medium shrink-0 whitespace-nowrap">{g.qtdMembros} membros</span>
                               </div>
                               {temComparacao && (
-                                <div className="flex items-center gap-4 mt-1.5 text-[10px]">
-                                  <span className="text-emerald-400 flex items-center gap-1"><ArrowUpRight className="w-3 h-3 shrink-0" /> {novosValor} Entradas</span>
-                                  <span className="text-red-400 flex items-center gap-1"><ArrowDownRight className="w-3 h-3 shrink-0" /> {sairamValor} Saídas</span>
-                                  {evasao && <span className="text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3 shrink-0" /> Alta evasão</span>}
+                                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mt-1.5 text-[10px] w-full">
+                                  <div className="flex flex-wrap items-center gap-4 min-w-0">
+                                    <span className="text-emerald-400 flex items-center gap-1"><ArrowUpRight className="w-3 h-3 shrink-0" /> {novosValor} Entradas</span>
+                                    <span className="text-red-400 flex items-center gap-1"><ArrowDownRight className="w-3 h-3 shrink-0" /> {sairamValor} Saídas</span>
+                                    {evasao && <span className="text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3 shrink-0" /> Alta evasão</span>}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="text-white font-medium shrink-0 ml-auto hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setGplActionsGroup(g);
+                                    }}
+                                  >
+                                    Ações
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -1106,6 +1169,48 @@ export default function GplCalculatorPage() {
           </div>
               )}
         </div>
+          </div>
+        </div>
+      )}
+
+      {gplActionsGroup && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => !gplClearing && setGplActionsGroup(null)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md bg-[#1c1c1f] border border-dark-border rounded-xl shadow-2xl p-5"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gpl-actions-title"
+          >
+            <h3 id="gpl-actions-title" className="text-base font-semibold text-text-primary mb-1">
+              Ações
+            </h3>
+            <p className="text-xs text-text-secondary mb-4 line-clamp-2">{gplActionsGroup.nome}</p>
+            <p className="text-xs text-text-secondary/90 mb-4">
+              Limpar dados zera as <strong className="text-text-primary">Entradas</strong> e <strong className="text-text-primary">Saídas</strong> acumuladas deste grupo (Ação Irreversível).
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+              <button
+                type="button"
+                disabled={gplClearing}
+                onClick={() => setGplActionsGroup(null)}
+                className="px-4 py-2.5 rounded-lg border border-dark-border text-text-secondary hover:text-text-primary text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={gplClearing}
+                onClick={() => void handleGplClearGroupCumulative()}
+                className="px-4 py-2.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {gplClearing ? "Limpando…" : "Limpar dados"}
+              </button>
+            </div>
           </div>
         </div>
       )}
