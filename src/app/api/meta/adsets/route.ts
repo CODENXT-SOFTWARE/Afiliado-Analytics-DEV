@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../../utils/supabase/server";
+import { normalizeAdSetTargeting } from "../../../../lib/meta-adset-targeting";
 
 const GRAPH_BASE = "https://graph.facebook.com/v21.0";
 
@@ -231,7 +232,7 @@ export async function PATCH(req: Request) {
       publisher_platforms,
     };
     if (gender !== "all") targeting.genders = gender === "female" ? [2] : [1];
-    params.set("targeting", JSON.stringify(targeting));
+    params.set("targeting", JSON.stringify(normalizeAdSetTargeting(targeting)));
     if (pixel_id && conversion_event) {
       const promotedObject = { pixel_id, custom_event_type: conversion_event };
       params.set("promoted_object", JSON.stringify(promotedObject));
@@ -366,6 +367,8 @@ export async function POST(req: Request) {
       targeting.genders = gender === "female" ? [2] : [1];
     }
 
+    const targetingPayload = normalizeAdSetTargeting(targeting);
+
     const params = new URLSearchParams();
     params.set("access_token", token);
     params.set("campaign_id", campaign_id);
@@ -373,7 +376,7 @@ export async function POST(req: Request) {
     params.set("daily_budget", String(Math.round(daily_budget)));
     params.set("billing_event", "IMPRESSIONS");
     params.set("optimization_goal", effectiveOptimizationGoal);
-    params.set("targeting", JSON.stringify(targeting));
+    params.set("targeting", JSON.stringify(targetingPayload));
     params.set("status", "PAUSED");
     params.set("start_time", new Date().toISOString());
     params.set("destination_type", "WEBSITE");

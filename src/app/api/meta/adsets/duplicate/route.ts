@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../../../utils/supabase/server";
+import { normalizeAdSetTargeting } from "../../../../../lib/meta-adset-targeting";
 
 const GRAPH_BASE = "https://graph.facebook.com/v21.0";
 
@@ -63,6 +64,16 @@ export async function POST(req: Request) {
     const account_id = normalizeAdAccountId(campaignJson.account_id);
 
     const baseName = (adsetJson.name || "Conjunto").slice(0, 200);
+    const fallbackTargeting: Record<string, unknown> = {
+      geo_locations: { countries: ["BR"] },
+      age_min: 18,
+      age_max: 65,
+    };
+    const sourceTargeting =
+      adsetJson.targeting && typeof adsetJson.targeting === "object" && adsetJson.targeting !== null && !Array.isArray(adsetJson.targeting)
+        ? { ...(adsetJson.targeting as Record<string, unknown>) }
+        : fallbackTargeting;
+    const targetingJson = JSON.stringify(normalizeAdSetTargeting(sourceTargeting));
     const created: string[] = [];
     for (let i = 1; i <= count; i++) {
       const name = `${baseName} -COPIA ${i}`;
@@ -73,7 +84,7 @@ export async function POST(req: Request) {
         daily_budget: String(adsetJson.daily_budget || "1000"),
         billing_event: adsetJson.billing_event || "IMPRESSIONS",
         optimization_goal: adsetJson.optimization_goal || "LINK_CLICKS",
-        targeting: JSON.stringify(adsetJson.targeting || { geo_locations: { countries: ["BR"] }, age_min: 18, age_max: 65 }),
+        targeting: targetingJson,
         status: "PAUSED",
         start_time: new Date().toISOString(),
         destination_type: adsetJson.destination_type || "WEBSITE",
