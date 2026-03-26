@@ -6,7 +6,7 @@ import { Player } from "@remotion/player";
 import {
   Film, Upload, Loader2, Wand2, Mic, Image as ImageIcon,
   Music, AlertCircle, ChevronLeft, ChevronRight, Sparkles, Download,
-  Check, CheckCircle2, Volume2, Search, Trash2, Play, Zap, ShoppingBag,
+  Check, CheckCircle2, Volume2, Search, Trash2, Play, Zap, ShoppingBag, X,
   TrendingUp, Timer, Star, LayoutGrid, Maximize2, Video, Info,
 } from "lucide-react";
 import { VideoComposition } from "../../../../../remotion/VideoComposition";
@@ -188,6 +188,38 @@ function VideoEditorPageInner() {
     const picked = Array.from(selectedMedia).sort((a, b) => a - b).map((i) => mediaAssets[i]).filter(Boolean);
     return [...picked, ...uploadedFiles];
   }, [selectedMedia, mediaAssets, uploadedFiles]);
+
+  const removeSelectedAssetAt = useCallback((globalIdx: number) => {
+    const pickedIndices = Array.from(selectedMedia).sort((a, b) => a - b);
+    const pickedCount = pickedIndices.length;
+    if (globalIdx < pickedCount) {
+      const mediaIndex = pickedIndices[globalIdx];
+      setSelectedMedia((prev) => {
+        const next = new Set(prev);
+        next.delete(mediaIndex);
+        return next;
+      });
+    } else {
+      const uploadIdx = globalIdx - pickedCount;
+      setUploadedFiles((prev) => {
+        const victim = prev[uploadIdx];
+        if (victim?.src?.startsWith("blob:")) {
+          try {
+            URL.revokeObjectURL(victim.src);
+          } catch {
+            /* ignore */
+          }
+        }
+        return prev.filter((_, j) => j !== uploadIdx);
+      });
+    }
+  }, [selectedMedia]);
+
+  useEffect(() => {
+    const perPage = 8;
+    const totalPages = Math.max(1, Math.ceil(selectedAssets.length / perPage));
+    setSelectedMediaPage((p) => Math.min(p, totalPages - 1));
+  }, [selectedAssets.length]);
 
   const totalDurationSec = useMemo(() => {
     if (voiceAudioDuration > 0) return Math.ceil(voiceAudioDuration) + 3;
@@ -709,18 +741,27 @@ function VideoEditorPageInner() {
                         {paged.map((asset, idx) => {
                           const i = pageOffset + idx;
                           return (
-                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-dark-border/30 group">
+                            <div key={`${asset.src}-${i}`} className="relative aspect-square rounded-xl overflow-hidden border border-dark-border/30 group">
                               {asset.type === "image"
                                 ? <img src={asset.src} alt="" className="w-full h-full object-cover" />
                                 : <video src={asset.src} muted className="w-full h-full object-cover" />
                               }
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                              <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white/90 bg-black/60 px-1.5 py-0.5 rounded-md">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                              <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white/90 bg-black/60 px-1.5 py-0.5 rounded-md pointer-events-none">
                                 {i + 1}
                               </span>
                               {asset.type === "video" && (
-                                <span className="absolute top-1.5 right-1.5 text-[9px] font-bold text-white bg-purple-600/80 px-1.5 py-0.5 rounded-md">▶</span>
+                                <span className="absolute top-1.5 right-8 text-[9px] font-bold text-white bg-purple-600/80 px-1.5 py-0.5 rounded-md pointer-events-none">▶</span>
                               )}
+                              <button
+                                type="button"
+                                aria-label="Remover mídia"
+                                title="Remover"
+                                onClick={() => removeSelectedAssetAt(i)}
+                                className="absolute top-1.5 right-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-lg bg-black/70 text-white/90 ring-1 ring-white/15 backdrop-blur-sm transition hover:bg-red-500/90 hover:text-white hover:ring-red-400/40"
+                              >
+                                <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                              </button>
                             </div>
                           );
                         })}
