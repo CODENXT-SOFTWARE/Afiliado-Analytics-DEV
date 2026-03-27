@@ -5,6 +5,7 @@ import Testimonials from "../components/home/Testimonials";
 import Faq from "../components/home/Faq";
 import Pricing from "../components/home/Pricing";
 import FeaturesSection from "../components/home/Features";
+import Mockup from "../components/home/Mockup";
 import { Play } from "lucide-react";
 import { motion } from "framer-motion"; // 📦 Importando o Framer Motion
 
@@ -239,6 +240,7 @@ export default function HomePage() {
       </section> */}
 
       <FeaturesSection />
+      <Mockup />
       <Testimonials />
       <Pricing />
       <Faq />
