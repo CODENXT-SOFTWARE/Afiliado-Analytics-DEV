@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
+import type { EmblaCarouselType } from "embla-carousel";
 import { motion } from "framer-motion";
 import {
   BarChart2, MousePointerClick, Link2, TrendingUp,
@@ -157,8 +158,8 @@ export default function FeaturesGridPunchy() {
   const handleMouseEnter = useCallback(() => emblaApi?.plugins().autoplay.stop(), [emblaApi]);
   const handleMouseLeave = useCallback(() => emblaApi?.plugins().autoplay.play(),  [emblaApi]);
 
-  const onInit   = useCallback((api: any) => setScrollSnaps(api.scrollSnapList()), []);
-  const onSelect = useCallback((api: any) => setSelectedIndex(api.selectedScrollSnap()), []);
+  const onInit = useCallback((api: EmblaCarouselType) => setScrollSnaps(api.scrollSnapList()), []);
+  const onSelect = useCallback((api: EmblaCarouselType) => setSelectedIndex(api.selectedScrollSnap()), []);
 
   useEffect(() => {
     if (!emblaApi) return;
