@@ -500,7 +500,7 @@ export default function GruposVendaPage() {
       if (falhas > 0) {
         setCronTestFeedback({ ok: false, message: "Erro. Entre em contato com o suporte." });
       } else {
-        setCronTestFeedback({ ok: true, message: "Enviado." });
+        setCronTestFeedback({ ok: true, message: "Conexão ativa." });
       }
       if (processed > 0) loadContinuo();
     } catch (e) {
