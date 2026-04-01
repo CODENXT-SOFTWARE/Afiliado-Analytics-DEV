@@ -18,6 +18,7 @@ import {
   ListChecks,
   Film,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import {
@@ -104,6 +105,13 @@ const sidebarNavItems: NavItem[] = [
     title: "Gerador de Criativos",
     href: "/dashboard/video-editor",
     icon: <Film className="h-5 w-5" />,
+    proOnly: true,
+    proFeature: "geradorCriativos",
+  },
+  {
+    title: "Gerador de Especialista",
+    href: "/dashboard/gerador-especialista",
+    icon: <Sparkles className="h-5 w-5" />,
     proOnly: true,
     proFeature: "geradorCriativos",
   },

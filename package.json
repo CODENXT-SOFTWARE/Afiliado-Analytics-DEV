@@ -36,6 +36,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.38.0",
+    "google-auth-library": "^10.6.2",
     "idb-keyval": "^6.2.2",
     "is-plain-object": "^2.0.4",
     "lucide-react": "^0.541.0",
