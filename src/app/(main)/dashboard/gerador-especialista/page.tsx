@@ -58,7 +58,7 @@ const STEPS = [
   { id: 1, title: "Produto", icon: ImageIcon },
   { id: 2, title: "Cenário", icon: User },
   { id: 3, title: "Imagem IA", icon: Sparkles },
-  { id: 4, title: "Vídeo Veo", icon: Film },
+  { id: 4, title: "Vídeo", icon: Film },
 ] as const;
 
 function FieldLabel({
@@ -715,9 +715,7 @@ function ExpertGeneratorInner() {
             <h1 className="text-base font-bold text-text-primary">
               Gerador de Especialista
             </h1>
-            <p className="text-[11px] text-text-secondary/60">
-              Produto → Cenário → Imagem (Nano Banana) → Vídeo Veo
-            </p>
+           
           </div>
         </div>
         <div className="hidden md:flex items-center gap-1 text-[11px] text-text-secondary/50">
@@ -1245,14 +1243,12 @@ function ExpertGeneratorInner() {
         <CardShell
           icon={Sparkles}
           title="Gerar imagem"
-          subtitle="Nano Banana (Gemini Image): enviamos o prompt completo e, se houver, a foto do produto."
+          subtitle="A magia começa aqui!!"
           bodyClassName="flex flex-col p-0 gap-0"
         >
           <div className="flex flex-col lg:flex-row lg:items-stretch lg:min-h-0 lg:max-h-[min(88vh,860px)]">
             <div className="flex flex-col gap-4 p-5 lg:w-1/2 lg:flex-none lg:min-w-0 lg:min-h-0 lg:max-h-[min(88vh,860px)] lg:overflow-y-auto lg:border-r border-dark-border/60">
-              <p className="text-[11px] text-text-secondary/80">
-                Gemini Image costuma exigir faturamento ativo na API Google AI.
-              </p>
+             
               <div>
                 <FieldLabel>Proporção da imagem</FieldLabel>
                 <div className="flex flex-wrap gap-2">
@@ -1272,7 +1268,7 @@ function ExpertGeneratorInner() {
               <button
                 type="button"
                 onClick={() => setAdvancedImageOpen((o) => !o)}
-                className="flex items-center gap-2 text-sm text-text-secondary w-full justify-between py-2 border-t border-dark-border/80"
+                className="flex hidden items-center gap-2 text-sm text-text-secondary w-full justify-between py-2 border-t border-dark-border/80"
               >
                 <span>Prompt avançado (imagem)</span>
                 {advancedImageOpen ? (
@@ -1308,7 +1304,7 @@ function ExpertGeneratorInner() {
                 ) : (
                   <ImageIcon className="h-4 w-4" />
                 )}
-                Gerar imagem (Nano Banana · Gemini Image)
+                Gerar imagem 
               </button>
               {!canGenerateImage ? (
                 <p className="text-center text-xs text-text-secondary">
@@ -1389,7 +1385,7 @@ function ExpertGeneratorInner() {
         <CardShell
           icon={Film}
           title="Vídeo com Veo 3.1 Fast"
-          subtitle="Como no cenário: movimento → duração → formato → resolução → áudio (sem / com voz) → roteiro se escolher voz. ~US$0,10/s."
+        
           bodyClassName={
             imageResult
               ? "flex flex-col p-0 gap-0"
@@ -1469,11 +1465,13 @@ function ExpertGeneratorInner() {
                         )}
                         <button
                           type="button"
-                          className={`w-full ${btnPrimary} py-3`}
+                          className={`compress-media-sweep-btn isolate w-full ${btnPrimary} py-3`}
                           onClick={() => setVideoWizardTab("duration")}
                         >
-                          Continuar para duração
-                          <ChevronRight className="h-4 w-4" />
+                          <span className="relative z-[1] inline-flex items-center justify-center gap-2">
+                            Continuar para duração
+                            <ChevronRight className="h-4 w-4" />
+                          </span>
                         </button>
                       </>
                     )}
@@ -1484,7 +1482,7 @@ function ExpertGeneratorInner() {
                           Duração do vídeo
                         </FieldLabel>
                         <div className="flex flex-wrap gap-2">
-                          {([4, 6, 8] as const).map((d) => (
+                          {([ 6 ] as const).map((d) => (
                             <button
                               key={d}
                               type="button"
@@ -1589,7 +1587,7 @@ function ExpertGeneratorInner() {
                         <FieldLabel>Áudio no vídeo</FieldLabel>
                         <p className="text-[11px] text-text-secondary -mt-2">
                           Sem som: vídeo mudas — pode gerar de seguida. Com voz:
-                          abrimos o roteiro (escreva ou use IA com Gemini).
+                          abrimos o roteiro.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <button
@@ -1653,7 +1651,7 @@ function ExpertGeneratorInner() {
                               Roteiro falado
                             </p>
                             <p className="text-[11px] text-text-secondary">
-                              Com texto, o Veo gera <strong>áudio</strong> e
+                              Com texto, gera <strong>áudio</strong> e
                               tenta sincronizar a boca (qualidade variável).
                               Voz em português do Brasil.
                             </p>
@@ -1707,10 +1705,10 @@ function ExpertGeneratorInner() {
                               }}
                             >
                               <Sparkles className="h-4 w-4 text-shopee-orange" />
-                              Gerar roteiro com IA (Gemini)
+                              Gerar roteiro com IA 
                             </button>
                           </div>
-                          <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                          <label className="flex hidden items-center gap-2 text-sm text-text-secondary cursor-pointer">
                             <input
                               type="checkbox"
                               checked={generateAudio}
@@ -1736,7 +1734,7 @@ function ExpertGeneratorInner() {
                   <button
                     type="button"
                     onClick={() => setAdvancedVideoOpen((o) => !o)}
-                    className="flex items-center gap-2 text-sm text-text-secondary w-full justify-between py-2 border-t border-dark-border/80"
+                    className="flex hidden items-center gap-2 text-sm text-text-secondary w-full justify-between py-2 border-t border-dark-border/80"
                   >
                     <span>Prompt avançado (vídeo)</span>
                     {advancedVideoOpen ? (
@@ -1780,7 +1778,7 @@ function ExpertGeneratorInner() {
                     ) : (
                       <Video className="h-4 w-4" />
                     )}
-                    Gerar vídeo (~US$ 0,10/s · Veo 3.1 Fast)
+                    Gerar vídeo 
                   </button>
                   {videoAudioMode === null ? (
                     <p className="text-xs text-amber-400/90 text-center">
@@ -1788,11 +1786,7 @@ function ExpertGeneratorInner() {
                       desbloquear a geração.
                     </p>
                   ) : null}
-                  <p className="text-xs text-text-secondary text-center">
-                    Custo indicativo: {durationSec}s × US$ 0,10 ≈ US$
-                    {(durationSec * 0.1).toFixed(2)} (consulte a tabela Google
-                    atual).
-                  </p>
+                 
                 </div>
 
                 <aside className="flex flex-col p-5 lg:w-1/2 lg:flex-none lg:min-w-0 lg:min-h-0 lg:max-h-[min(88vh,860px)] border-t lg:border-t-0 border-dark-border/60 bg-dark-bg/30 overflow-hidden">
@@ -1904,9 +1898,7 @@ function ExpertGeneratorInner() {
                   Gerar roteiro com IA
                 </h2>
                 <p className="text-[11px] text-text-secondary mt-1 leading-relaxed">
-                  Descreva brevemente o produto. O Gemini devolve texto falado
-                  para <strong>{durationSec}s</strong> (ajustado ao movimento
-                  escolhido).
+                  Descreva brevemente o produto. 
                 </p>
               </div>
               <button
