@@ -98,6 +98,8 @@ export async function POST(req: Request) {
       ? b.productVisionSummary.trim()
       : null;
 
+  const productWearOnModel = opt.productWearOnModel === true;
+
   const imageBuild: ExpertImageBuildInput = {
     model,
     sceneIds: asStringArray(opt.sceneIds),
@@ -108,6 +110,7 @@ export async function POST(req: Request) {
     improvementIds: asStringArray(opt.improvementIds),
     productDescription: productDescription || undefined,
     productVisionSummary,
+    productWearOnModel,
   };
 
   const videoBuild: ExpertVideoBuildInput = {

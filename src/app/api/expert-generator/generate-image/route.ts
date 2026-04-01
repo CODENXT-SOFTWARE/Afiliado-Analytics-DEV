@@ -102,6 +102,8 @@ export async function POST(req: Request) {
 
   const hasProductPhoto = Boolean(productImageBase64);
 
+  const productWearOnModel = opt.productWearOnModel === true;
+
   const buildInput: ExpertImageBuildInput = {
     model,
     sceneIds: asStringArray(opt.sceneIds),
@@ -113,6 +115,7 @@ export async function POST(req: Request) {
     productDescription: productDescription || undefined,
     productVisionSummary: null,
     productImageAttachedForNanoBanana: hasProductPhoto,
+    productWearOnModel,
   };
 
   if (!productImageBase64 && productDescription.length < 15) {
@@ -143,6 +146,7 @@ export async function POST(req: Request) {
     productImageBase64: productImageBase64 || null,
     productMimeType,
     modelReferenceImages,
+    productWearOnModel,
   });
   if (!nb.ok) {
     const isKey = /GEMINI_API_KEY não configurada/i.test(nb.error);

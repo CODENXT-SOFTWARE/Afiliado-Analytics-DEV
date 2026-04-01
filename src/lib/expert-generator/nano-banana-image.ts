@@ -19,6 +19,13 @@ Do NOT output this reference as the full final picture — create a NEW photorea
 
 `;
 
+const MULTIMODAL_INTRO_WEAR = `The image below is a reference for apparel or another wearable (graphics, colors, cut, fabric). Reproduce it as worn naturally on the person in the generated scene — correct fit and drape — not as an object only held flat toward the camera unless the text instructions say otherwise.
+Do NOT output this reference as the full final picture — create a NEW photorealistic photograph that follows the instructions after the separator.
+
+---
+
+`;
+
 const MODEL_FACE_REF_INTRO = `The images immediately below are reference photos of the SAME woman (facial identity, hair, skin tone, age). Your output must show this same person. They are NOT product photos — use them only for her appearance. Keep her identity consistent; pose, outfit, lighting, and scene follow the text instructions after the separator.
 
 `;
@@ -111,7 +118,8 @@ function buildBody(
   aspectRatio: string,
   productImageBase64: string | null,
   productMimeType: string,
-  modelReferenceImages: NanoBananaRefImage[]
+  modelReferenceImages: NanoBananaRefImage[],
+  productWearOnModel: boolean
 ) {
   const parts: GeminiImagePart[] = [];
 
@@ -135,7 +143,8 @@ function buildBody(
   }
 
   if (productImageBase64) {
-    parts.push({ text: MULTIMODAL_INTRO + promptText });
+    const intro = productWearOnModel ? MULTIMODAL_INTRO_WEAR : MULTIMODAL_INTRO;
+    parts.push({ text: intro + promptText });
     parts.push({
       inlineData: {
         mimeType: productMimeType || "image/jpeg",
@@ -164,7 +173,8 @@ async function generateOnce(
   aspectRatio: string,
   productImageBase64: string | null,
   productMimeType: string,
-  modelReferenceImages: NanoBananaRefImage[]
+  modelReferenceImages: NanoBananaRefImage[],
+  productWearOnModel: boolean
 ): Promise<NanoBananaImageResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const body = buildBody(
@@ -172,7 +182,8 @@ async function generateOnce(
     aspectRatio,
     productImageBase64,
     productMimeType,
-    modelReferenceImages
+    modelReferenceImages,
+    productWearOnModel
   );
 
   const res = await fetch(url, {
@@ -230,6 +241,8 @@ export async function generateNanoBananaImage(params: {
   productMimeType: string;
   /** Fotos da modelo (preset) — mesma ordem que no pedido multimodal */
   modelReferenceImages?: NanoBananaRefImage[];
+  /** Quando true, o intro multimodal da foto do produto pede “vestir” em vez de embalagem nas mãos. */
+  productWearOnModel?: boolean;
 }): Promise<NanoBananaImageResult> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) {
@@ -248,6 +261,7 @@ export async function generateNanoBananaImage(params: {
   }
 
   const modelReferenceImages = params.modelReferenceImages ?? [];
+  const productWearOnModel = params.productWearOnModel === true;
 
   for (const model of candidates) {
     const result = await generateOnce(
@@ -257,7 +271,8 @@ export async function generateNanoBananaImage(params: {
       params.aspectRatio,
       params.productImageBase64,
       params.productMimeType,
-      modelReferenceImages
+      modelReferenceImages,
+      productWearOnModel
     );
     if (result.ok) return result;
     errors.push(`[${model}] ${result.error}`);

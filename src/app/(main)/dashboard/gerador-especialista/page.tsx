@@ -227,6 +227,8 @@ function ExpertGeneratorInner() {
   const [productMime, setProductMime] = useState("image/jpeg");
   const [productDescription, setProductDescription] = useState("");
   const [productDescriptionOpen, setProductDescriptionOpen] = useState(false);
+  /** false = segurar nas mãos (padrão); true = vestir no corpo (ex.: camiseta). */
+  const [productWearOnModel, setProductWearOnModel] = useState(false);
   const [compressing, setCompressing] = useState(false);
 
   const activeProductDescription = useMemo(
@@ -505,6 +507,7 @@ function ExpertGeneratorInner() {
         : { mode: "preset" as const, presetId, gender };
     return {
       model,
+      productWearOnModel,
       sceneIds: sceneUseCustom ? [] : sceneIds,
       sceneCustom: sceneUseCustom ? sceneCustom : "",
       poseIds: poseUseCustom ? [] : poseIds,
@@ -519,6 +522,7 @@ function ExpertGeneratorInner() {
     customModel,
     gender,
     presetId,
+    productWearOnModel,
     sceneIds,
     sceneCustom,
     sceneUseCustom,
@@ -849,6 +853,14 @@ function ExpertGeneratorInner() {
               />
             </button>
           </div>
+
+          <PersonalizedFieldSwitch
+            checked={productWearOnModel}
+            onCheckedChange={setProductWearOnModel}
+            label="Produto para vestir"
+            description="Ligado: a peça vai no corpo (camisa, boné, etc.). Desligado: segurar nas mãos, como frasco ou caixa."
+            ariaLabel="Produto para vestir em vez de segurar"
+          />
 
           {productDescriptionOpen ? (
             <>

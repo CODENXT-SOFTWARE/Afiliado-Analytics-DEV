@@ -16,30 +16,26 @@ import {
  * `{MODEL_GENDER}`, `{MODEL_DESCRIPTION}`, `{PRODUCT_REFERENCE_IMAGE}`, `{SCENE_DESCRIPTION}`,
  * `{CUSTOM_SCENE}`, `{POSE_DESCRIPTION}`, `{STYLE_DESCRIPTION}`, `{IMPROVEMENT_DESCRIPTION}`,
  * `{MOVEMENT_DESCRIPTION}` (vídeo; em imagem estática usa texto neutro se existir no template).
+ * `{PRODUCT_USE_BODY}` — bloco “segurar vs vestir” + referência do produto (preenchido no servidor).
+ * `{VIDEO_SEED_PRODUCT_PHRASE}`, `{VIDEO_PRODUCT_MOTION_HINT}` — continuidade no vídeo conforme vestir/segurar.
  */
 export const DEFAULT_IMAGE_PROMPT = `NOT a product packshot — NOT a bottle alone on a backdrop. Ultra-realistic Brazilian UGC — ONE lifestyle photograph with person + place + product.
 
 WHO YOU MUST SHOW (non-negotiable): a real adult Brazilian {MODEL_GENDER}, appearance: {MODEL_DESCRIPTION}. This person is the MAIN subject and must occupy a large share of the frame (face and/or upper body visible per pose — never omit the human unless the pose explicitly allows hands-only with visible skin). They stand or sit in: {SCENE_DESCRIPTION}. Custom scene notes: {CUSTOM_SCENE}. Pose: {POSE_DESCRIPTION}. Wardrobe / vibe: {STYLE_DESCRIPTION}. Quality notes: {IMPROVEMENT_DESCRIPTION}.
 
-WHAT THEY HOLD (must match spec, not “similar”): the product is ONLY the object in their hands. Follow this product specification literally — same silhouette, colors, label layout, logo, typography, cap, material finish, and unit count. Ground truth is the text below and, when a product reference image is included in the same generation request, that image for exact pack identity: {PRODUCT_REFERENCE_IMAGE}
+{PRODUCT_USE_BODY}
 
-LABEL AND TYPOGRAPHY (mandatory — common failure mode): If the specification describes a printed label, bands, logos, or any words on the pack, you MUST render them on the product surface facing the camera. Do NOT output a blank white (or plain) bottle/box where a graphic label was described. Every string listed after LABEL_TEXT_TO_RENDER in the spec must appear as readable print on the packaging, not as floating subtitles in the air. Shallow depth of field is OK on the background, but the label area must be sharp enough to read the brand. A smooth empty cylinder with no graphics when the spec mentions GLUCO, VITAL, red bands, etc. is an invalid output.
+LABEL AND TYPOGRAPHY (mandatory — common failure mode): If the specification describes a printed label, bands, logos, or words on packaging OR printed graphics/text on fabric or garments, you MUST render them on the actual product surface facing the camera (bottle, box, fabric, etc.). Do NOT output blank undecorated surfaces where graphics were described. Every string listed after LABEL_TEXT_TO_RENDER in the spec must appear as real print on the product, not as floating subtitles in the air. Shallow depth of field is OK on the background, but branded/print areas must be sharp enough to read. A smooth empty cylinder or plain tee when the spec mentions logos, bands, or artwork is an invalid output.
 
-Do NOT output a packshot, catalog tile, or “reference image” of the product alone. Do NOT fill the frame with only the packaging on a plain or studio background. Do NOT paste or recreate the user's upload as the entire picture. The correct output is always: environment + visible presenter + product in hands together in one shot.
-
-The {MODEL_GENDER} faces or angles toward the camera as in the pose, presenting the product at arm's length or chest height so the label stays readable. Casual UGC energy — not a glossy ad. Lighting matches the scene (sun outdoors, warm indoors, gym fluorescents, etc.). Natural skin, hair, fabric; phone-camera selfie / front-camera look, slight grain.
-
-Hard bans: fake phone UI, status bar, app chrome, story/reels frame, watermarks, gibberish UI text. Full-bleed photo like a camera-roll file. Brazilian everyday authenticity — no mansion glam kitchen.
-
-Photorealistic: a Brazilian creator showing a friend what they bought — person first, product clearly in the same frame.`;
+Hard bans: fake phone UI, status bar, app chrome, story/reels frame, watermarks, gibberish UI text. Full-bleed photo like a camera-roll file. Brazilian everyday authenticity — no mansion glam kitchen.`;
 
 export const DEFAULT_VIDEO_PROMPT = `Ultra-realistic Brazilian UGC vertical video — one continuous take feel.
 
-The FIRST FRAME you receive is already the full scene: the same {MODEL_GENDER} ({MODEL_DESCRIPTION}), environment ({SCENE_DESCRIPTION}; custom: {CUSTOM_SCENE}), pose ({POSE_DESCRIPTION}), style ({STYLE_DESCRIPTION}), holding the product. EXTEND that moment in time — do not replace it with a product-only intro, packshot B-roll, or a cut to “just the bottle” before the person appears. No slideshow: no shot that is only the SKU on white, then a different shot with the person. Same human, same clothes, same room, same pack design for the whole clip.
+The FIRST FRAME you receive is already the full scene: the same {MODEL_GENDER} ({MODEL_DESCRIPTION}), environment ({SCENE_DESCRIPTION}; custom: {CUSTOM_SCENE}), pose ({POSE_DESCRIPTION}), style ({STYLE_DESCRIPTION}), {VIDEO_SEED_PRODUCT_PHRASE} EXTEND that moment in time — do not replace it with a product-only intro, packshot B-roll, or a cut to “just the bottle” before the person appears. No slideshow: no shot that is only the SKU on white, then a different shot with the person. Same human, same clothes, same room, same product appearance for the whole clip.
 
-Product identity (text spec — keep identical motion-to-motion; label graphics must stay visible and legible, not blank packaging): {PRODUCT_REFERENCE_IMAGE}
+Product identity (text spec — keep identical motion-to-motion; graphics must stay visible and legible, not blank surfaces): {PRODUCT_REFERENCE_IMAGE}
 
-Movement: {MOVEMENT_DESCRIPTION}. Handheld micro-shake, imperfect framing, natural light for the scene. The {MODEL_GENDER} talks or reacts like recommending to a friend; product stays visible in hand. Quality: {IMPROVEMENT_DESCRIPTION}.
+Movement: {MOVEMENT_DESCRIPTION}. Handheld micro-shake, imperfect framing, natural light for the scene. The {MODEL_GENDER} talks or reacts like recommending to a friend; {VIDEO_PRODUCT_MOTION_HINT} Quality: {IMPROVEMENT_DESCRIPTION}.
 
 Hard bans: fake phone UI, status bar, story chrome, watermarks, social headers. Plain full-bleed footage like camera roll. Photoreal Brazilian UGC — not a TV ad.`;
 
@@ -62,6 +58,10 @@ export type ExpertImageBuildInput = {
    * Ajusta STEP 1 e `{PRODUCT_REFERENCE_IMAGE}` para não depender só de texto.
    */
   productImageAttachedForNanoBanana?: boolean;
+  /**
+   * `true` = produto vestível no corpo (ex.: camisa). `false`/omitido = segurar nas mãos (padrão).
+   */
+  productWearOnModel?: boolean;
 };
 
 export type ExpertVideoBuildInput = ExpertImageBuildInput & {
@@ -108,6 +108,10 @@ function modelGenderWord(gender: "women" | "men"): string {
   return gender === "women" ? "woman" : "man";
 }
 
+function wearMode(input: ExpertImageBuildInput): boolean {
+  return input.productWearOnModel === true;
+}
+
 /** Remove cabeçalhos tipo "2) CONTAINER / FORM" que o Gemini antigo punha no texto e o Imagen imprimia no rótulo. */
 function sanitizeGeminiOutlineBleed(text: string): string {
   const lines = text.split(/\r?\n/);
@@ -135,17 +139,63 @@ function buildProductReferenceForTemplate(input: ExpertImageBuildInput): string 
   const merged = chunks.join("\n\n").trim();
   if (!merged) {
     if (input.productImageAttachedForNanoBanana) {
+      if (wearMode(input)) {
+        return (
+          "[WEARABLE PRODUCT — match the attached product reference image in this request]\n" +
+          "The garment or wearable's cut, colors, graphics, neckline, sleeves, and fabric read are visible in the product image. Reproduce it naturally worn on the presenter’s body with believable fit and drape — do not invent a different item and do not show only a flat folded shirt unless the scene explicitly calls for that."
+        );
+      }
       return (
         "[OBJECT IN HANDS — match the attached product reference image in this request]\n" +
         "The exact pack (silhouette, label layout, colors, cap, typography, materials, unit count) is visible in the product image supplied with this prompt. Reproduce that same SKU in the presenter’s hands — do not invent a substitute product."
       );
     }
-    return "Use STEP 1 product text above — reproduce that exact pack in the presenter's hands only.";
+    return wearMode(input)
+      ? "Use STEP 1 product text above — reproduce that exact wearable on the presenter's body."
+      : "Use STEP 1 product text above — reproduce that exact pack in the presenter's hands only.";
+  }
+  if (wearMode(input)) {
+    return (
+      "[WEARABLE ON BODY — not the whole photograph; match every detail below]\n" +
+      merged
+    );
   }
   return (
     "[OBJECT IN HANDS — not the whole photograph; match every detail below]\n" +
     merged
   );
+}
+
+/** Bloco STEP 3 substituído em `{PRODUCT_USE_BODY}` (inclui já o texto de `{PRODUCT_REFERENCE_IMAGE}` resolvido). */
+function buildProductUseBodyForImageTemplate(
+  input: ExpertImageBuildInput,
+  productRef: string
+): string {
+  const g = modelGenderWord(input.model.gender);
+  if (wearMode(input)) {
+    return [
+      `WHAT THEY WEAR (must match spec, not “similar”): the product must be visibly ON THE PRESENTER'S BODY — believable fit, drape, seams, neckline/sleeves as appropriate, and any print/graphics exactly as in the reference. Do NOT default to holding the item stretched toward the camera like a bottle unless it is clearly not apparel. Ground truth is the text below and, when a product reference image is included in the same generation request, that image for exact garment identity:`,
+      "",
+      productRef,
+      "",
+      "Do NOT output a packshot of clothing alone on a hanger or flat lay as the entire frame without the person. Do NOT fill the frame with only the garment on a plain backdrop and no wearer. The correct output is always: environment + visible presenter + product worn on the body in one shot.",
+      "",
+      `The ${g} faces or angles toward the camera as in the pose; the worn product must read clearly (torso, shoulders, sleeves, or full outfit as appropriate). Casual UGC energy — not a glossy catalog lookbook.`,
+      "",
+      "Photorealistic: a Brazilian creator showing how the piece looks on them — person first, garment clearly visible and faithful to the reference.",
+    ].join("\n");
+  }
+  return [
+    `WHAT THEY HOLD (must match spec, not “similar”): the product is ONLY the object in their hands. Follow this product specification literally — same silhouette, colors, label layout, logo, typography, cap, material finish, and unit count. Ground truth is the text below and, when a product reference image is included in the same generation request, that image for exact pack identity:`,
+    "",
+    productRef,
+    "",
+    "Do NOT output a packshot, catalog tile, or “reference image” of the product alone. Do NOT fill the frame with only the packaging on a plain or studio background. Do NOT paste or recreate the user's upload as the entire picture. The correct output is always: environment + visible presenter + product in hands together in one shot.",
+    "",
+    `The ${g} faces or angles toward the camera as in the pose, presenting the product at arm's length or chest height so the label stays readable. Casual UGC energy — not a glossy ad. Lighting matches the scene (sun outdoors, warm indoors, gym fluorescents, etc.). Natural skin, hair, fabric; phone-camera selfie / front-camera look, slight grain.`,
+    "",
+    "Photorealistic: a Brazilian creator showing a friend what they bought — person first, product clearly in the same frame.",
+  ].join("\n");
 }
 
 function buildModelDescriptionForTemplate(input: ExpertImageBuildInput): string {
@@ -224,10 +274,21 @@ export function fillExpertPromptTemplate(
         ? "—"
         : "not specified — use only the main scene type above";
 
+  const productRefBlock = buildProductReferenceForTemplate(input);
+  const videoSeedPhrase = wearMode(input)
+    ? "already wearing the product on their body (garment or wearable as in the seed frame)."
+    : "holding the product.";
+  const videoMotionHint = wearMode(input)
+    ? "the worn product stays clearly visible on the body (fit, print, drape)."
+    : "product stays visible in hand.";
+
   const map: Record<string, string> = {
     MODEL_GENDER: modelGenderWord(input.model.gender),
     MODEL_DESCRIPTION: buildModelDescriptionForTemplate(input),
-    PRODUCT_REFERENCE_IMAGE: buildProductReferenceForTemplate(input),
+    PRODUCT_REFERENCE_IMAGE: productRefBlock,
+    PRODUCT_USE_BODY: buildProductUseBodyForImageTemplate(input, productRefBlock),
+    VIDEO_SEED_PRODUCT_PHRASE: videoSeedPhrase,
+    VIDEO_PRODUCT_MOTION_HINT: videoMotionHint,
     SCENE_DESCRIPTION: buildSceneDescriptionForTemplate(input),
     CUSTOM_SCENE: customSceneSlot,
     POSE_DESCRIPTION: buildPoseDescriptionForTemplate(input),
@@ -255,16 +316,25 @@ function buildImagePromptPreamble(input: ExpertImageBuildInput): string {
   const scene = buildSceneDescriptionForTemplate(input);
   const sceneExtra = sceneCustomAdditionalForPreamble(input);
   const pose = buildPoseDescriptionForTemplate(input);
+  const line3 = wearMode(input)
+    ? `(3) That person clearly WEARING the product on their body (appearance matches STEP 1) — pose intent: ${pose}`
+    : `(3) That person holding the product toward the camera — pose intent: ${pose}`;
+  const rightLine = wearMode(input)
+    ? "RIGHT: the person and the room (or outdoor place) are clearly visible; the product is worn ON THEIR BODY (fit, drape, graphics) — not a clothing-only packshot without the wearer."
+    : "RIGHT: the person and the room (or outdoor place) are clearly visible; the product is an object IN THEIR HANDS, not the sole subject of the image.";
+  const step1Hint = wearMode(input)
+    ? "The paragraphs below labeled STEP 1 describe the product to wear (garment, accessory, etc.) — they are NOT instructions to output only that item as the full image without the human and scene."
+    : "The paragraphs below labeled STEP 1 describe ONLY the packaging to place in the person's hands — they are NOT instructions to draw only that packaging as the full image.";
   return [
     ">>> START — OUTPUT TYPE (HIGHEST PRIORITY) <<<",
     `You must generate ONE photorealistic UGC-style photograph that includes ALL of the following in the SAME frame:`,
     `(1) A real adult Brazilian ${g} — ${modelDesc}`,
     `(2) A real environment (not a void): ${scene}${sceneExtra ? ` Additional: ${sceneExtra}.` : ""}`,
-    `(3) That person holding the product toward the camera — pose intent: ${pose}`,
+    line3,
     "",
     "WRONG (do not generate): a photograph of ONLY the product on a plain black, gray, or white background with NO visible human body, NO face, NO arms — that is a catalog packshot and is rejected.",
-    "RIGHT: the person and the room (or outdoor place) are clearly visible; the product is an object IN THEIR HANDS, not the sole subject of the image.",
-    "The paragraphs below labeled STEP 1 describe ONLY the packaging to place in the person's hands — they are NOT instructions to draw only that packaging as the full image.",
+    rightLine,
+    step1Hint,
     ">>> END PREAMBLE <<<",
   ].join("\n");
 }
@@ -276,8 +346,11 @@ function buildStep1ProductFromImage(input: ExpertImageBuildInput): string {
     input.productDescription
   );
 
+  const step1Title = wearMode(input)
+    ? "STEP 1 — WEARABLE PRODUCT (text for the item on the presenter's body — NOT a description of the whole photograph)."
+    : "STEP 1 — HAND-HELD PRODUCT PROP ONLY (text for the object in the person's hands — NOT a description of the whole photograph).";
   const lines: string[] = [
-    "STEP 1 — HAND-HELD PRODUCT PROP ONLY (text for the object in the person's hands — NOT a description of the whole photograph).",
+    step1Title,
     "Ignore the temptation to output only this object: the final image must still show the human presenter and the scene from STEP 2.",
   ];
 
@@ -318,7 +391,9 @@ function buildStep1ProductFromImage(input: ExpertImageBuildInput): string {
   );
 
   lines.push(
-    "ROLE IN OUTPUT: The product exists only as the item the human presenter holds in the lifestyle scene. The final image must never be a packshot of the product alone without the scene and presenter described in STEP 2."
+    wearMode(input)
+      ? "ROLE IN OUTPUT: The product must appear as worn by the human presenter in the lifestyle scene (fit and identity match STEP 1). The final image must never be a packshot of the garment alone on a plain surface without the wearer and environment from STEP 2."
+      : "ROLE IN OUTPUT: The product exists only as the item the human presenter holds in the lifestyle scene. The final image must never be a packshot of the product alone without the scene and presenter described in STEP 2."
   );
 
   lines.push(
@@ -332,6 +407,9 @@ function buildStep1ProductFromImage(input: ExpertImageBuildInput): string {
 function buildStep2AppSelections(input: ExpertImageBuildInput): string {
   const blocks: string[] = [
     "STEP 2 — USER CHOICES FROM THE APP (apply every line below).",
+    wearMode(input)
+      ? "Product interaction (from app): WORN on the presenter's body — do not default to holding it like a bottle unless the product is not apparel."
+      : "Product interaction (from app): HELD in the presenter's hands.",
   ];
 
   if (input.model.mode === "preset") {
@@ -389,14 +467,21 @@ export function buildExpertCreativeCore(input: ExpertImageBuildInput): string {
 
 function buildImageCompositionGuarantee(input: ExpertImageBuildInput): string {
   const productForward = input.poseIds.includes("so-produto");
-  const humanLine = productForward
-    ? "Even in product-forward framing: real hands and forearms with natural skin must hold the product — never a floating pack with zero human."
-    : "The presenter's face and/or upper body must read clearly per STEP 2 pose — the specialist is mandatory, not optional.";
+  const humanLine =
+    productForward && wearMode(input)
+      ? "Even in product-forward framing: real skin and body must show the product worn — never disembodied fabric with zero human context."
+      : productForward
+        ? "Even in product-forward framing: real hands and forearms with natural skin must hold the product — never a floating pack with zero human."
+        : "The presenter's face and/or upper body must read clearly per STEP 2 pose — the specialist is mandatory, not optional.";
+  const productLine = wearMode(input)
+    ? "(3) product worn on the body per STEP 1."
+    : "(3) product in hands per STEP 1.";
   return [
     "COMPOSITION GUARANTEE (repeat — equal priority to STEP 3):",
     "Final image = one photorealistic Brazilian UGC photograph with ALL of: (1) environment from STEP 2, (2) visible adult " +
       modelGenderWord(input.model.gender) +
-      " per model description, (3) product in hands per STEP 1.",
+      " per model description, " +
+      productLine,
     humanLine,
     "FORBIDDEN: product-only; supplement bottle alone on dark gradient; Amazon-style packshot; white/gray/black seamless with zero human; macro product fill with no room context; any frame with no visible skin or body parts.",
     "FORBIDDEN: blank / unprinted packaging when STEP 1 describes a label — the bottle or box must show the described graphics and text on its surface.",
@@ -434,10 +519,16 @@ function buildLabelTypographyPunch(input: ExpertImageBuildInput): string {
 
 function buildImagePromptClosingReminder(input: ExpertImageBuildInput): string {
   const g = modelGenderWord(input.model.gender);
+  const actionLine = wearMode(input)
+    ? `Show a Brazilian ${g} in the chosen environment, clearly visible, wearing the specified product on the body — not a clothing-only still life without the person.`
+    : `Show a Brazilian ${g} in the chosen environment, clearly visible, holding the specified product — not a standalone bottle or jar photograph.`;
+  const labelLine = wearMode(input)
+    ? "If graphics or branding were described on fabric, they must appear on the garment — not blank cloth."
+    : "If a label was described, the pack must show that label — not plain white plastic.";
   return [
     ">>> FINAL REMINDER BEFORE RENDER <<<",
-    `Show a Brazilian ${g} in the chosen environment, clearly visible, holding the specified product — not a standalone bottle or jar photograph.`,
-    "If a label was described, the pack must show that label — not plain white plastic.",
+    actionLine,
+    labelLine,
     ">>> END <<<",
   ].join("\n");
 }
@@ -502,7 +593,9 @@ export function buildExpertVideoPrompt(
     `\n${buildVideoContinuityGuarantee()}`,
     `\nSTEP 3 — VIDEO RENDERING (template filled from UI + product text)\n${filledStep3}`,
     labelPunch ? `\n${labelPunch}` : "",
-    "\nKeep continuity with the reference frame: same person, outfit, product, environment — animate in place, do not reset to a new composition. Keep label graphics visible — not blank packaging.",
+    wearMode(input)
+      ? "\nKeep continuity with the reference frame: same person, outfit, product worn on the body, environment — animate in place, do not reset to a new composition. Keep garment graphics visible — not blank fabric."
+      : "\nKeep continuity with the reference frame: same person, outfit, product in hand, environment — animate in place, do not reset to a new composition. Keep label graphics visible — not blank packaging.",
   ];
   const script = input.voiceScript?.trim();
   if (script) {
