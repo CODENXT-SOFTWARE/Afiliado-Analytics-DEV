@@ -26,7 +26,7 @@ Do NOT output this reference as the full final picture — create a NEW photorea
 
 `;
 
-const MODEL_FACE_REF_INTRO = `The images immediately below are reference photos of the SAME woman (facial identity, hair, skin tone, age). Your output must show this same person. They are NOT product photos — use them only for her appearance. Keep her identity consistent; pose, outfit, lighting, and scene follow the text instructions after the separator.
+const MODEL_FACE_REF_INTRO = `The images immediately below are reference photos of the SAME adult person (facial identity, hair, skin tone, age). Your output must show this same person. They are NOT product photos — use them only for that person's appearance. Keep identity consistent; pose, outfit, lighting, and scene follow the text instructions after the separator.
 
 `;
 

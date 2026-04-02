@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import Image, { type StaticImageData } from "next/image";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -19,6 +26,8 @@ import {
   Mic,
   CheckCircle2,
   X,
+  Camera,
+  Info,
 } from "lucide-react";
 import ProFeatureGate from "../ProFeatureGate";
 import {
@@ -61,21 +70,98 @@ const STEPS = [
   { id: 4, title: "Vídeo", icon: Film },
 ] as const;
 
+/** Tooltip estilo Gerador de Criativos / video-editor: portal, fundo #111, seta inferior. */
+function HintTooltip({
+  text,
+  wide,
+  extraWide,
+}: {
+  text: string;
+  wide?: boolean;
+  extraWide?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const show = useCallback(() => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setCoords({
+      top: rect.top + window.scrollY - 8,
+      left: rect.left + rect.width / 2 + window.scrollX,
+    });
+    setVisible(true);
+  }, []);
+  const hide = useCallback(() => setVisible(false), []);
+  const widthCls = extraWide
+    ? "w-[min(22rem,calc(100vw-2rem))]"
+    : wide
+      ? "w-72"
+      : "w-56";
+  const tip = visible
+    ? createPortal(
+        <span
+          style={{
+            position: "absolute",
+            top: coords.top,
+            left: coords.left,
+            transform: "translate(-50%, -100%)",
+            zIndex: 99999,
+          }}
+          className={`pointer-events-none ${widthCls} p-2.5 bg-[#111] border border-[#333] rounded-lg shadow-2xl text-xs text-[#e5e5e5] leading-relaxed whitespace-normal block`}
+        >
+          {text}
+          <span className="absolute left-1/2 -translate-x-1/2 top-full -mt-px border-4 border-transparent border-t-[#111]" />
+        </span>,
+        document.body
+      )
+    : null;
+  return (
+    <span
+      ref={anchorRef}
+      className="inline-flex items-center shrink-0 cursor-help"
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onFocus={show}
+      onBlur={hide}
+    >
+      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#333]/80 text-[#888] hover:bg-shopee-orange/20 hover:text-shopee-orange transition-colors">
+        <Info className="h-2.5 w-2.5" />
+      </span>
+      {tip}
+    </span>
+  );
+}
+
 function FieldLabel({
   children,
   hint,
+  tooltip,
+  tooltipWide,
+  tooltipExtraWide,
   className,
 }: {
   children: React.ReactNode;
   hint?: string;
+  tooltip?: string;
+  tooltipWide?: boolean;
+  tooltipExtraWide?: boolean;
   className?: string;
 }) {
   return (
     <div className={className ? `mb-1.5 ${className}` : "mb-1.5"}>
-      <label className="block text-[11px] font-semibold text-text-secondary/60 uppercase tracking-wide">
-        {children}
-      </label>
-      {hint ? (
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-text-secondary/60 uppercase tracking-wide">
+        <span>{children}</span>
+        {tooltip ? (
+          <HintTooltip
+            text={tooltip}
+            wide={tooltipWide}
+            extraWide={tooltipExtraWide}
+          />
+        ) : null}
+      </div>
+      {hint && !tooltip ? (
         <p className="text-[10px] text-text-secondary/45 mt-0.5 leading-snug">
           {hint}
         </p>
@@ -89,21 +175,38 @@ function PersonalizedFieldSwitch({
   onCheckedChange,
   label,
   description,
+  infoTooltip,
+  infoTooltipWide,
+  infoTooltipExtraWide,
   ariaLabel,
 }: {
   checked: boolean;
   onCheckedChange: (next: boolean) => void;
   label: string;
-  description: string;
+  description?: string;
+  infoTooltip?: string;
+  infoTooltipWide?: boolean;
+  infoTooltipExtraWide?: boolean;
   ariaLabel: string;
 }) {
   return (
     <div className="rounded-xl border border-dark-border bg-dark-bg/45 px-3.5 py-3 flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-text-primary">{label}</p>
-        <p className="text-[11px] text-text-secondary/80 mt-0.5 leading-snug">
-          {description}
+        <p className="text-sm font-semibold text-text-primary flex items-center gap-1.5 flex-wrap">
+          {label}
+          {infoTooltip ? (
+            <HintTooltip
+              text={infoTooltip}
+              wide={infoTooltipWide}
+              extraWide={infoTooltipExtraWide}
+            />
+          ) : null}
         </p>
+        {description && !infoTooltip ? (
+          <p className="text-[11px] text-text-secondary/80 mt-0.5 leading-snug">
+            {description}
+          </p>
+        ) : null}
       </div>
       <button
         type="button"
@@ -129,12 +232,19 @@ function CardShell({
   icon: Icon,
   title,
   subtitle,
+  headerTooltip,
+  headerTooltipWide,
+  headerTooltipExtraWide,
   children,
   bodyClassName = "p-5 flex flex-col gap-4",
 }: {
   icon: LucideIcon;
   title: string;
   subtitle?: string;
+  /** Texto longo no ícone (i), estilo video-editor — sem ocupar o subtítulo. */
+  headerTooltip?: string;
+  headerTooltipWide?: boolean;
+  headerTooltipExtraWide?: boolean;
   children: React.ReactNode;
   /** Sobrescreve o padding/layout do corpo (ex.: split 50/50 no desktop). */
   bodyClassName?: string;
@@ -146,7 +256,16 @@ function CardShell({
           <Icon className="h-3.5 w-3.5 text-shopee-orange" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-text-primary">{title}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-bold text-text-primary">{title}</p>
+            {headerTooltip ? (
+              <HintTooltip
+                text={headerTooltip}
+                wide={headerTooltipWide}
+                extraWide={headerTooltipExtraWide}
+              />
+            ) : null}
+          </div>
           {subtitle ? (
             <p className="text-[11px] text-text-secondary/50">{subtitle}</p>
           ) : null}
@@ -183,6 +302,13 @@ type VideoWizardTab =
   | "resolution"
   | "audio"
   | "script";
+
+type CustomFaceRefSlot = {
+  id: string;
+  mimeType: string;
+  base64: string;
+  previewUrl: string;
+};
 
 const VIDEO_WIZARD_TABS: {
   id: VideoWizardTab;
@@ -240,6 +366,8 @@ function ExpertGeneratorInner() {
   const [modelMode, setModelMode] = useState<"preset" | "custom">("preset");
   const [presetId, setPresetId] = useState(FEMALE_PRESETS[0]!.id);
   const [customModel, setCustomModel] = useState("");
+  const [customFaceRefs, setCustomFaceRefs] = useState<CustomFaceRefSlot[]>([]);
+  const [faceRefErr, setFaceRefErr] = useState<string | null>(null);
 
   const [sceneIds, setSceneIds] = useState<string[]>(["casa"]);
   const [sceneCustom, setSceneCustom] = useState("");
@@ -288,6 +416,8 @@ function ExpertGeneratorInner() {
   const [imageResult, setImageResult] = useState<{
     base64: string;
     mime: string;
+    /** Quantas imagens de rosto foram enviadas ao Nano Banana neste pedido (preset ou tuas fotos). */
+    modelFaceReferenceCount?: number;
   } | null>(null);
   const [veoLoading, setVeoLoading] = useState(false);
   const [veoErr, setVeoErr] = useState<string | null>(null);
@@ -295,6 +425,7 @@ function ExpertGeneratorInner() {
   const [videoDataUrl, setVideoDataUrl] = useState<string | null>(null);
   const [videoGcsUri, setVideoGcsUri] = useState<string | null>(null);
   const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
+  const customFaceInputRef = useRef<HTMLInputElement>(null);
 
   const presets = gender === "women" ? FEMALE_PRESETS : MALE_PRESETS;
 
@@ -331,7 +462,13 @@ function ExpertGeneratorInner() {
 
   const canGenerateImage = useMemo(() => {
     if (compressing) return false;
-    if (modelMode === "custom" && customModel.trim().length < 8) return false;
+    if (
+      modelMode === "custom" &&
+      customModel.trim().length < 8 &&
+      customFaceRefs.length === 0
+    ) {
+      return false;
+    }
     return (
       Boolean(productBase64) || activeProductDescription.length >= 15
     );
@@ -339,6 +476,7 @@ function ExpertGeneratorInner() {
     compressing,
     modelMode,
     customModel,
+    customFaceRefs.length,
     productBase64,
     activeProductDescription,
   ]);
@@ -446,14 +584,6 @@ function ExpertGeneratorInner() {
     [hasProductBasics, canGenerateImage, imageResult]
   );
 
-  useEffect(() => {
-    if (step !== 2 || sceneWizardTab !== "model") return;
-    if (modelMode !== "custom") return;
-    if (customModel.trim().length < 8) return;
-    const t = setTimeout(() => setSceneWizardTab("scene"), 450);
-    return () => clearTimeout(t);
-  }, [customModel, modelMode, sceneWizardTab, step]);
-
   const modelSummaryLine = useMemo(() => {
     const g = gender === "women" ? "Mulheres" : "Homens";
     if (modelMode === "preset") {
@@ -461,8 +591,11 @@ function ExpertGeneratorInner() {
       return `${g} · ${p?.name ?? presetId}`;
     }
     const c = customModel.trim();
-    return `${g} · Personalizado${c ? ` — ${c.slice(0, 120)}${c.length > 120 ? "…" : ""}` : ""}`;
-  }, [gender, modelMode, presetId, customModel, presets]);
+    const n = customFaceRefs.length;
+    const refBit =
+      n > 0 ? ` · ${n} foto${n > 1 ? "s" : ""} referência (Nano Banana)` : "";
+    return `${g} · Personalizado${c ? ` — ${c.slice(0, 120)}${c.length > 120 ? "…" : ""}` : ""}${refBit}`;
+  }, [gender, modelMode, presetId, customModel, customFaceRefs.length, presets]);
 
   const ingestProductFile = useCallback(async (file: File | null) => {
     if (!file) {
@@ -500,26 +633,98 @@ function ExpertGeneratorInner() {
     }
   }, []);
 
-  const buildOptionsPayload = useCallback(() => {
-    const model =
-      modelMode === "custom"
-        ? { mode: "custom" as const, description: customModel, gender }
-        : { mode: "preset" as const, presetId, gender };
-    return {
-      model,
-      productWearOnModel,
-      sceneIds: sceneUseCustom ? [] : sceneIds,
-      sceneCustom: sceneUseCustom ? sceneCustom : "",
-      poseIds: poseUseCustom ? [] : poseIds,
-      poseCustom: poseUseCustom ? poseCustom : "",
-      styleIds,
-      improvementIds,
-      motionIds: motionUseCustom ? [] : motionIds,
-      motionCustom: motionUseCustom ? motionCustom : "",
-    };
-  }, [
+  const MAX_CUSTOM_FACE_PAYLOAD = 2_500_000;
+
+  const addCustomFaceFiles = useCallback(async (files: FileList | null) => {
+    if (!files?.length) return;
+    setFaceRefErr(null);
+    const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const newSlots: CustomFaceRefSlot[] = [];
+    for (const file of Array.from(files)) {
+      if (!allowed.has(file.type)) {
+        setFaceRefErr("Use JPEG, PNG ou WEBP nas fotos de rosto.");
+        continue;
+      }
+      try {
+        const blob = await compressImageFileToMaxBytes(
+          file,
+          MAX_CUSTOM_FACE_PAYLOAD
+        );
+        const b64 = await blobToBase64(blob);
+        const previewUrl = URL.createObjectURL(blob);
+        newSlots.push({
+          id:
+            typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          mimeType: "image/jpeg",
+          base64: b64,
+          previewUrl,
+        });
+      } catch (e) {
+        setFaceRefErr(
+          e instanceof Error ? e.message : "Erro ao processar uma das fotos."
+        );
+      }
+    }
+    if (!newSlots.length) return;
+    setCustomFaceRefs((prev) => {
+      const room = Math.max(0, 6 - prev.length);
+      if (room <= 0) {
+        newSlots.forEach((s) => URL.revokeObjectURL(s.previewUrl));
+        return prev;
+      }
+      const toAdd = newSlots.slice(0, room);
+      newSlots.slice(room).forEach((s) => URL.revokeObjectURL(s.previewUrl));
+      return [...prev, ...toAdd];
+    });
+  }, []);
+
+  const removeCustomFaceRef = useCallback((id: string) => {
+    setCustomFaceRefs((prev) => {
+      const slot = prev.find((x) => x.id === id);
+      if (slot) URL.revokeObjectURL(slot.previewUrl);
+      return prev.filter((x) => x.id !== id);
+    });
+  }, []);
+
+  const buildOptionsPayload = useCallback(
+    (opts?: { forImageApi?: boolean }) => {
+      const forImage = opts?.forImageApi === true;
+      const model =
+        modelMode === "custom"
+          ? { mode: "custom" as const, description: customModel, gender }
+          : { mode: "preset" as const, presetId, gender };
+      const base = {
+        model,
+        productWearOnModel,
+        sceneIds: sceneUseCustom ? [] : sceneIds,
+        sceneCustom: sceneUseCustom ? sceneCustom : "",
+        poseIds: poseUseCustom ? [] : poseIds,
+        poseCustom: poseUseCustom ? poseCustom : "",
+        styleIds,
+        improvementIds,
+        motionIds: motionUseCustom ? [] : motionIds,
+        motionCustom: motionUseCustom ? motionCustom : "",
+      };
+      if (
+        forImage &&
+        modelMode === "custom" &&
+        customFaceRefs.length > 0
+      ) {
+        return {
+          ...base,
+          customFaceReferenceImages: customFaceRefs.map(
+            ({ mimeType, base64 }) => ({ mimeType, base64 })
+          ),
+        };
+      }
+      return base;
+    },
+    [
     modelMode,
     customModel,
+    customFaceRefs,
     gender,
     presetId,
     productWearOnModel,
@@ -552,7 +757,7 @@ function ExpertGeneratorInner() {
           productImageBase64: productBase64 ?? "",
           productMimeType: productMime,
           productDescription: activeProductDescription,
-          options: buildOptionsPayload(),
+          options: buildOptionsPayload({ forImageApi: true }),
         }),
       });
       const raw = await res.text();
@@ -562,6 +767,7 @@ function ExpertGeneratorInner() {
         detail?: string;
         imageBase64?: string;
         mimeType?: string;
+        modelFaceReferenceCount?: number;
       } = {};
       try {
         data = JSON.parse(raw) as typeof data;
@@ -586,6 +792,10 @@ function ExpertGeneratorInner() {
       setImageResult({
         base64: data.imageBase64,
         mime: data.mimeType ?? "image/png",
+        modelFaceReferenceCount:
+          typeof data.modelFaceReferenceCount === "number"
+            ? data.modelFaceReferenceCount
+            : undefined,
       });
     } catch (e) {
       setGenImgErr(e instanceof Error ? e.message : "Erro ao gerar imagem.");
@@ -791,7 +1001,8 @@ function ExpertGeneratorInner() {
         <CardShell
           icon={ImageIcon}
           title="Foto do produto"
-          subtitle="JPEG, PNG ou WEBP — comprimimos no browser. Ative o interruptor se quiser descrever o produto por texto."
+          headerTooltip="JPEG, PNG ou WEBP — comprimimos no browser. Ative o interruptor se quiser descrever o produto por texto."
+          headerTooltipWide
         >
           <label className="flex flex-col items-center justify-center min-h-[168px] border-2 border-dashed border-dark-border rounded-xl bg-dark-bg/50 cursor-pointer hover:border-shopee-orange/45 transition-colors">
             <input
@@ -823,14 +1034,14 @@ function ExpertGeneratorInner() {
           </label>
 
           <div className="rounded-xl border border-dark-border bg-dark-bg/45 px-3.5 py-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex items-center gap-1.5">
               <p className="text-sm font-semibold text-text-primary">
                 Descrição do produto
               </p>
-              <p className="text-[11px] text-text-secondary/80 mt-0.5 leading-snug">
-                Ative para escrever notas (rótulo, cor, materiais). Sem foto, o
-                texto precisa de pelo menos 15 caracteres.
-              </p>
+              <HintTooltip
+                wide
+                text="Ative para escrever notas (rótulo, cor, materiais). Sem foto, o texto precisa de pelo menos 15 caracteres."
+              />
             </div>
             <button
               type="button"
@@ -856,13 +1067,14 @@ function ExpertGeneratorInner() {
             checked={productWearOnModel}
             onCheckedChange={setProductWearOnModel}
             label="Produto para vestir"
-            description="Ligado: a peça vai no corpo (camisa, boné, etc.). Desligado: segurar nas mãos, como frasco ou caixa."
+            infoTooltip="Ligado: a peça vai no corpo (camisa, boné, etc.). Desligado: segurar nas mãos, como frasco ou caixa."
+            infoTooltipWide
             ariaLabel="Produto para vestir em vez de segurar"
           />
 
           {productDescriptionOpen ? (
             <>
-              <FieldLabel hint="Opcional com foto. Sem foto, use pelo menos 15 caracteres para gerar só com texto.">
+              <FieldLabel tooltip="Opcional com foto. Sem foto, use pelo menos 15 caracteres para gerar só com texto.">
                 Texto da descrição
               </FieldLabel>
               <textarea
@@ -894,7 +1106,8 @@ function ExpertGeneratorInner() {
         <CardShell
           icon={User}
           title="Modelo, cena, pose e estilo"
-          subtitle="Escolha em sequência — avançamos automaticamente; use as abas para rever ou mudar."
+          headerTooltip="Use as abas (Modelo, Cena, Pose…) para rever ou mudar. Só ao escolher um preset é que saltamos para Cena; no modelo personalizado ficas no separador até mudares tu."
+          headerTooltipExtraWide
         >
           <div className="grid grid-cols-1 lg:grid-cols-10 gap-5 lg:items-stretch min-h-[300px]">
             <div className="lg:col-span-7 flex flex-col gap-3 min-w-0">
@@ -950,10 +1163,20 @@ function ExpertGeneratorInner() {
                     <PersonalizedFieldSwitch
                       checked={modelMode === "custom"}
                       onCheckedChange={(on) => {
+                        if (!on) {
+                          setFaceRefErr(null);
+                          setCustomFaceRefs((prev) => {
+                            prev.forEach((s) =>
+                              URL.revokeObjectURL(s.previewUrl)
+                            );
+                            return [];
+                          });
+                        }
                         setModelMode(on ? "custom" : "preset");
                       }}
                       label="Modelo personalizado"
-                      description="Ative para descrever a pessoa por texto. Desligado: só presets visuais."
+                      infoTooltip="Ative para descrever a pessoa por texto e/ou enviar fotos tuas para o Nano Banana. Desligado: só presets visuais."
+                      infoTooltipWide
                       ariaLabel="Usar descrição de modelo personalizada"
                     />
 
@@ -994,11 +1217,16 @@ function ExpertGeneratorInner() {
                         ))}
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <p className="text-xs text-text-secondary/70">
-                          Mín. 8 caracteres — com texto suficiente avançamos para
-                          Cena automaticamente.
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-1.5 text-xs text-text-secondary/80">
+                          <span className="font-medium text-text-primary/90">
+                            Descrição ou fotos de rosto
+                          </span>
+                          <HintTooltip
+                            extraWide
+                            text="Escreve pelo menos 8 caracteres na descrição ou adiciona fotos de rosto abaixo. Podes mudar o género, o texto e as fotos à vontade — passa para Cena na aba quando estiveres pronto (não saltamos sozinhos)."
+                          />
+                        </div>
                         <textarea
                           value={customModel}
                           onChange={(e) => setCustomModel(e.target.value)}
@@ -1006,6 +1234,76 @@ function ExpertGeneratorInner() {
                           rows={4}
                           className={inputCls}
                         />
+                        <div className="rounded-xl border border-dark-border/80 bg-dark-bg/50 p-3 space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
+                              Minhas fotos (referência facial)
+                            </p>
+                            <HintTooltip
+                              extraWide
+                              text="Até 6 imagens (JPEG/PNG/WebP). No passo 3, ao gerar a imagem, elas vão no mesmo pedido ao Nano Banana (multimodal), antes do texto — como as fotos dos presets. O resumo à direita mostra quantas tens carregadas; depois de gerar, o passo 3 confirma quantas o servidor usou."
+                            />
+                          </div>
+                          <input
+                            ref={customFaceInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              void addCustomFaceFiles(e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={customFaceRefs.length >= 6}
+                              onClick={() =>
+                                customFaceInputRef.current?.click()
+                              }
+                              className={`${btnSecondary} py-2 px-3 text-xs`}
+                            >
+                              <Camera className="h-3.5 w-3.5" />
+                              Adicionar fotos
+                            </button>
+                            <span className="text-[10px] text-text-secondary/60">
+                              {customFaceRefs.length}/6
+                            </span>
+                          </div>
+                          {faceRefErr ? (
+                            <p className="text-[11px] text-amber-400/90">
+                              {faceRefErr}
+                            </p>
+                          ) : null}
+                          {customFaceRefs.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {customFaceRefs.map((slot) => (
+                                <div
+                                  key={slot.id}
+                                  className="relative h-16 w-16 rounded-lg border border-dark-border overflow-hidden shrink-0 group"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={slot.previewUrl}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                  <button
+                                    type="button"
+                                    aria-label="Remover foto"
+                                    onClick={() =>
+                                      removeCustomFaceRef(slot.id)
+                                    }
+                                    className="absolute top-0.5 right-0.5 rounded-md bg-black/65 p-0.5 text-white opacity-90 hover:opacity-100"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     )}
                   </>
@@ -1014,11 +1312,12 @@ function ExpertGeneratorInner() {
                 {sceneWizardTab === "scene" && (
                   <>
                     <FieldLabel
-                      hint={
+                      tooltip={
                         sceneUseCustom
                           ? "Descreva o ambiente em texto livre. Desligue o interruptor para voltar aos cenários prontos."
                           : "Um chip de cada vez (ex.: Casa OU Academia). Ao tocar, seguimos para Pose."
                       }
+                      tooltipWide
                     >
                       Cena / ambiente
                     </FieldLabel>
@@ -1033,7 +1332,7 @@ function ExpertGeneratorInner() {
                           );
                       }}
                       label="Cenário personalizado"
-                      description="Ligado: só texto. Desligado: chips prontos."
+                      infoTooltip="Ligado: só texto. Desligado: chips prontos."
                       ariaLabel="Usar cenário descrito por texto"
                     />
                     {sceneUseCustom ? (
@@ -1071,11 +1370,12 @@ function ExpertGeneratorInner() {
                 {sceneWizardTab === "pose" && (
                   <>
                     <FieldLabel
-                      hint={
+                      tooltip={
                         poseUseCustom
                           ? "Descreva a pose em texto. Desligue para voltar aos chips."
                           : "Ao escolher ou alterar uma pose, passamos a Estilo — volte aqui pela aba se quiser várias poses."
                       }
+                      tooltipWide
                     >
                       Pose
                     </FieldLabel>
@@ -1090,7 +1390,7 @@ function ExpertGeneratorInner() {
                           );
                       }}
                       label="Pose personalizada"
-                      description="Ligado: só texto. Desligado: poses prontas."
+                      infoTooltip="Ligado: só texto. Desligado: poses prontas."
                       ariaLabel="Usar pose descrita por texto"
                     />
                     {poseUseCustom ? (
@@ -1125,7 +1425,10 @@ function ExpertGeneratorInner() {
 
                 {sceneWizardTab === "style" && (
                   <>
-                    <FieldLabel hint="Ao escolher estilo, passamos a Melhorias — use a aba Estilo para marcar mais de um.">
+                    <FieldLabel
+                      tooltip="Ao escolher estilo, passamos a Melhorias — use a aba Estilo para marcar mais de um."
+                      tooltipWide
+                    >
                       Estilo
                     </FieldLabel>
                     <div className="flex flex-wrap gap-2">
@@ -1343,6 +1646,16 @@ function ExpertGeneratorInner() {
                       <Download className="h-4 w-4" />
                       Descarregar PNG/JPEG
                     </button>
+                    {typeof imageResult.modelFaceReferenceCount === "number" &&
+                    imageResult.modelFaceReferenceCount > 0 ? (
+                      <p className="text-center text-[10px] text-emerald-400/90 leading-snug px-1">
+                        Neste pedido, foi enviado{" "}
+                        <strong>
+                          {imageResult.modelFaceReferenceCount} imagem(ns)
+                        </strong>{" "}
+                        de referência facial.
+                      </p>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="flex flex-1 flex-col items-center justify-center text-center text-text-secondary px-4 py-8">
@@ -1374,7 +1687,7 @@ function ExpertGeneratorInner() {
               onClick={() => setStep(4)}
               className={`${btnPrimary} flex-1 py-3 disabled:opacity-40`}
             >
-              Continuar para vídeo Veo
+              Continuar para vídeo 
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -1424,11 +1737,12 @@ function ExpertGeneratorInner() {
                     {videoWizardTab === "motion" && (
                       <>
                         <FieldLabel
-                          hint={
+                          tooltip={
                             motionUseCustom
                               ? "Descreva o movimento da câmara e da pessoa em texto livre."
                               : "Pode marcar vários. Depois avance para Duração."
                           }
+                          tooltipWide
                         >
                           Movimento
                         </FieldLabel>
@@ -1443,7 +1757,7 @@ function ExpertGeneratorInner() {
                               );
                           }}
                           label="Movimento personalizado"
-                          description="Ligado: só texto. Desligado: opções prontas."
+                          infoTooltip="Ligado: só texto. Desligado: opções prontas."
                           ariaLabel="Usar movimento descrito por texto"
                         />
                         {motionUseCustom ? (
@@ -1478,7 +1792,7 @@ function ExpertGeneratorInner() {
 
                     {videoWizardTab === "duration" && (
                       <>
-                        <FieldLabel hint="O roteiro com IA respeita estes segundos.">
+                        <FieldLabel tooltip="O roteiro com IA respeita estes segundos.">
                           Duração do vídeo
                         </FieldLabel>
                         <div className="flex flex-wrap gap-2">
@@ -1584,11 +1898,12 @@ function ExpertGeneratorInner() {
 
                     {videoWizardTab === "audio" && (
                       <>
-                        <FieldLabel>Áudio no vídeo</FieldLabel>
-                        <p className="text-[11px] text-text-secondary -mt-2">
-                          Sem som: vídeo mudas — pode gerar de seguida. Com voz:
-                          abrimos o roteiro.
-                        </p>
+                        <FieldLabel
+                          tooltip="Sem som: vídeo mudas — pode gerar de seguida. Com voz: abrimos o roteiro."
+                          tooltipWide
+                        >
+                          Áudio no vídeo
+                        </FieldLabel>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <button
                             type="button"
@@ -1646,14 +1961,13 @@ function ExpertGeneratorInner() {
                       videoAudioMode === "voice" && (
                         <>
                           <div className="rounded-xl border border-dark-border bg-dark-bg/40 p-3 space-y-3">
-                            <p className="text-xs font-semibold text-shopee-orange flex items-center gap-2">
-                              <Mic className="h-3.5 w-3.5" />
-                              Roteiro falado
-                            </p>
-                            <p className="text-[11px] text-text-secondary">
-                              Com texto, gera <strong>áudio</strong> e
-                              tenta sincronizar a boca (qualidade variável).
-                              Voz em português do Brasil.
+                            <p className="text-xs font-semibold text-shopee-orange flex items-center gap-2 flex-wrap">
+                              <Mic className="h-3.5 w-3.5 shrink-0" />
+                              <span>Roteiro falado</span>
+                              <HintTooltip
+                                wide
+                                text="Com texto, gera áudio e tenta sincronizar a boca (qualidade variável). Voz em português do Brasil."
+                              />
                             </p>
                             <div className="flex gap-2 flex-wrap">
                               <button

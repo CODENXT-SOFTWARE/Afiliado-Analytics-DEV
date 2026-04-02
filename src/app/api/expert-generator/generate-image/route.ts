@@ -13,6 +13,30 @@ import { generateNanoBananaImage } from "@/lib/expert-generator/nano-banana-imag
 export const maxDuration = 120;
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+const MAX_CUSTOM_FACE_REFS = 6;
+const MAX_CUSTOM_FACE_BYTES = 5 * 1024 * 1024;
+
+function parseCustomFaceReferenceImages(
+  opt: Record<string, unknown>
+): { mimeType: string; base64: string }[] {
+  const raw = opt.customFaceReferenceImages;
+  if (!Array.isArray(raw)) return [];
+  const out: { mimeType: string; base64: string }[] = [];
+  for (const item of raw) {
+    if (out.length >= MAX_CUSTOM_FACE_REFS) break;
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const mimeType = typeof o.mimeType === "string" ? o.mimeType.trim() : "";
+    const base64 =
+      typeof o.base64 === "string" ? o.base64.replace(/\s/g, "") : "";
+    if (!/^image\/(jpeg|png|webp)$/i.test(mimeType)) continue;
+    if (base64.length < 80) continue;
+    const approxBytes = (base64.length * 3) / 4;
+    if (approxBytes > MAX_CUSTOM_FACE_BYTES) continue;
+    out.push({ mimeType: mimeType.toLowerCase(), base64 });
+  }
+  return out;
+}
 
 function parseModel(raw: unknown): ExpertModelSelection | null {
   if (!raw || typeof raw !== "object") return null;
@@ -83,9 +107,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "model inválido" }, { status: 400 });
   }
 
-  if (model.mode === "custom" && model.description.trim().length < 8) {
+  const customFaceRefs = parseCustomFaceReferenceImages(opt);
+
+  if (
+    model.mode === "custom" &&
+    model.description.trim().length < 8 &&
+    customFaceRefs.length === 0
+  ) {
     return NextResponse.json(
-      { error: "Descreva a modelo em “Criar do Zero” (mín. 8 caracteres)." },
+      {
+        error:
+          "Descreva a pessoa (mín. 8 caracteres) ou envie pelo menos uma foto de referência facial.",
+      },
       { status: 400 }
     );
   }
@@ -138,6 +171,8 @@ export async function POST(req: Request) {
     if (packId) {
       modelReferenceImages = loadPresetReferenceImages(packId);
     }
+  } else if (model.mode === "custom" && customFaceRefs.length > 0) {
+    modelReferenceImages = customFaceRefs;
   }
 
   const nb = await generateNanoBananaImage({
@@ -175,5 +210,7 @@ export async function POST(req: Request) {
     productVisionSummary: productDescription || null,
     modelId: nb.modelUsed,
     imageProvider: "nano-banana" as const,
+    /** Confirmação para o UI: fotos de rosto enviadas no pedido multimodal ao Gemini Image. */
+    modelFaceReferenceCount: modelReferenceImages.length,
   });
 }
