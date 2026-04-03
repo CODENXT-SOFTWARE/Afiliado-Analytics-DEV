@@ -28,6 +28,7 @@ import BuscarGruposModal, {
   type EvolutionInstanceItem,
 } from "../gpl/BuscarGruposModal";
 import { usePlanEntitlements } from "../PlanEntitlementsContext";
+import ProFeatureGate from "../ProFeatureGate";
 
 type Instance = EvolutionInstanceItem & { id: string };
 
@@ -486,16 +487,19 @@ export default function EspelhamentoGruposPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col w-full text-[#f0f0f2] rounded-lg p-6">
-        <div className="flex items-center justify-center gap-2 py-20 text-[#a0a0a0] text-sm">
-          <Loader2 className="w-5 h-5 animate-spin text-[#e24c30]" />
-          Carregando…
+      <ProFeatureGate feature="espelhamentogrupos">
+        <div className="flex flex-col w-full text-[#f0f0f2] rounded-lg p-6">
+          <div className="flex items-center justify-center gap-2 py-20 text-[#a0a0a0] text-sm">
+            <Loader2 className="w-5 h-5 animate-spin text-[#e24c30]" />
+            Carregando…
+          </div>
         </div>
-      </div>
+      </ProFeatureGate>
     );
   }
 
   return (
+    <ProFeatureGate feature="espelhamentogrupos">
     <div className="flex flex-col w-full text-[#f0f0f2] rounded-lg p-3 sm:p-6 gap-4 sm:gap-5">
       <style jsx>{`
         .scrollbar-thin::-webkit-scrollbar {
@@ -1015,5 +1019,6 @@ export default function EspelhamentoGruposPage() {
         </div>
       )}
     </div>
+    </ProFeatureGate>
   );
 }

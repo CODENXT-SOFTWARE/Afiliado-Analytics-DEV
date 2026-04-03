@@ -17,6 +17,10 @@ export type PlanUsageSnapshot = {
   gruposVendaGroupsTotal: number;
   activeCampaigns: number;
   videoExportsToday: number;
+  /** Gerações do Gerador Especialista (imagem/voz) no dia UTC */
+  especialistaGenerationsToday: number;
+  /** Eventos de espelhamento gravados no dia UTC */
+  espelhamentoGruposToday: number;
 };
 
 export function utcTodayYmd(): string {
@@ -105,6 +109,8 @@ export async function getUsageSnapshot(
     { count: groupsCount },
     { count: activeCampaignsCount },
     { count: exportsCount },
+    { count: especialistaCount },
+    { count: espelhamentoCount },
   ] = await Promise.all([
     supabase
       .from("evolution_instances")
@@ -151,6 +157,8 @@ export async function getUsageSnapshot(
     gruposVendaGroupsTotal: groupsCount ?? 0,
     activeCampaigns: activeCampaignsCount ?? 0,
     videoExportsToday: exportsCount ?? 0,
+    especialistaGenerationsToday: especialistaCount ?? 0,
+    espelhamentoGruposToday: espelhamentoCount ?? 0,
   };
 }
 

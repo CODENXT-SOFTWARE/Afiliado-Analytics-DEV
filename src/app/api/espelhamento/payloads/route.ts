@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "utils/supabase/server";
+import { gateEspelhamentoGrupos } from "@/lib/require-entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,9 @@ export async function GET(req: Request) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const gate = await gateEspelhamentoGrupos();
+    if (!gate.allowed) return gate.response;
 
     const url = new URL(req.url);
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));

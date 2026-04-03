@@ -29,7 +29,12 @@ import {
 const LS_KEY = "hasSeenCaptureFeature";
 
 /** Qual flag de `PlanEntitlements` libera o item na sidebar (não use só `tier === "pro"` — staff/custom também podem ter essas flags). */
-type ProSidebarFeature = "ati" | "criarCampanhaMeta" | "geradorCriativos";
+type ProSidebarFeature =
+  | "ati"
+  | "criarCampanhaMeta"
+  | "geradorCriativos"
+  | "espelhamentogrupos"
+  | "especialistagenerate";
 
 type NavItem = {
   title: string;
@@ -95,6 +100,8 @@ const sidebarNavItems: NavItem[] = [
     title: "Espelhamento de grupos",
     href: "/dashboard/espelhamento-grupos",
     icon: <ArrowLeftRight className="h-5 w-5" />,
+    proOnly: true,
+    proFeature: "espelhamentogrupos",
   },
   {
     title: "Minha Lista de Ofertas",
@@ -113,7 +120,7 @@ const sidebarNavItems: NavItem[] = [
     href: "/dashboard/gerador-especialista",
     icon: <Sparkles className="h-5 w-5" />,
     proOnly: true,
-    proFeature: "geradorCriativos",
+    proFeature: "especialistagenerate",
   },
 ];
 

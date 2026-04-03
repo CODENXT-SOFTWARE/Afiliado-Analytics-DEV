@@ -98,7 +98,7 @@ const PRO_LIMITS = {
   criarCampanhaMeta: true,
   geradorCriativos: true,
   videoExportsPerDay: 2,
-  voicegenerate:2,
+  voicegenerate: 2,
   espelhamentogrupos: true,
   especialistagenerate: true,
 } as const satisfies PlanEntitlements;

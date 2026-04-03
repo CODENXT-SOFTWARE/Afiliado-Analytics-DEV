@@ -11,6 +11,7 @@ import {
   assertSharedGroupsPoolSlot,
   normalizeGroupJid,
 } from "@/lib/espelhamento-limits";
+import { gateEspelhamentoGrupos } from "@/lib/require-entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,9 @@ export async function GET() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const gate = await gateEspelhamentoGrupos();
+    if (!gate.allowed) return gate.response;
 
     const { data: rows, error } = await supabase
       .from("espelhamento_config")
@@ -72,6 +76,9 @@ export async function POST(req: Request) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const gate = await gateEspelhamentoGrupos();
+    if (!gate.allowed) return gate.response;
 
     const body = await req.json().catch(() => ({}));
     const instanceId = typeof body.instanceId === "string" ? body.instanceId.trim() : "";
@@ -153,6 +160,9 @@ export async function PATCH(req: Request) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const gate = await gateEspelhamentoGrupos();
+    if (!gate.allowed) return gate.response;
 
     const body = await req.json().catch(() => ({}));
     const id = typeof body.id === "string" ? body.id.trim() : "";
@@ -259,6 +269,9 @@ export async function DELETE(req: Request) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const gate = await gateEspelhamentoGrupos();
+    if (!gate.allowed) return gate.response;
 
     const url = new URL(req.url);
     const id = url.searchParams.get("id")?.trim();

@@ -2309,7 +2309,7 @@ function ChipGroup(props: {
 
 export default function GeradorEspecialistaPage() {
   return (
-    <ProFeatureGate feature="geradorCriativos">
+    <ProFeatureGate feature="especialistagenerate">
       <ExpertGeneratorInner />
     </ProFeatureGate>
   );

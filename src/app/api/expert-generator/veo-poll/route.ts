@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { gateGeradorCriativos } from "@/lib/require-entitlements";
+import { gateEspecialistaGenerate } from "@/lib/require-entitlements";
 import { veoFetchPredictOperation } from "@/lib/vertex/veo-long-running";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const gate = await gateGeradorCriativos();
+  const gate = await gateEspecialistaGenerate();
   if (!gate.allowed) return gate.response;
 
   let body: unknown;

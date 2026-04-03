@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { gateGeradorCriativos } from "@/lib/require-entitlements";
+import { gateEspecialistaGenerate } from "@/lib/require-entitlements";
 import { generateVoiceScriptWithGemini } from "@/lib/expert-generator/generate-voice-script-gemini";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const gate = await gateGeradorCriativos();
+  const gate = await gateEspecialistaGenerate();
   if (!gate.allowed) return gate.response;
 
   let body: unknown;

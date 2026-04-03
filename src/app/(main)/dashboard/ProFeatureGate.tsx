@@ -4,7 +4,12 @@ import { usePlanEntitlements } from "./PlanEntitlementsContext";
 import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 
-type Feature = "ati" | "criarCampanhaMeta" | "geradorCriativos";
+type Feature =
+  | "ati"
+  | "criarCampanhaMeta"
+  | "geradorCriativos"
+  | "espelhamentogrupos"
+  | "especialistagenerate";
 
 export default function ProFeatureGate({
   feature,
