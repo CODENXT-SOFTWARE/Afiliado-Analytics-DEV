@@ -132,6 +132,16 @@ export async function getUsageSnapshot(
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("export_day", utcTodayYmd()),
+    supabase
+      .from("especialistagenerate_usage")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("generated_at", utcTodayYmd()),
+    supabase
+      .from("espelhamentogrupos_usage")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("espelhado_at", utcTodayYmd()),
   ]);
 
   return {

@@ -9,13 +9,14 @@ import {
   BarChart2, MousePointerClick, Link2, TrendingUp,
   LayoutTemplate, ShoppingBag, Bell, Calculator,
   Zap, ChevronLeft, ChevronRight, ArrowRight, ArrowLeftRight,
+  User,
 } from "lucide-react";
 
 const features = [
   {
     icon: TrendingUp,
     tag: "ANALYTICS",
-    title: "Tráfego Inteligente (ATIA)",
+    title: "Tráfego Inteligente (ATI)",
     description:
       "Cruze dados do Meta e Shopee para validar criativos. Escale suas campanhas com o termômetro de performance Ruim, Bom ou Excelente.",
   },
@@ -28,8 +29,8 @@ const features = [
   },
   {
     icon: Bell,
-    tag: "Relatórios",
-    title: "Grupos de venda",
+    tag: "Automação",
+    title: "Automação de Grupos",
     description:
       "Gerencie listas de transmissão e dispare ofertas automaticamente para seus grupos de WhatsApp.",
   },
@@ -82,13 +83,20 @@ const features = [
     description:
       "Analise minuciosamente o volume, a origem e os horários de pico dos seus cliques na Shopee.",
   },
-  {
-    icon: Link2,
-    tag: "Links",
-    title: "Redirecionador de Links",
-    description:
-      "Crie links curtos, amigáveis e evite o bloqueio em redes sociais alterando o destino.",
-  },
+    {
+      icon: Link2,
+      tag: "Links",
+      title: "Redirecionador de Links",
+      description:
+        "Crie links curtos, amigáveis e evite o bloqueio em redes sociais alterando o destino.",
+    },
+    {
+      icon: User,
+      tag: "IA",
+      title: "Gerador de Especialistas",
+      description:
+        "Gere especialistas para seus grupos de WhatsApp com nossa IA. Faça o seu especialista usar seus produtos.",
+    }
 ];
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
@@ -207,7 +215,7 @@ export default function FeaturesGridPunchy() {
           </span>
 
           <h2 className="mb-5 font-[var(--font-space-grotesk)] text-[clamp(2rem,5vw,3.1rem)] font-black leading-[1.08] tracking-[-1.5px] text-white">
-            11 ferramentas{" "}
+            12 ferramentas{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b35] via-[#e24c30] to-[#ff9a6c]">
               poderosas
             </span>

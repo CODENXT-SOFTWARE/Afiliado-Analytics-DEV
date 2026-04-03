@@ -31,6 +31,41 @@ export const FEMALE_PRESETS: PresetModel[] = [
     promptEn:
       "Adult woman — same facial identity as the reference face photos: long wavy dark brown hair with soft curtain bangs, light-to-medium skin with natural freckles on nose and cheeks, brown eyes, subtle winged eyeliner, full lips natural pink-nude tone, calm confident expression. Often wears black high-neck top with black blazer; small gold hoop earrings and thin gold necklace with small round pendant. Photoreal UGC, not catalog beauty.",
   },
+  {
+    id: "maria",
+    name: "Maria",
+    referencePackId: "maria",
+    promptEn:
+      "Adult woman — same facial identity as the reference face photos: shoulder-length to medium dark chestnut brown hair with soft natural waves, side or center part, warm olive to tan skin, brown eyes, soft brows, natural makeup with warm nude lips, friendly approachable expression. Often wears a simple black or dark top. Photoreal Brazilian UGC — not a different face, not catalog beauty.",
+  },
+  {
+    id: "sophia",
+    name: "Sophia",
+    referencePackId: "sophia",
+    promptEn:
+      "Adult woman — same facial identity as the reference face photos: long straight to lightly wavy dark blonde or light brown hair, side part, fair to light-medium skin, hazel or light brown eyes, defined but natural brows, minimal makeup, calm confident gaze. Often wears black or neutral dark top. Photoreal Brazilian UGC — not a different face.",
+  },
+  {
+    id: "rosa",
+    name: "Rosa",
+    referencePackId: "rosa",
+    promptEn:
+      "Adult woman — same facial identity as the reference face photos: natural medium-to-long curly or coily dark brown hair, volume at crown, warm brown skin, dark brown eyes, full brows, subtle glossy lips, warm smile. Simple black top or dark casual wear; small gold jewelry ok if in references. Photoreal Brazilian UGC — not a different face.",
+  },
+  {
+    id: "luana",
+    name: "Luana",
+    referencePackId: "luana",
+    promptEn:
+      "Adult woman — same facial identity as the reference face photos: long sleek dark brown to black hair, often down or sleek ponytail, tan skin, dark almond eyes, groomed brows, natural makeup, confident relaxed expression. Black fitted top or dark casual clothing. Photoreal Brazilian UGC — not a different face.",
+  },
+  {
+    id: "evy",
+    name: "Evy",
+    referencePackId: "evy",
+    promptEn:
+      "Adult woman — same facial identity as the reference face photos: short dark hair in pixie or cropped cut, light to medium skin (freckles if visible in refs), expressive eyes, soft natural makeup, subtle smile. Black simple top. Photoreal Brazilian UGC — not a different face.",
+  },
 ];
 
 export const MALE_PRESETS: PresetModel[] = [

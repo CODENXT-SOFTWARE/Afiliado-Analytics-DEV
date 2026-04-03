@@ -46,13 +46,23 @@ import {
 import { compressImageFileToMaxBytes } from "@/lib/compress-image-client";
 import { humanizeLargeRequestError } from "@/lib/humanize-fetch-error";
 import camilleCardImg from "@/lib/expert-generator/expert/camille/card.png";
+import evyCardImg from "@/lib/expert-generator/expert/evy/card.jpeg";
+import luanaCardImg from "@/lib/expert-generator/expert/luana/card.jpeg";
+import mariaCardImg from "@/lib/expert-generator/expert/maria/card.jpeg";
 import milenaCardImg from "@/lib/expert-generator/expert/milena/card.png";
 import mikoCardImg from "@/lib/expert-generator/expert/miko/card.png";
+import rosaCardImg from "@/lib/expert-generator/expert/rosa/card.jpeg";
+import sophiaCardImg from "@/lib/expert-generator/expert/sophia/card.png";
 
 const PRESET_THUMB_BY_ID: Partial<Record<string, StaticImageData>> = {
   milena: milenaCardImg,
   miko: mikoCardImg,
   camille: camilleCardImg,
+  maria: mariaCardImg,
+  sophia: sophiaCardImg,
+  rosa: rosaCardImg,
+  luana: luanaCardImg,
+  evy: evyCardImg,
 };
 
 /** Alinhado ao Gerador de Criativos (`video-editor/page.tsx`). */

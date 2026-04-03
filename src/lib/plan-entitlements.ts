@@ -45,6 +45,8 @@ export type PlanEntitlements = {
   videoExportsPerDay: number | null;
   /** Limite diário de gerações "voz + legendas" (ElevenLabs with-timestamps). */
   voicegenerate: number | null;
+  espelhamentogrupos: boolean;
+  especialistagenerate: boolean;
 };
 
 
@@ -71,6 +73,8 @@ const PADRAO_LIMITS = {
   geradorCriativos: false,
   videoExportsPerDay: null,
   voicegenerate: 0,
+  espelhamentogrupos: false,
+  especialistagenerate: false,
 } as const satisfies PlanEntitlements;
 
 const PRO_LIMITS = {
@@ -95,6 +99,8 @@ const PRO_LIMITS = {
   geradorCriativos: true,
   videoExportsPerDay: 2,
   voicegenerate:2,
+  espelhamentogrupos: true,
+  especialistagenerate: true,
 } as const satisfies PlanEntitlements;
 
 
@@ -121,6 +127,8 @@ const STAFF_LIMITS = {
   geradorCriativos: true,
   videoExportsPerDay: 10,
   voicegenerate: 10,
+  espelhamentogrupos: true,
+  especialistagenerate: true,
 } as const satisfies PlanEntitlements;
 
 /** Mesma referência para legacy e padrao — alterar um não altera o outro em runtime se você clonar; aqui são iguais por definição. */
