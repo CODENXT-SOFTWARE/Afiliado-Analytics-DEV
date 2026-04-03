@@ -199,6 +199,14 @@ export default function EspelhamentoGruposPage() {
   const [detailsGroupKey, setDetailsGroupKey] = useState<string | null>(null);
   const [cardsPageIndex, setCardsPageIndex] = useState(0);
   const [itemsPerCardsPage, setItemsPerCardsPage] = useState(2);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    ids: string[];
+    title: string;
+    body: string;
+    /** Fechar painel "Destinos" após sucesso (ex.: último destino ou exclusão em lote). */
+    closeDetailsAfter: boolean;
+  } | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const activeCount = useMemo(() => configs.filter((c) => c.ativo).length, [configs]);
   const configById = useMemo(() => new Map(configs.map((c) => [c.id, c])), [configs]);
@@ -464,19 +472,63 @@ export default function EspelhamentoGruposPage() {
     }
   };
 
-  const remover = async (id: string) => {
-    if (!confirm("Remover esta configuração de espelhamento?")) return;
+  const openDeleteSingle = useCallback(
+    (row: ConfigRow, totalDestinosNoPainel: number) => {
+      setDeleteConfirm({
+        ids: [row.id],
+        title: "Remover espelhamento",
+        body: `O destino «${row.grupoDestinoNome ?? "Grupo de destino"}» deixará de receber mensagens espelhadas desta origem. Esta ação é permanente e não pode ser desfeita.`,
+        closeDetailsAfter: totalDestinosNoPainel <= 1,
+      });
+    },
+    []
+  );
+
+  const openDeleteAllDestinations = useCallback(() => {
+    const g = groupedConfigs.find((x) => x.key === detailsGroupKey);
+    if (!g || g.destinos.length === 0) return;
+    const n = g.destinos.length;
+    setDeleteConfirm({
+      ids: g.destinos.map((d) => d.id),
+      title: n === 1 ? "Remover espelhamento" : "Remover todos os destinos",
+      body:
+        n === 1
+          ? "Esta configuração será eliminada permanentemente."
+          : `Serão removidas ${n} ligações de destino para a origem «${g.grupoOrigemNome ?? "Grupo de origem"}». Todo o espelhamento deste conjunto deixará de existir. Esta ação é permanente.`,
+      closeDetailsAfter: true,
+    });
+  }, [detailsGroupKey, groupedConfigs]);
+
+  const executeDeleteConfirmed = useCallback(async () => {
+    if (!deleteConfirm) return;
+    const { ids, closeDetailsAfter } = deleteConfirm;
+
+    setDeleteSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/espelhamento/config?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.error ?? "Erro");
-      setFeedback("Configuração removida.");
+      await Promise.all(
+        ids.map(async (id) => {
+          const res = await fetch(`/api/espelhamento/config?id=${encodeURIComponent(id)}`, {
+            method: "DELETE",
+          });
+          const j = await res.json();
+          if (!res.ok) throw new Error(j?.error ?? "Erro ao remover");
+        })
+      );
+      setFeedback(
+        ids.length === 1
+          ? "Espelhamento removido com sucesso."
+          : `${ids.length} espelhamentos removidos com sucesso.`
+      );
+      setDeleteConfirm(null);
+      if (closeDetailsAfter) setDetailsGroupKey(null);
       await load({ soft: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro");
+      setError(e instanceof Error ? e.message : "Erro ao remover");
+    } finally {
+      setDeleteSubmitting(false);
     }
-  };
+  }, [deleteConfirm, load]);
 
   const closeForm = () => {
     setShowForm(false);
@@ -501,23 +553,6 @@ export default function EspelhamentoGruposPage() {
   return (
     <ProFeatureGate feature="espelhamentogrupos">
     <div className="flex flex-col w-full text-[#f0f0f2] rounded-lg p-3 sm:p-6 gap-4 sm:gap-5">
-      <style jsx>{`
-        .scrollbar-thin::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: #3e3e3e;
-          border-radius: 10px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-          background: #e24c30;
-        }
-      `}</style>
-
       <header>
         <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2.5 text-white">
           <div className="p-1.5 bg-[#e24c30]/10 rounded-lg border border-[#e24c30]/20 shrink-0">
@@ -941,11 +976,11 @@ export default function EspelhamentoGruposPage() {
               </button>
             </div>
             <div className="p-4">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
                 <button
                   type="button"
                   onClick={() => handleToggleBatch(detailsGroup.destinos.map((d) => d.id), true)}
-                  disabled={batchLoading !== null}
+                  disabled={batchLoading !== null || deleteSubmitting}
                   className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold text-emerald-400 disabled:opacity-50"
                 >
                   {batchLoading === "ativar" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3 fill-emerald-400" />}{" "}
@@ -954,12 +989,23 @@ export default function EspelhamentoGruposPage() {
                 <button
                   type="button"
                   onClick={() => handleToggleBatch(detailsGroup.destinos.map((d) => d.id), false)}
-                  disabled={batchLoading !== null}
+                  disabled={batchLoading !== null || deleteSubmitting}
                   className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[10px] font-bold text-red-400 disabled:opacity-50"
                 >
                   {batchLoading === "pausar" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pause className="w-3 h-3 fill-red-400" />}{" "}
                   Pausar todos
                 </button>
+                {detailsGroup.destinos.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={openDeleteAllDestinations}
+                    disabled={batchLoading !== null || deleteSubmitting}
+                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/15 px-3 py-1.5 text-[10px] font-bold text-red-200 hover:bg-red-500/25 disabled:opacity-50 ml-auto sm:ml-0"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Excluir todos os destinos
+                  </button>
+                ) : null}
               </div>
               <div className="max-h-[45vh] overflow-y-auto scrollbar-thin space-y-2">
                 {detailsGroup.destinos.map((d) => (
@@ -1004,7 +1050,9 @@ export default function EspelhamentoGruposPage() {
                         )}
                         <button
                           type="button"
-                          onClick={() => remover(d.id)}
+                          onClick={() =>
+                            openDeleteSingle(d, detailsGroup.destinos.length)
+                          }
                           className="inline-flex items-center gap-1 rounded-md border border-red-500/20 bg-red-500/5 px-2 py-1 text-[9px] font-bold text-red-300 hover:bg-red-500/10"
                         >
                           <Trash2 className="w-3 h-3" /> Excluir
@@ -1014,6 +1062,67 @@ export default function EspelhamentoGruposPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => !deleteSubmitting && setDeleteConfirm(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="espelhamento-delete-title"
+            className="w-full max-w-md rounded-2xl border border-[#2c2c32] bg-[#1b1b1e] shadow-2xl shadow-black/40 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 pt-5 pb-4 border-b border-[#2c2c32] flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/25 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-400" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2
+                  id="espelhamento-delete-title"
+                  className="text-sm font-bold text-white leading-snug"
+                >
+                  {deleteConfirm.title}
+                </h2>
+                <p className="text-[11px] text-[#a0a0a0] leading-relaxed mt-2">
+                  {deleteConfirm.body}
+                </p>
+              </div>
+            </div>
+            <div className="px-5 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-[#161618]/80">
+              <button
+                type="button"
+                disabled={deleteSubmitting}
+                onClick={() => setDeleteConfirm(null)}
+                className="w-full sm:w-auto rounded-xl border border-[#2c2c32] px-4 py-2.5 text-[11px] font-semibold text-[#d8d8d8] hover:bg-[#222228] hover:text-white transition disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deleteSubmitting}
+                onClick={() => void executeDeleteConfirmed()}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 px-4 py-2.5 text-[11px] font-bold text-white shadow-lg shadow-red-900/30 transition disabled:opacity-50"
+              >
+                {deleteSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    A remover…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                    Confirmar exclusão
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

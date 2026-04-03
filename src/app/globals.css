@@ -313,3 +313,40 @@ select::-webkit-scrollbar-thumb:hover {
   background-repeat: no-repeat;
   background-position: center;
 }
+
+/**
+ * Scroll fino — dashboard (espelhamento, grupos de venda, etc.).
+ * Global: styled-jsx por página não cobre bem modais / todos os motores.
+ */
+.scrollbar-thin {
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: #3e3e3e #121214;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #121214;
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #3e3e3e;
+  border-radius: 10px;
+  border: 2px solid #121214;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #e24c30;
+}
+
+/* Sem setas de sistema — alinha ao resto do app */
+.scrollbar-thin::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
