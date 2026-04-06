@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
-import { createClient } from "../../../../../utils/supabase/server";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { createClient as createServerSupabase } from "../../../../../utils/supabase/server";
 import { getEntitlementsForUser, getUsageSnapshot } from "@/lib/plan-server";
+import { normalizeCapturePageTemplate } from "@/lib/capture-page-template";
+
+/** INSERT com service role evita RLS/policies que às vezes ignoram colunas novas (ex.: page_template). */
+function supabaseServiceRole() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY ou NEXT_PUBLIC_SUPABASE_URL ausente no servidor.");
+  }
+  return createSupabaseAdmin(url, key, { auth: { persistSession: false } });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +26,7 @@ function isUniqueViolationOnUserId(error: { message?: string; details?: string }
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -30,14 +42,75 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
+  const raw = await req.json().catch(() => null);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return NextResponse.json({ error: "Corpo da requisição inválido." }, { status: 400 });
+  }
+  const body = raw as Record<string, unknown>;
 
-  const { user_id: _ignore, userid: _ignore2, ...rest } = body as Record<string, unknown>;
-  const { data, error } = await supabase
-    .from("capture_sites")
-    .insert({ ...rest, userid: user.id })
-    .select()
-    .single();
+  const page_template = normalizeCapturePageTemplate(body.page_template ?? body.pageTemplate);
+
+  const trimOrNull = (v: unknown): string | null => {
+    if (v == null) return null;
+    const s = String(v).trim();
+    return s.length ? s : null;
+  };
+
+  const slug =
+    typeof body.slug === "string"
+      ? body.slug.trim()
+      : typeof body.slug === "number"
+        ? String(body.slug).trim()
+        : "";
+  if (!slug) {
+    return NextResponse.json({ error: "Slug obrigatório." }, { status: 400 });
+  }
+
+  const whatsapp_url =
+    typeof body.whatsapp_url === "string"
+      ? body.whatsapp_url.trim()
+      : typeof body.whatsappUrl === "string"
+        ? body.whatsappUrl.trim()
+        : "";
+  if (!whatsapp_url) {
+    return NextResponse.json({ error: "Link do botão obrigatório." }, { status: 400 });
+  }
+
+  const insertRow = {
+    domain:
+      (typeof body.domain === "string" && body.domain.trim()) || "s.afiliadoanalytics.com.br",
+    slug,
+    title: trimOrNull(body.title),
+    description: trimOrNull(body.description),
+    button_text: trimOrNull(body.button_text ?? body.buttonText),
+    whatsapp_url,
+    button_color:
+      (typeof body.button_color === "string" && body.button_color.trim()) ||
+      (typeof body.buttonColor === "string" && body.buttonColor.trim()) ||
+      "#25D366",
+    layout_variant:
+      (typeof body.layout_variant === "string" && body.layout_variant.trim()) ||
+      (typeof body.layoutVariant === "string" && body.layoutVariant.trim()) ||
+      "icons",
+    meta_pixel_id: trimOrNull(body.meta_pixel_id ?? body.metaPixelId),
+    page_template,
+    userid: user.id,
+  };
+
+  let data: Record<string, unknown> | null = null;
+  let error: { message?: string; code?: string; details?: string } | null = null;
+
+  try {
+    const admin = supabaseServiceRole();
+    const ins = await admin.from("capture_sites").insert(insertRow).select().single();
+    data = ins.data as Record<string, unknown> | null;
+    error = ins.error;
+  } catch (boot) {
+    return NextResponse.json(
+      { error: boot instanceof Error ? boot.message : "Erro de configuração do servidor." },
+      { status: 500 }
+    );
+  }
 
   if (error) {
     const dup = "code" in error && error.code === "23505";

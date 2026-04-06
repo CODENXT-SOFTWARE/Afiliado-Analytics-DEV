@@ -1,6 +1,7 @@
 export type LayoutVariant = "icons" | "scarcity";
 
-
+/** classic = fluxo atual (ícones / escassez). vip_* = landing longa (template2 + variação terrosa). */
+export type PageTemplate = "classic" | "vip_rosa" | "vip_terroso";
 
 export type CaptureSiteRow = {
   id: string;
@@ -28,5 +29,6 @@ export type CaptureSiteRow = {
   layout_variant: LayoutVariant | null;
   meta_pixel_id: string | null; // 👈 ADICIONAR ESTA LINHA
   buttontext?: string | null;
+  page_template: PageTemplate | null;
 
 };

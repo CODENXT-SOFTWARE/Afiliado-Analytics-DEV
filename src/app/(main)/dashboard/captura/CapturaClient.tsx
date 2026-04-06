@@ -17,16 +17,20 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  LayoutTemplate,
 } from "lucide-react";
 
 import { useSupabase } from "../../../components/auth/AuthProvider";
 import LoadingOverlay from "../../../components/ui/LoadingOverlay";
 import { usePlanEntitlements } from "../PlanEntitlementsContext";
 
-import type { CaptureSiteRow, LayoutVariant } from "./_lib/types";
+import type { CaptureSiteRow, LayoutVariant, PageTemplate } from "./_lib/types";
+import { PAGE_TEMPLATE_OPTIONS, pageTemplateLabel } from "./_lib/captureTemplates";
+import { normalizeCapturePageTemplate } from "@/lib/capture-page-template";
 import { formatDateTimePtBR, isExpired, sanitizeSlug } from "./_lib/captureUtils";
 
 import CapturePreviewCard from "./_components/CapturePreviewCard";
+import CaptureVipLanding from "@/app/capture/[slug]/CaptureVipLanding";
 import DeleteSiteModal from "./_components/DeleteSiteModal";
 import LayoutVariantField from "./_components/LayoutVariantField";
 import ResetMetricsModal from "./_components/ResetMetricsModal";
@@ -101,7 +105,7 @@ function rowPublicUrl(row: CaptureSiteRow) {
   return `https://${DOMAIN}/${row.slug}`;
 }
 
-type Mode = "empty" | "create" | "view" | "edit";
+type Mode = "empty" | "pickTemplate" | "create" | "view" | "edit";
 
 export default function CapturaClient() {
   const ctx = useSupabase();
@@ -132,7 +136,7 @@ export default function CapturaClient() {
 
   const isWizardOpenRef = useRef(false);
   useEffect(() => {
-    isWizardOpenRef.current = mode === "create" || mode === "edit";
+    isWizardOpenRef.current = mode === "create" || mode === "edit" || mode === "pickTemplate";
   }, [mode]);
 
   useEffect(() => {
@@ -159,8 +163,13 @@ export default function CapturaClient() {
   const [buttonColor, setButtonColor] = useState("#25D366");
   const [metaPixelId, setMetaPixelId] = useState("");
 
-  // layout variant (icons | scarcity)
+  // layout variant (icons | scarcity) — só página classic
   const [layoutVariant, setLayoutVariant] = useState<LayoutVariant>("icons");
+  const [pageTemplate, setPageTemplate] = useState<PageTemplate>("classic");
+  const pageTemplateRef = useRef<PageTemplate>("classic");
+  useEffect(() => {
+    pageTemplateRef.current = pageTemplate;
+  }, [pageTemplate]);
 
   // UI states
   const [error, setError] = useState<string | null>(null);
@@ -246,7 +255,8 @@ export default function CapturaClient() {
   const fetchSites = useCallback(async () => {
     if (!supabase || !session) return;
 
-    const wizardOpen = modeRef.current === "create" || modeRef.current === "edit";
+    const wizardOpen =
+      modeRef.current === "create" || modeRef.current === "edit" || modeRef.current === "pickTemplate";
 
     if (!wizardOpen) setPageLoading(true);
     setError(null);
@@ -314,24 +324,40 @@ export default function CapturaClient() {
     }
   }
 
-  function startCreate() {
+  function openTemplatePicker() {
     if (sites.length >= captureLimit) {
       setError(`Limite de ${captureLimit} site(s) de captura atingido.`);
       return;
     }
     setError(null);
+    modeRef.current = "pickTemplate";
+    setMode("pickTemplate");
+  }
+
+  function cancelTemplatePicker() {
+    setError(null);
+    if (sites.length > 0) {
+      modeRef.current = "view";
+      setMode("view");
+    } else {
+      modeRef.current = "empty";
+      setMode("empty");
+    }
+  }
+
+  function confirmTemplateChoice(t: PageTemplate) {
+    setError(null);
+    pageTemplateRef.current = t;
+    setPageTemplate(t);
     setStep(1);
 
     setSlug("");
     setTitle("");
     setDescription("");
-
-    // não auto preencher
     setButtonText("");
-
     setWhatsappUrl("");
     setButtonColor("#25D366");
-    setLayoutVariant("icons");
+    setLayoutVariant(t === "classic" ? "icons" : "scarcity");
     setMetaPixelId("");
 
     setLogoFile(null);
@@ -355,6 +381,7 @@ export default function CapturaClient() {
     setWhatsappUrl(row.whatsapp_url ?? "");
     setButtonColor(row.button_color ?? "#25D366");
     setLayoutVariant((row.layout_variant ?? "icons") as LayoutVariant);
+    setPageTemplate(((row as CaptureSiteRow).page_template ?? "classic") as PageTemplate);
     setMetaPixelId(row.meta_pixel_id ?? "");
 
     setLogoFile(null);
@@ -385,6 +412,7 @@ export default function CapturaClient() {
       setWhatsappUrl(site.whatsapp_url ?? "");
       setButtonColor(site.button_color ?? "#25D366");
       setLayoutVariant((site.layout_variant ?? "icons") as LayoutVariant);
+      setPageTemplate(((site as CaptureSiteRow).page_template ?? "classic") as PageTemplate);
       setMetaPixelId(site.meta_pixel_id ?? "");
 
       originalButtonUrlRef.current = (site.whatsapp_url ?? "").trim();
@@ -550,14 +578,24 @@ export default function CapturaClient() {
         button_color: buttonColor,
         layout_variant: layoutVariant,
         meta_pixel_id: metaPixelId.trim() || null,
+        page_template: pageTemplateRef.current,
       }),
     });
-    const created = (await res.json()) as { id?: string; error?: string };
+    const created = (await res.json()) as { id?: string; error?: string; page_template?: unknown };
 
     if (!res.ok) {
       setError(created?.error || "Erro ao criar site.");
       setSaving(false);
       return;
+    }
+
+    const wantedTpl = normalizeCapturePageTemplate(pageTemplateRef.current);
+    const savedTpl = normalizeCapturePageTemplate(created.page_template);
+    if (savedTpl !== wantedTpl) {
+      setError(
+        `O modelo não foi gravado corretamente (escolhido: ${wantedTpl}, salvo: ${savedTpl}). ` +
+          "Confirme a migration da coluna page_template no Supabase e a variável SUPABASE_SERVICE_ROLE_KEY na Vercel."
+      );
     }
 
     try {
@@ -769,6 +807,8 @@ export default function CapturaClient() {
 
   if (saving && (mode === "create" || mode === "edit")) return <LoadingOverlay message="Salvando..." />;
 
+  const isVipPreview = pageTemplate === "vip_rosa" || pageTemplate === "vip_terroso";
+
   const canCreateAnotherSite = sites.length < captureLimit;
 
   const colorPresets = ["#25D366", "#F97316", "#2563EB", "#16A34A", "#DC2626", "#111827"];
@@ -788,7 +828,7 @@ export default function CapturaClient() {
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {mode === "empty" && canCreateAnotherSite && (
             <button
-              onClick={startCreate}
+              onClick={openTemplatePicker}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-shopee-orange text-white rounded-md hover:opacity-90 transition-opacity font-semibold"
               type="button"
             >
@@ -798,7 +838,7 @@ export default function CapturaClient() {
           )}
           {mode === "view" && canCreateAnotherSite && (
             <button
-              onClick={startCreate}
+              onClick={openTemplatePicker}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-shopee-orange text-white rounded-md hover:opacity-90 transition-opacity font-semibold"
               type="button"
             >
@@ -817,6 +857,53 @@ export default function CapturaClient() {
         </div>
       )}
 
+      {/* Escolher template (antes do wizard) */}
+      {mode === "pickTemplate" && (
+        <div className="bg-dark-card p-4 sm:p-8 rounded-lg border border-dark-border">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold text-text-primary flex items-center gap-2">
+                <LayoutTemplate className="h-5 w-5 text-shopee-orange shrink-0" />
+                Escolha o modelo do site
+              </h2>
+              <p className="text-sm text-text-secondary mt-1 max-w-xl">
+                Cada opção muda o visual da página pública. Depois você preenche slug, textos e link como de costume.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={cancelTemplatePicker}
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-md border border-dark-border text-text-secondary hover:text-text-primary text-sm"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Voltar
+            </button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {PAGE_TEMPLATE_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => confirmTemplateChoice(opt.id)}
+                className="text-left rounded-xl border border-dark-border bg-dark-bg/40 p-4 sm:p-5 hover:border-shopee-orange/45 hover:bg-shopee-orange/5 transition-all flex flex-col gap-2 min-h-[140px]"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-text-primary">{opt.title}</span>
+                  {opt.badge ? (
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-shopee-orange/15 text-shopee-orange border border-shopee-orange/25">
+                      {opt.badge}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed flex-1">{opt.description}</p>
+                <span className="text-xs font-semibold text-shopee-orange mt-1">Usar este modelo →</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* EMPTY */}
       {mode === "empty" && (
         <div className="bg-dark-card p-8 sm:p-12 rounded-lg border border-dark-border text-center">
@@ -827,7 +914,7 @@ export default function CapturaClient() {
                 Clique no botão abaixo para criar seu primeiro site de captura e gerar seu link com slug.
               </p>
               <button
-                onClick={startCreate}
+                onClick={openTemplatePicker}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-shopee-orange text-white rounded-md hover:opacity-90 transition-opacity font-semibold"
                 type="button"
               >
@@ -882,9 +969,14 @@ export default function CapturaClient() {
                       )}
 
                       <div className="min-w-0 flex-grow">
-                        <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
-                          {row.title?.trim() || "Site de Captura"}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
+                            {row.title?.trim() || "Site de Captura"}
+                          </h3>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-dark-bg border border-dark-border text-text-secondary">
+                            {pageTemplateLabel((row as CaptureSiteRow).page_template)}
+                          </span>
+                        </div>
 
                         <div className="mt-3 flex items-center gap-2 flex-wrap text-sm">
                           <span className="text-text-secondary">Link</span>
@@ -1053,8 +1145,27 @@ export default function CapturaClient() {
                     </div>
                   )}
 
-                  {/* Layout */}
-                  <LayoutVariantField value={layoutVariant} onChange={setLayoutVariant} />
+                  <div className="rounded-lg border border-dark-border/60 bg-dark-bg/30 px-3 py-2.5">
+                    <p className="text-xs text-text-secondary">
+                      <span className="font-medium text-text-primary">Modelo visual:</span>{" "}
+                      {pageTemplateLabel(pageTemplate)}
+                      {mode === "edit" ? (
+                        <span className="block mt-1 text-text-secondary/80">
+                          O modelo não pode ser alterado após criar. Para trocar, crie outro site.
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+
+                  {/* Layout do card — só no template padrão */}
+                  {pageTemplate === "classic" ? (
+                    <LayoutVariantField value={layoutVariant} onChange={setLayoutVariant} />
+                  ) : (
+                    <p className="text-xs text-text-secondary/90 leading-relaxed">
+                      Este modelo já inclui faixa de urgência, barra de vagas e lista de benefícios na página
+                      pública (não usa “layout com ícones / escassez” do card clássico).
+                    </p>
+                  )}
 
                   {/* Logo */}
                   <div className="bg-dark-bg border border-dark-border rounded-lg p-4">
@@ -1365,15 +1476,38 @@ export default function CapturaClient() {
 
           {/* Preview */}
           <div className="lg:sticky lg:top-6 self-start">
-            <CapturePreviewCard
-              title={previewTitle}
-              description={previewDesc}
-              buttonColor={previewColor}
-              layoutVariant={previewLayout}
-              logoSrc={previewLogoSrc}
-              buttonText={previewButtonText}
-              buttonUrl={previewButtonUrl}
-            />
+            {isVipPreview ? (
+              <div className="rounded-lg border border-dark-border overflow-hidden bg-dark-card">
+                <div className="px-4 py-3 border-b border-dark-border flex items-center justify-between">
+                  <div className="text-sm font-semibold text-text-primary">Preview (modelo VIP)</div>
+                  <div className="text-xs text-text-secondary">Tempo real</div>
+                </div>
+                <div className="p-3 bg-dark-bg max-h-[min(78vh,820px)] overflow-y-auto scrollbar-thin">
+                  <div className="origin-top scale-[0.72] sm:scale-[0.78] mx-auto w-[min(100%,420px)]">
+                    <CaptureVipLanding
+                      variant={pageTemplate === "vip_terroso" ? "vip_terroso" : "vip_rosa"}
+                      title={previewTitle}
+                      description={previewDesc}
+                      buttonText={previewButtonText}
+                      ctaHref={previewButtonUrl.trim() ? previewButtonUrl : "#"}
+                      logoUrl={previewLogoSrc}
+                      buttonColor={previewColor}
+                      previewMode
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <CapturePreviewCard
+                title={previewTitle}
+                description={previewDesc}
+                buttonColor={previewColor}
+                layoutVariant={previewLayout}
+                logoSrc={previewLogoSrc}
+                buttonText={previewButtonText}
+                buttonUrl={previewButtonUrl}
+              />
+            )}
           </div>
         </div>
       )}

@@ -7,6 +7,9 @@ import { Tag, Zap, Gift, Lock } from "lucide-react"; // ✅ REMOVIDO MessageCirc
 import ScarcityBlock from "./ScarcityBlock";
 import { detectBot } from "../../../lib/bot-detection";
 import CTAButton from "./CTAButton";
+import CaptureVipLanding from "./CaptureVipLanding";
+import type { PageTemplate } from "@/app/(main)/dashboard/captura/_lib/types";
+import { normalizeCapturePageTemplate } from "@/lib/capture-page-template";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -173,7 +176,7 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
   const { data: site } = await supabase
     .from("capture_sites")
     .select(
-      "id, title, description, whatsapp_url, button_text, button_color, active, expiresat, logopath, layout_variant, meta_pixel_id"
+      "id, title, description, whatsapp_url, button_text, button_color, active, expiresat, logopath, layout_variant, meta_pixel_id, page_template"
     )
     .eq("domain", DOMAIN)
     .eq("slug", slug)
@@ -235,6 +238,12 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
 
   const metaPixelId = site.meta_pixel_id;
 
+  const siteRow = site as Record<string, unknown>;
+  const pageTemplate = normalizeCapturePageTemplate(
+    siteRow.page_template ?? siteRow.pageTemplate,
+  );
+  const isVipTemplate = pageTemplate === "vip_rosa" || pageTemplate === "vip_terroso";
+
   return (
     <>
       {/* Injeção do Meta Pixel (se existir) */}
@@ -269,6 +278,19 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
         </>
       )}
 
+      {isVipTemplate ? (
+        <CaptureVipLanding
+          variant={pageTemplate as Exclude<PageTemplate, "classic">}
+          title={title}
+          description={desc}
+          buttonText={buttonText}
+          ctaHref={`/${slug}/go`}
+          logoUrl={logoUrl}
+          buttonColor={buttonColor}
+        />
+      ) : null}
+
+      {!isVipTemplate ? (
       <main
         className="min-h-screen flex flex-col px-4 pt-10 pb-6 sm:pt-8 sm:pb-12"
         style={{
@@ -422,6 +444,7 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
           © 2026 Afiliado Analytics. Todos os direitos reservados.
         </footer>
       </main>
+      ) : null}
     </>
   );
 }
