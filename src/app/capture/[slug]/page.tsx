@@ -22,21 +22,26 @@ const DEFAULT_OG_IMAGE = `${PUBLIC_BASE}/favicon-32x32.png`;
 const DEFAULT_BUTTON_TEXT = "Acessar Grupo Vip";
 
 function admin() {
+  /** Mesma ordem que `go/page.tsx`: nomes padrão primeiro. Evita ler outro projeto se existirem envs typo antigas na Vercel. */
   const supabaseUrl =
-    process.env.NEXTPUBLICSUPABASEURL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    process.env.SUPABASE_URL ??
+    process.env.NEXTPUBLICSUPABASEURL;
 
   const serviceKey =
-    process.env.SUPABASESERVICEROLEKEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SERVICE_ROLE_KEY ??
+    process.env.SUPABASESERVICEROLEKEY;
 
   if (!supabaseUrl) {
     throw new Error(
-      "Env do Supabase ausente: defina NEXTPUBLICSUPABASEURL (ou NEXT_PUBLIC_SUPABASE_URL)."
+      "Env do Supabase ausente: defina NEXT_PUBLIC_SUPABASE_URL (ou SUPABASE_URL)."
     );
   }
 
   if (!serviceKey) {
     throw new Error(
-      "Env do Supabase ausente: defina SUPABASESERVICEROLEKEY (ou SUPABASE_SERVICE_ROLE_KEY)."
+      "Env do Supabase ausente: defina SUPABASE_SERVICE_ROLE_KEY (ou SERVICE_ROLE_KEY)."
     );
   }
 
@@ -175,9 +180,7 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
 
   const { data: site } = await supabase
     .from("capture_sites")
-    .select(
-      "id, title, description, whatsapp_url, button_text, button_color, active, expiresat, logopath, layout_variant, meta_pixel_id, page_template"
-    )
+    .select("*")
     .eq("domain", DOMAIN)
     .eq("slug", slug)
     .maybeSingle();

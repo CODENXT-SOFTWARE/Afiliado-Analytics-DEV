@@ -8,10 +8,14 @@ const LOGO_BUCKET = "capture-logos";
 
 function supabaseAdmin() {
   const supabaseUrl =
-    process.env.NEXTPUBLICSUPABASEURL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    process.env.SUPABASE_URL ??
+    process.env.NEXTPUBLICSUPABASEURL;
 
   const serviceKey =
-    process.env.SUPABASESERVICEROLEKEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SERVICE_ROLE_KEY ??
+    process.env.SUPABASESERVICEROLEKEY;
 
   if (!supabaseUrl || !serviceKey) throw new Error("Supabase envs ausentes.");
   return createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
