@@ -850,7 +850,9 @@ export default function CapturaClient() {
     pageTemplate === "vip_rosa" ||
     pageTemplate === "vip_terroso" ||
     pageTemplate === "vinho_rose" ||
-    pageTemplate === "the_new_chance";
+    pageTemplate === "the_new_chance" ||
+    pageTemplate === "aurora_ledger" ||
+    pageTemplate === "jardim_floral";
 
   const canCreateAnotherSite = sites.length < captureLimit;
 
@@ -1585,7 +1587,11 @@ export default function CapturaClient() {
                             ? "vinho_rose"
                             : pageTemplate === "the_new_chance"
                               ? "the_new_chance"
-                              : "vip_rosa"
+                              : pageTemplate === "aurora_ledger"
+                                ? "aurora_ledger"
+                                : pageTemplate === "jardim_floral"
+                                  ? "jardim_floral"
+                                  : "vip_rosa"
                       }
                       title={previewTitle}
                       description={previewDesc}

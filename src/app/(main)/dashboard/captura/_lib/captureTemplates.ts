@@ -47,6 +47,22 @@ export const PAGE_TEMPLATE_OPTIONS: {
     badge: "Novo",
     previewSrc: "/capture-templates/the_new_chance.svg",
   },
+  {
+    id: "aurora_ledger",
+    title: "Sala Aurora",
+    description:
+      "Página editorial escura: aurora animada, vidro fosco, copy de direct response, benefícios numerados, barra de urgência elegante e CTA fixo no mobile.",
+    badge: "Novo",
+    previewSrc: "/capture-templates/aurora_ledger.svg",
+  },
+  {
+    id: "jardim_floral",
+    title: "Jardim floral",
+    description:
+      "Visual fofo e artístico: branco, rosa claro e rosa escuro, flores em SVG, moldura de cartão postal, corações e CTA arredondado — ideal para público mais leve.",
+    badge: "Novo",
+    previewSrc: "/capture-templates/jardim_floral.svg",
+  },
 ];
 
 export function pageTemplateLabel(t: PageTemplate | null | undefined): string {

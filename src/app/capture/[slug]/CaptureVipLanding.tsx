@@ -6,6 +6,8 @@ import CaptureVipRosa from "./CaptureVipRosa";
 import CaptureVipTerroso from "./CaptureVipTerroso";
 import CaptureVipVinhoRose from "./CaptureVipVinhoRose";
 import CaptureTheNewChance from "./CaptureTheNewChance";
+import CaptureAuroraLedger from "./CaptureAuroraLedger";
+import CaptureJardimFloral from "./CaptureJardimFloral";
 
 export type { CaptureVipLandingProps } from "./capture-vip-types";
 
@@ -26,6 +28,12 @@ export default function CaptureVipLanding({ variant, ...rest }: Props) {
   }
   if (variant === "the_new_chance") {
     return <CaptureTheNewChance {...rest} />;
+  }
+  if (variant === "aurora_ledger") {
+    return <CaptureAuroraLedger {...rest} />;
+  }
+  if (variant === "jardim_floral") {
+    return <CaptureJardimFloral {...rest} />;
   }
   return <CaptureVipRosa {...rest} />;
 }

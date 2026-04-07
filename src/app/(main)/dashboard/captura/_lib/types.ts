@@ -6,7 +6,9 @@ export type PageTemplate =
   | "vip_rosa"
   | "vip_terroso"
   | "vinho_rose"
-  | "the_new_chance";
+  | "the_new_chance"
+  | "aurora_ledger"
+  | "jardim_floral";
 
 export type CaptureSiteRow = {
   id: string;

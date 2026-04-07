@@ -6,6 +6,8 @@ const ALLOWED = new Set<PageTemplate>([
   "vip_terroso",
   "vinho_rose",
   "the_new_chance",
+  "aurora_ledger",
+  "jardim_floral",
 ]);
 
 /**
@@ -28,6 +30,12 @@ export function normalizeCapturePageTemplate(raw: unknown): PageTemplate {
     s === "vip_the_new_chance"
   ) {
     return "the_new_chance";
+  }
+  if (s === "aurora_ledger" || s === "auroraledger" || s === "sala_aurora") {
+    return "aurora_ledger";
+  }
+  if (s === "jardim_floral" || s === "jardimfloral" || s === "petala" || s === "jardim_rosa") {
+    return "jardim_floral";
   }
   if (ALLOWED.has(s as PageTemplate)) return s as PageTemplate;
   return "classic";
