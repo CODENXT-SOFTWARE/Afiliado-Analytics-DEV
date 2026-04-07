@@ -7,12 +7,16 @@
     },
     "src/app/api/mercadolivre/minha-lista-ofertas/refresh/route.ts": {
       "maxDuration": 300
+    },
+    "src/app/api/gpl/cron-sync/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
     { "path": "/api/cron/expire-subscriptions", "schedule": "0 5 * * *" },
     { "path": "/api/grupos-venda/cron-disparo", "schedule": "*/10 * * * *" },
-    { "path": "/api/cron/espelhamento-payloads-retention", "schedule": "0 * * * *" }
+    { "path": "/api/cron/espelhamento-payloads-retention", "schedule": "0 * * * *" },
+    { "path": "/api/gpl/cron-sync", "schedule": "*/30 * * * *" }
   ],
   "rewrites": [
     {
