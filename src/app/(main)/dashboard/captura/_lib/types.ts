@@ -40,10 +40,17 @@ export type CaptureSiteRow = {
 
   /** URL ou ID do YouTube; opcional — embed acima do 1.º CTA quando preenchido. */
   youtube_url: string | null;
+  /** Onde o embed do YouTube aparece (default `above_cta`; `card_end` = fim do bloco principal). */
+  youtube_position: string | null;
 
   /** Notificações fictícias (entrada no grupo / cupom); default true. */
   notifications_enabled: boolean | null;
   /** `top` = sob o topo da viewport; `bottom` = acima do rodapé. */
   notifications_position: string | null;
+
+  ofert_carousel_enabled: boolean | null;
+  ofert_carousel_position: string | null;
+  /** JSON array de até 4 strings (paths no Storage) ou null por slot. */
+  ofert_carousel_image_paths: unknown;
 
 };

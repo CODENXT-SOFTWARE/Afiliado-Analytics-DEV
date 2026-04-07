@@ -7,13 +7,14 @@ import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
 import { isWhatsAppUrl } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
-import CaptureYoutubeEmbed from "./CaptureYoutubeEmbed";
+import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
   CAPTURE_BODY,
   CAPTURE_CTA_CLASS,
   CAPTURE_CTA_LABEL,
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
+import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
 
 const ROSE_DARK = "#9f1239";
 const ROSE_DEEP = "#831843";
@@ -74,6 +75,7 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
     logoUrl,
     buttonColor,
     youtubeUrl,
+    youtubePosition,
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
@@ -91,8 +93,6 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
   const { r, g, b } = parseColorToRgb(color);
   const showWa =
     previewMode || isWhatsAppUrl(ctaHref) || /\/go\/?(\?.*)?$/i.test(ctaHref.trim());
-  const yt = (youtubeUrl ?? "").trim();
-
   return (
     <>
       <CaptureVipEntradaToasts disabled={!notifOn} position={notifPos} />
@@ -252,6 +252,15 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
                 {safeTitle}
               </h1>
 
+              <CaptureOfertCarouselIf {...props} slot="below_title" variant="light" eyebrow="Destaques" />
+
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="below_title"
+                className="mt-4 w-full"
+              />
+
               <div className="mx-auto mt-4 flex justify-center gap-2" aria-hidden>
                 {[0, 1, 2, 2, 1, 0].map((s, i) => (
                   <span
@@ -274,6 +283,15 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
                 {safeDesc}
               </p>
 
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="above_cta"
+                className="mt-6 w-full"
+              />
+
+              <CaptureOfertCarouselIf {...props} slot="above_cta" variant="light" eyebrow="Destaques" />
+
               <div className="mt-7 flex w-full flex-col items-stretch">
                 <a
                   href={ctaHref}
@@ -292,6 +310,15 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
                   Grátis - Sem spam - Só carinho e oferta boa
                 </p>
               </div>
+
+              <CaptureOfertCarouselIf {...props} slot="below_cta" variant="light" eyebrow="Destaques" />
+
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="below_cta"
+                className="mt-6 w-full"
+              />
 
               <ul className="mt-8 space-y-4">
                 {BULLETS.map((line, i) => (
@@ -326,17 +353,16 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
                 </a>
               </div>
 
-              {yt ? (
-                <div className="mt-8 w-full">
-                  <p
-                    className="mb-2 text-center text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: ROSE_DARK, opacity: 0.55 }}
-                  >
-                    Um vídeo rapidinho
-                  </p>
-                  <CaptureYoutubeEmbed url={yt} />
-                </div>
-              ) : null}
+              <CaptureOfertCarouselIf {...props} slot="card_end" variant="light" eyebrow="Destaques" />
+
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="card_end"
+                className="mt-8 w-full"
+                eyebrow="Um vídeo rapidinho"
+                eyebrowClassName="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-rose-900/55"
+              />
             </div>
           </div>
 

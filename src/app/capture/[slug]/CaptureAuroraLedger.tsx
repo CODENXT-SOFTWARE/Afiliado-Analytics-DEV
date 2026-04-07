@@ -1,21 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
 import { isWhatsAppUrl } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
-import CaptureYoutubeEmbed from "./CaptureYoutubeEmbed";
+import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
   CAPTURE_BODY,
   CAPTURE_CTA_CLASS_UPPER,
   CAPTURE_CTA_LABEL,
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
+import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
 
 const ACCENT = "#5eead4";
 const AMBER = "#fbbf24";
@@ -25,131 +25,6 @@ const PARTNER_LOGOS = [
   { src: "/logo-mercadolivre_5d835dbf.png", alt: "Mercado Livre" },
   { src: "/logo-amazon_99ccd542.png", alt: "Amazon" },
 ] as const;
-
-/** Imagens em `public/ofert/` — carrossel abaixo do título. */
-const OFERT_SLIDES = [
-  { src: "/ofert/colar.png", alt: "Oferta: colar" },
-  { src: "/ofert/gilgil.png", alt: "Oferta: produto em destaque" },
-  { src: "/ofert/CAMISOLA.png", alt: "Oferta: camisola" },
-  { src: "/ofert/3301c0b3-a1e4-4539-b0e1-4abd35658256.jpg", alt: "Oferta em destaque" },
-  { src: "/ofert/relógio.png", alt: "Oferta: relógio" },
-  { src: "/ofert/4c046724-b2ea-4c15-9c50-601d677330c0.jpg", alt: "Oferta em destaque" },
-  { src: "/ofert/iphone17.png", alt: "Oferta: smartphone" },
-  { src: "/ofert/da287c40-cdb5-4c99-ab61-2e6e29acc654.jpg", alt: "Oferta em destaque" },
-] as const;
-
-function OfertCarousel() {
-  const n = OFERT_SLIDES.length;
-  const [index, setIndex] = useState(0);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const touchStartX = useRef<number | null>(null);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(mq.matches);
-    const onChange = () => setReduceMotion(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    const t = window.setInterval(() => setIndex((i) => (i + 1) % n), 4500);
-    return () => window.clearInterval(t);
-  }, [reduceMotion, n]);
-
-  const go = useCallback(
-    (delta: number) => {
-      setIndex((i) => (i + delta + n) % n);
-    },
-    [n]
-  );
-
-  return (
-    <div
-      className="mt-5 w-[calc(100%+3rem)] max-w-[calc(100%+3rem)] -mx-6 sm:mx-0 sm:w-full sm:max-w-none"
-      role="region"
-      aria-roledescription="carousel"
-      aria-label="Ofertas em destaque"
-      onTouchStart={(e) => {
-        touchStartX.current = e.touches[0]?.clientX ?? null;
-      }}
-      onTouchEnd={(e) => {
-        const start = touchStartX.current;
-        const end = e.changedTouches[0]?.clientX;
-        touchStartX.current = null;
-        if (start == null || end == null) return;
-        const dx = end - start;
-        if (dx > 56) go(-1);
-        else if (dx < -56) go(1);
-      }}
-    >
-      <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-        Achados que rolam na sala
-      </p>
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/40 shadow-inner ring-1 ring-white/5">
-        <div
-          className="flex"
-          style={{
-            transform: `translateX(-${index * 100}%)`,
-            transition: reduceMotion ? "none" : "transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        >
-          {OFERT_SLIDES.map((slide, slideIndex) => (
-            <div
-              key={slide.src}
-              className="relative aspect-[4/3] w-full min-w-full shrink-0 max-sm:aspect-[3/4]"
-              aria-hidden={OFERT_SLIDES[index]?.src !== slide.src}
-            >
-              <Image
-                src={slide.src}
-                alt={slide.alt}
-                fill
-                className="object-contain object-center p-0 sm:p-4"
-                sizes="(max-width: 768px) 100vw, 448px"
-                unoptimized
-                priority={slideIndex === 0}
-              />
-            </div>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => go(-1)}
-          className="absolute left-1 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-md transition hover:bg-black/65 active:scale-95"
-          aria-label="Oferta anterior"
-        >
-          <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
-        </button>
-        <button
-          type="button"
-          onClick={() => go(1)}
-          className="absolute right-1 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-md transition hover:bg-black/65 active:scale-95"
-          aria-label="Próxima oferta"
-        >
-          <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
-        </button>
-      </div>
-
-      <div className="mt-3 flex justify-center gap-1.5" role="tablist" aria-label="Indicadores do carrossel">
-        {OFERT_SLIDES.map((slide, i) => (
-          <button
-            key={slide.src}
-            type="button"
-            role="tab"
-            aria-selected={i === index}
-            aria-label={`Ir para oferta ${i + 1} de ${n}`}
-            onClick={() => setIndex(i)}
-            className={`h-1.5 rounded-full transition-all ${
-              i === index ? "w-5 bg-teal-400" : "w-1.5 bg-zinc-600 hover:bg-zinc-500"
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** Depoimentos fictícios para prova social (ilustração). Fotos em `public/notifi`. */
 const FAKE_TESTIMONIALS = [
@@ -218,6 +93,7 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
     logoUrl,
     buttonColor,
     youtubeUrl,
+    youtubePosition,
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
@@ -235,8 +111,6 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
   const { r, g, b } = parseColorToRgb(color);
   const showWa =
     previewMode || isWhatsAppUrl(ctaHref) || /\/go\/?(\?.*)?$/i.test(ctaHref.trim());
-  const yt = (youtubeUrl ?? "").trim();
-
   return (
     <>
       <CaptureVipEntradaToasts disabled={!notifOn} position={notifPos} />
@@ -325,7 +199,7 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
 
           {/* Cartão principal */}
           <article
-            className="rounded-[1.75rem] border border-white/[0.09] bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-3"
+            className="rounded-[1.75rem] border border-white/[0.09] bg-white/[0.05] px-7 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-8"
             style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 80px rgba(0,0,0,0.45)" }}
           >
             {logoUrl ? (
@@ -343,7 +217,35 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
               {safeTitle}
             </h1>
 
-            <OfertCarousel />
+            <CaptureOfertCarouselIf
+              {...props}
+              slot="below_title"
+              variant="aurora"
+              eyebrow="Achados que rolam na sala"
+              bleed
+            />
+
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="below_title"
+              className="mt-6 w-full"
+            />
+
+            <CaptureOfertCarouselIf
+              {...props}
+              slot="above_cta"
+              variant="aurora"
+              eyebrow="Achados que rolam na sala"
+              bleed
+            />
+
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="above_cta"
+              className="mt-6 w-full"
+            />
 
             <div className="mt-6">
               <CtaButton href={ctaHref} r={r} g={g} b={b}>
@@ -355,6 +257,21 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
                 WhatsApp.
               </p>
             </div>
+
+            <CaptureOfertCarouselIf
+              {...props}
+              slot="below_cta"
+              variant="aurora"
+              eyebrow="Achados que rolam na sala"
+              bleed
+            />
+
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="below_cta"
+              className="mt-6 w-full"
+            />
 
             <p className={`mt-6 ${CAPTURE_BODY} text-zinc-400 sm:text-base`}>{safeDesc}</p>
 
@@ -442,14 +359,21 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
               </p>
             </div>
 
-            {yt ? (
-              <div className="mt-8 w-full">
-                <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Veja em 30 segundos por que entram
-                </p>
-                <CaptureYoutubeEmbed url={yt} />
-              </div>
-            ) : null}
+            <CaptureOfertCarouselIf
+              {...props}
+              slot="card_end"
+              variant="aurora"
+              eyebrow="Achados que rolam na sala"
+              bleed
+            />
+
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="card_end"
+              className="mt-8 w-full"
+              eyebrow="Veja em 30 segundos por que entram"
+            />
           </article>
 
           {/* Passos + prova social leve */}

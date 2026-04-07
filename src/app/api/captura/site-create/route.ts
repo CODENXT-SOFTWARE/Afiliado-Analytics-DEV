@@ -8,6 +8,8 @@ import {
   normalizeNotificationsEnabled,
   normalizeNotificationsPosition,
 } from "@/lib/capture-notifications";
+import { normalizeOfertCarouselPosition } from "@/lib/capture-ofert-carousel";
+import { normalizeYoutubePosition } from "@/lib/capture-block-position";
 
 /** INSERT com service role evita RLS/policies que às vezes ignoram colunas novas (ex.: page_template). */
 function supabaseServiceRole() {
@@ -113,12 +115,20 @@ export async function POST(req: Request) {
     meta_pixel_id: trimOrNull(body.meta_pixel_id ?? body.metaPixelId),
     page_template,
     youtube_url: youtubeRaw ? youtubeRaw : null,
+    youtube_position: normalizeYoutubePosition(
+      body.youtube_position ?? body.youtubePosition,
+    ),
     notifications_enabled: normalizeNotificationsEnabled(
       body.notifications_enabled ?? body.notificationsEnabled,
     ),
     notifications_position: normalizeNotificationsPosition(
       body.notifications_position ?? body.notificationsPosition,
     ),
+    ofert_carousel_enabled: false,
+    ofert_carousel_position: normalizeOfertCarouselPosition(
+      body.ofert_carousel_position ?? body.ofertCarouselPosition,
+    ),
+    ofert_carousel_image_paths: [] as unknown[],
     userid: user.id,
   };
 

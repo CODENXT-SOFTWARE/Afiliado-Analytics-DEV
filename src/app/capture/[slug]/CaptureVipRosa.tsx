@@ -15,13 +15,14 @@ import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
 import { isWhatsAppUrl, useCaptureVipFonts } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
-import CaptureYoutubeEmbed from "./CaptureYoutubeEmbed";
+import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
   CAPTURE_BODY,
   CAPTURE_CTA_CLASS,
   CAPTURE_CTA_LABEL,
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
+import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
 
 const BENEFITS: { Icon: typeof Ticket; title: string; body: string }[] = [
   {
@@ -109,6 +110,7 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
     logoUrl,
     buttonColor,
     youtubeUrl,
+    youtubePosition,
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
@@ -126,8 +128,6 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
   const { r, g, b } = parseColorToRgb(color);
   const showWa =
     previewMode || isWhatsAppUrl(ctaHref) || /\/go\/?(\?.*)?$/i.test(ctaHref.trim());
-
-  const yt = (youtubeUrl ?? "").trim();
 
   const [eleganteFilledPct, setEleganteFilledPct] = useState(70);
 
@@ -248,6 +248,20 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
             {safeTitle}
           </h1>
 
+          <CaptureOfertCarouselIf
+            {...props}
+            slot="below_title"
+            variant="light"
+            eyebrow="Destaques"
+          />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="below_title"
+            className="mb-3.5 w-full text-left"
+          />
+
           <p
             className={`mb-3.5 px-0.5 ${CAPTURE_BODY} font-normal`}
             style={{ color: theme.textSoft }}
@@ -255,11 +269,14 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
             {safeDesc}
           </p>
 
-          {yt ? (
-            <div className="mb-3.5 w-full text-left">
-              <CaptureYoutubeEmbed url={yt} />
-            </div>
-          ) : null}
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="above_cta"
+            className="mb-3.5 w-full text-left"
+          />
+
+          <CaptureOfertCarouselIf {...props} slot="above_cta" variant="light" eyebrow="Destaques" />
 
           <div className="my-2">
             <a
@@ -281,6 +298,15 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
               ✅ Grupo seguro — ofertas novas todos os dias
             </p>
           </div>
+
+          <CaptureOfertCarouselIf {...props} slot="below_cta" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="below_cta"
+            className="mb-4 w-full text-left"
+          />
 
           {rosaPct >= 100 ? (
             <p
@@ -345,6 +371,15 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
               </div>
             ))}
           </div>
+
+          <CaptureOfertCarouselIf {...props} slot="card_end" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="card_end"
+            className="mb-4 w-full text-left"
+          />
 
           <footer
             className="mt-4 flex flex-col items-center gap-3 border-t pt-4 text-[11px]"

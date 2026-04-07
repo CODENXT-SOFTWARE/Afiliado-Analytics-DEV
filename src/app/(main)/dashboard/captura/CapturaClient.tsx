@@ -33,6 +33,20 @@ import {
   NOTIFICATIONS_POSITION_OPTIONS,
   type NotificationsPosition,
 } from "@/lib/capture-notifications";
+import {
+  CAPTURE_BLOCK_POSITION_OPTIONS,
+  DEFAULT_YOUTUBE_POSITION,
+  normalizeYoutubePosition,
+  type CaptureBlockPosition,
+} from "@/lib/capture-block-position";
+import {
+  DEFAULT_OFERT_CAROUSEL_POSITION,
+  OFERT_CAROUSEL_POSITION_OPTIONS,
+  carouselPublicUrls,
+  normalizeOfertCarouselPosition,
+  normalizeOfertCarouselSlots,
+  type OfertCarouselPosition,
+} from "@/lib/capture-ofert-carousel";
 import { isValidOptionalYoutubeUrl } from "@/lib/youtube-embed";
 import { formatDateTimePtBR, isExpired, sanitizeSlug } from "./_lib/captureUtils";
 
@@ -42,6 +56,7 @@ import { CapturePreviewPortalContext } from "@/app/capture/[slug]/CapturePreview
 import DeleteSiteModal from "./_components/DeleteSiteModal";
 import LayoutVariantField from "./_components/LayoutVariantField";
 import ResetMetricsModal from "./_components/ResetMetricsModal";
+import { persistOfertCarouselSlots } from "./_lib/ofertCarouselPersist";
 
 const DOMAIN = "s.afiliadoanalytics.com.br";
 const LOGO_BUCKET = "capture-logos";
@@ -183,10 +198,33 @@ export default function CapturaClient() {
   const [buttonColor, setButtonColor] = useState("#25D366");
   const [metaPixelId, setMetaPixelId] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubePosition, setYoutubePosition] = useState<CaptureBlockPosition>(DEFAULT_YOUTUBE_POSITION);
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [notificationsPosition, setNotificationsPosition] =
     useState<NotificationsPosition>(DEFAULT_NOTIFICATIONS_POSITION);
+
+  const [ofertCarouselEnabled, setOfertCarouselEnabled] = useState(false);
+  const [ofertCarouselPosition, setOfertCarouselPosition] = useState<OfertCarouselPosition>(
+    DEFAULT_OFERT_CAROUSEL_POSITION,
+  );
+  const [carouselSlotPath, setCarouselSlotPath] = useState<(string | null)[]>([
+    null,
+    null,
+    null,
+    null,
+  ]);
+  const [carouselSlotFile, setCarouselSlotFile] = useState<(File | null)[]>([null, null, null, null]);
+  const initialCarouselPathsRef = useRef<(string | null)[]>([null, null, null, null]);
+  const [carouselBlobUrls, setCarouselBlobUrls] = useState<(string | null)[]>([null, null, null, null]);
+
+  useEffect(() => {
+    const urls = carouselSlotFile.map((f) => (f ? URL.createObjectURL(f) : null));
+    setCarouselBlobUrls(urls);
+    return () => {
+      urls.forEach((u) => u && URL.revokeObjectURL(u));
+    };
+  }, [carouselSlotFile]);
   /** Overlay onde o toast VIP é portado no preview (não cobre o resto do dashboard). */
   const [vipPreviewToastRoot, setVipPreviewToastRoot] = useState<HTMLDivElement | null>(null);
 
@@ -263,6 +301,20 @@ export default function CapturaClient() {
     if (!a || !b) return false;
     return a !== b;
   }, [mode, whatsappUrl]);
+
+  /** URLs do carrossel para o preview (deve ficar antes de qualquer return — Rules of Hooks). */
+  const ofertCarouselPreviewUrls = useMemo(() => {
+    if (!supabase) return [] as string[];
+    const out: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      if (carouselBlobUrls[i]) out.push(carouselBlobUrls[i]!);
+      else if (carouselSlotPath[i]) {
+        const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(carouselSlotPath[i]!);
+        if (data.publicUrl) out.push(data.publicUrl);
+      }
+    }
+    return out;
+  }, [supabase, carouselBlobUrls, carouselSlotPath]);
 
   const setLogoFromLogopath = useCallback(
     (logopath: string | null) => {
@@ -387,9 +439,16 @@ export default function CapturaClient() {
     setLayoutVariant(t === "classic" ? "icons" : "scarcity");
     setMetaPixelId("");
     setYoutubeUrl("");
+    setYoutubePosition(DEFAULT_YOUTUBE_POSITION);
 
     setNotificationsEnabled(true);
     setNotificationsPosition(DEFAULT_NOTIFICATIONS_POSITION);
+
+    setOfertCarouselEnabled(false);
+    setOfertCarouselPosition(DEFAULT_OFERT_CAROUSEL_POSITION);
+    setCarouselSlotPath([null, null, null, null]);
+    setCarouselSlotFile([null, null, null, null]);
+    initialCarouselPathsRef.current = [null, null, null, null];
 
     setLogoFile(null);
     setLogoPendingAction("keep");
@@ -415,9 +474,17 @@ export default function CapturaClient() {
     setPageTemplate(((row as CaptureSiteRow).page_template ?? "classic") as PageTemplate);
     setMetaPixelId(row.meta_pixel_id ?? "");
     setYoutubeUrl(row.youtube_url ?? "");
+    setYoutubePosition(normalizeYoutubePosition(row.youtube_position));
 
     setNotificationsEnabled(row.notifications_enabled !== false);
     setNotificationsPosition(normalizeNotificationsPosition(row.notifications_position));
+
+    const ocSlots = normalizeOfertCarouselSlots(row.ofert_carousel_image_paths);
+    setOfertCarouselEnabled(row.ofert_carousel_enabled === true);
+    setOfertCarouselPosition(normalizeOfertCarouselPosition(row.ofert_carousel_position));
+    setCarouselSlotPath([...ocSlots]);
+    initialCarouselPathsRef.current = [...ocSlots];
+    setCarouselSlotFile([null, null, null, null]);
 
     setLogoFile(null);
     setLogoPendingAction("keep");
@@ -450,8 +517,16 @@ export default function CapturaClient() {
       setPageTemplate(((site as CaptureSiteRow).page_template ?? "classic") as PageTemplate);
       setMetaPixelId(site.meta_pixel_id ?? "");
       setYoutubeUrl(site.youtube_url ?? "");
+      setYoutubePosition(normalizeYoutubePosition(site.youtube_position));
       setNotificationsEnabled(site.notifications_enabled !== false);
       setNotificationsPosition(normalizeNotificationsPosition(site.notifications_position));
+
+      const ocSlotsCancel = normalizeOfertCarouselSlots(site.ofert_carousel_image_paths);
+      setOfertCarouselEnabled(site.ofert_carousel_enabled === true);
+      setOfertCarouselPosition(normalizeOfertCarouselPosition(site.ofert_carousel_position));
+      setCarouselSlotPath([...ocSlotsCancel]);
+      initialCarouselPathsRef.current = [...ocSlotsCancel];
+      setCarouselSlotFile([null, null, null, null]);
 
       originalButtonUrlRef.current = (site.whatsapp_url ?? "").trim();
 
@@ -467,8 +542,14 @@ export default function CapturaClient() {
       setLogoUrl(null);
       setMetaPixelId("");
       setYoutubeUrl("");
+      setYoutubePosition(DEFAULT_YOUTUBE_POSITION);
       setNotificationsEnabled(true);
       setNotificationsPosition(DEFAULT_NOTIFICATIONS_POSITION);
+      setOfertCarouselEnabled(false);
+      setOfertCarouselPosition(DEFAULT_OFERT_CAROUSEL_POSITION);
+      setCarouselSlotPath([null, null, null, null]);
+      setCarouselSlotFile([null, null, null, null]);
+      initialCarouselPathsRef.current = [null, null, null, null];
     } else {
       originalButtonUrlRef.current = "";
       modeRef.current = "empty";
@@ -476,8 +557,14 @@ export default function CapturaClient() {
       setLogoUrl(null);
       setMetaPixelId("");
       setYoutubeUrl("");
+      setYoutubePosition(DEFAULT_YOUTUBE_POSITION);
       setNotificationsEnabled(true);
       setNotificationsPosition(DEFAULT_NOTIFICATIONS_POSITION);
+      setOfertCarouselEnabled(false);
+      setOfertCarouselPosition(DEFAULT_OFERT_CAROUSEL_POSITION);
+      setCarouselSlotPath([null, null, null, null]);
+      setCarouselSlotFile([null, null, null, null]);
+      initialCarouselPathsRef.current = [null, null, null, null];
     }
   }
 
@@ -620,6 +707,12 @@ export default function CapturaClient() {
       return;
     }
 
+    if (ofertCarouselEnabled && !carouselSlotFile.some(Boolean)) {
+      setError("Carrossel ativo: envie pelo menos uma imagem ou desative o carrossel.");
+      setSaving(false);
+      return;
+    }
+
     const fileToUploadAfterCreate = logoFile;
 
     const res = await fetch("/api/captura/site-create", {
@@ -637,6 +730,7 @@ export default function CapturaClient() {
         meta_pixel_id: metaPixelId.trim() || null,
         page_template: pageTemplateRef.current,
         youtube_url: youtubeUrl.trim() || null,
+        youtube_position: youtubePosition,
         notifications_enabled: notificationsEnabled,
         notifications_position: notificationsPosition,
       }),
@@ -664,6 +758,32 @@ export default function CapturaClient() {
       if (fileToUploadAfterCreate && created?.id) {
         await uploadLogoNow(fileToUploadAfterCreate, created.id);
         setLogoFile(null);
+        await fetchSites();
+      }
+
+      if (supabase && created?.id && ofertCarouselEnabled) {
+        const ofertDb = await persistOfertCarouselSlots({
+          siteId: created.id,
+          ofertCarouselEnabled: true,
+          ofertCarouselPosition,
+          carouselSlotPath: [null, null, null, null],
+          carouselSlotFile,
+          initialCarouselPaths: [null, null, null, null],
+        });
+        const { error: ocErr } = await supabase
+          .from("capture_sites")
+          .update({
+            ofert_carousel_enabled: ofertDb.ofert_carousel_enabled,
+            ofert_carousel_position: ofertDb.ofert_carousel_position,
+            ofert_carousel_image_paths: ofertDb.ofert_carousel_image_paths,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", created.id);
+        if (ocErr) throw new Error(ocErr.message);
+        const slots = ofertDb.ofert_carousel_image_paths;
+        initialCarouselPathsRef.current = [...slots];
+        setCarouselSlotPath(slots);
+        setCarouselSlotFile([null, null, null, null]);
         await fetchSites();
       }
 
@@ -725,6 +845,34 @@ export default function CapturaClient() {
       return;
     }
 
+    if (ofertCarouselEnabled) {
+      const anyCarousel =
+        carouselSlotFile.some(Boolean) ||
+        carouselSlotPath.some((p) => !!p) ||
+        initialCarouselPathsRef.current.some((p) => !!p);
+      if (!anyCarousel) {
+        setError("Carrossel ativo: envie pelo menos uma imagem ou desative o carrossel.");
+        setSaving(false);
+        return;
+      }
+    }
+
+    let ofertDb: Awaited<ReturnType<typeof persistOfertCarouselSlots>>;
+    try {
+      ofertDb = await persistOfertCarouselSlots({
+        siteId: site.id,
+        ofertCarouselEnabled,
+        ofertCarouselPosition,
+        carouselSlotPath,
+        carouselSlotFile,
+        initialCarouselPaths: initialCarouselPathsRef.current,
+      });
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Erro ao guardar o carrossel."));
+      setSaving(false);
+      return;
+    }
+
     const wantedTpl = normalizeCapturePageTemplate(pageTemplateRef.current);
 
     const { data: updatedRow, error: upErr } = await supabase
@@ -739,8 +887,12 @@ export default function CapturaClient() {
         meta_pixel_id: metaPixelId.trim() || null,
         page_template: wantedTpl,
         youtube_url: youtubeUrl.trim() || null,
+        youtube_position: youtubePosition,
         notifications_enabled: notificationsEnabled,
         notifications_position: notificationsPosition,
+        ofert_carousel_enabled: ofertDb.ofert_carousel_enabled,
+        ofert_carousel_position: ofertDb.ofert_carousel_position,
+        ofert_carousel_image_paths: ofertDb.ofert_carousel_image_paths,
         updated_at: new Date().toISOString(),
       })
       .eq("id", site.id)
@@ -797,6 +949,11 @@ export default function CapturaClient() {
 
       setLogoPendingAction("keep");
       setLogoFile(null);
+
+      const slots = ofertDb.ofert_carousel_image_paths;
+      initialCarouselPathsRef.current = [...slots];
+      setCarouselSlotPath(slots);
+      setCarouselSlotFile([null, null, null, null]);
 
       setPageLoading(true);
       setStep(1);
@@ -874,6 +1031,12 @@ export default function CapturaClient() {
       setLayoutVariant("icons");
       setMetaPixelId("");
       setYoutubeUrl("");
+      setYoutubePosition(DEFAULT_YOUTUBE_POSITION);
+      setOfertCarouselEnabled(false);
+      setOfertCarouselPosition(DEFAULT_OFERT_CAROUSEL_POSITION);
+      setCarouselSlotPath([null, null, null, null]);
+      setCarouselSlotFile([null, null, null, null]);
+      initialCarouselPathsRef.current = [null, null, null, null];
       setLogoFile(null);
       setLogoUrl(null);
       setLogoPendingAction("keep");
@@ -1552,13 +1715,126 @@ export default function CapturaClient() {
                       placeholder="https://www.youtube.com/watch?v=… ou youtu.be/…"
                     />
                     <p className="mt-1.5 text-xs text-text-secondary/80">
-                      Se preencher, o player aparece na página pública acima do primeiro botão (todos os modelos).
+                      Escolha abaixo onde o player aparece na página (título, botão ou fim do card).
                     </p>
                     {!!youtubeUrl.trim() && !isValidOptionalYoutubeUrl(youtubeUrl) && (
                       <div className="mt-2 text-xs text-red-400">
                         URL ou ID do YouTube inválido.
                       </div>
                     )}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Posição do vídeo no site</label>
+                    <select
+                      value={youtubePosition}
+                      onChange={(e) => setYoutubePosition(normalizeYoutubePosition(e.target.value))}
+                      className={inputClass}
+                    >
+                      {CAPTURE_BLOCK_POSITION_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="rounded-lg border border-dark-border p-4 space-y-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <span className={labelClass}>Carrossel de ofertas</span>
+                        <p className="mt-1 text-xs text-text-secondary/80">
+                          Até 4 imagens (PNG, JPEG ou WebP, máx. 2 MB). Escolha onde aparece na página.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={ofertCarouselEnabled}
+                        onClick={() => setOfertCarouselEnabled((v) => !v)}
+                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border border-dark-border transition-colors focus:outline-none focus:ring-2 focus:ring-shopee-orange/50 ${
+                          ofertCarouselEnabled ? "bg-shopee-orange" : "bg-dark-bg"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${
+                            ofertCarouselEnabled ? "translate-x-[1.35rem]" : "translate-x-0.5"
+                          } mt-px`}
+                        />
+                      </button>
+                    </div>
+                    {ofertCarouselEnabled ? (
+                      <>
+                        <div>
+                          <label className={labelClass}>Posição do carrossel</label>
+                          <select
+                            value={ofertCarouselPosition}
+                            onChange={(e) =>
+                              setOfertCarouselPosition(normalizeOfertCarouselPosition(e.target.value))
+                            }
+                            className={inputClass}
+                          >
+                            {OFERT_CAROUSEL_POSITION_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {([0, 1, 2, 3] as const).map((slot) => (
+                            <div key={slot} className="rounded-md border border-dark-border p-3">
+                              <label className="text-xs font-medium text-text-secondary">
+                                Imagem {slot + 1}
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                className="mt-1 block w-full text-xs text-text-secondary file:mr-2 file:rounded file:border-0 file:bg-dark-bg file:px-2 file:py-1"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0] ?? null;
+                                  if (!f) return;
+                                  if (f.size > 2 * 1024 * 1024) {
+                                    setError("Imagem muito grande (máx. 2 MB).");
+                                    return;
+                                  }
+                                  if (!["image/png", "image/jpeg", "image/webp"].includes(f.type)) {
+                                    setError("Use PNG, JPEG ou WebP.");
+                                    return;
+                                  }
+                                  setCarouselSlotFile((prev) => {
+                                    const n = [...prev];
+                                    n[slot] = f;
+                                    return n;
+                                  });
+                                  setError(null);
+                                }}
+                              />
+                              {(carouselSlotPath[slot] || carouselSlotFile[slot]) && (
+                                <button
+                                  type="button"
+                                  className="mt-2 text-xs text-red-400/90 hover:underline"
+                                  onClick={() => {
+                                    setCarouselSlotFile((prev) => {
+                                      const n = [...prev];
+                                      n[slot] = null;
+                                      return n;
+                                    });
+                                    setCarouselSlotPath((prev) => {
+                                      const n = [...prev];
+                                      n[slot] = null;
+                                      return n;
+                                    });
+                                  }}
+                                >
+                                  Remover
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
                   </div>
 
                   {isVipPreview && (
@@ -1710,9 +1986,13 @@ export default function CapturaClient() {
                               logoUrl={previewLogoSrc}
                               buttonColor={previewColor}
                               youtubeUrl={youtubeUrl.trim() || null}
+                              youtubePosition={youtubePosition}
                               previewMode
                               notificationsEnabled={notificationsEnabled}
                               notificationsPosition={notificationsPosition}
+                              ofertCarouselEnabled={ofertCarouselEnabled}
+                              ofertCarouselPosition={ofertCarouselPosition}
+                              ofertCarouselImageUrls={ofertCarouselPreviewUrls}
                             />
                           </div>
                         </div>
@@ -1748,6 +2028,10 @@ export default function CapturaClient() {
                 buttonText={previewButtonText}
                 buttonUrl={previewButtonUrl}
                 youtubeUrl={youtubeUrl}
+                youtubePosition={youtubePosition}
+                ofertCarouselEnabled={ofertCarouselEnabled}
+                ofertCarouselPosition={ofertCarouselPosition}
+                ofertCarouselImageUrls={ofertCarouselPreviewUrls}
               />
             )}
           </div>

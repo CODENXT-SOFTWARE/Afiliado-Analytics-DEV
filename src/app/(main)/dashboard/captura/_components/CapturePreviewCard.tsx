@@ -6,13 +6,18 @@ import { FaWhatsapp } from "react-icons/fa";
 import ScarcityPreview from "./ScarcityPreview";
 import { LayoutVariant } from "../_lib/types";
 import { parseColorToRgb } from "../_lib/captureUtils";
-import CaptureYoutubeEmbed from "@/app/capture/[slug]/CaptureYoutubeEmbed";
+import { CaptureYoutubeAtSlot } from "@/app/capture/[slug]/CaptureYoutubeAtSlot";
 import {
   CAPTURE_BODY,
   CAPTURE_CTA_CLASS,
   CAPTURE_CTA_LABEL,
   CAPTURE_TITLE_HERO,
 } from "@/app/capture/[slug]/capture-responsive-classes";
+import { OfertCarouselAtSlot } from "@/app/capture/[slug]/CaptureOfertCarouselIf";
+import type { CaptureBlockPosition } from "@/lib/capture-block-position";
+import { normalizeYoutubePosition } from "@/lib/capture-block-position";
+import type { OfertCarouselPosition } from "@/lib/capture-ofert-carousel";
+import { normalizeOfertCarouselPosition } from "@/lib/capture-ofert-carousel";
 
 function isWhatsAppLink(rawUrl: string) {
   const s = (rawUrl || "").trim().toLowerCase();
@@ -36,9 +41,25 @@ export default function CapturePreviewCard(props: {
   buttonText: string;
   buttonUrl: string;
   youtubeUrl?: string;
+  youtubePosition?: CaptureBlockPosition;
+  ofertCarouselEnabled?: boolean;
+  ofertCarouselPosition?: OfertCarouselPosition;
+  ofertCarouselImageUrls?: string[];
 }) {
-  const { title, description, buttonColor, layoutVariant, logoSrc, buttonText, buttonUrl, youtubeUrl } =
-    props;
+  const {
+    title,
+    description,
+    buttonColor,
+    layoutVariant,
+    logoSrc,
+    buttonText,
+    buttonUrl,
+    youtubeUrl,
+    youtubePosition,
+    ofertCarouselEnabled = false,
+    ofertCarouselPosition,
+    ofertCarouselImageUrls = [],
+  } = props;
 
   const safeTitle = title.trim() || "Grupo VIP";
   const safeDesc = description.trim() || "Clique no botão abaixo para acessar.";
@@ -50,6 +71,7 @@ export default function CapturePreviewCard(props: {
   const { r, g, b } = parseColorToRgb(safeColor);
   const isBlobLogo = !!logoSrc && logoSrc.startsWith("blob:");
   const yt = (youtubeUrl ?? "").trim();
+  const ytPos = normalizeYoutubePosition(youtubePosition);
 
   return (
     <div className="rounded-lg border border-dark-border overflow-hidden bg-dark-card">
@@ -97,6 +119,22 @@ export default function CapturePreviewCard(props: {
                 {safeTitle}
               </h1>
 
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled && ofertCarouselImageUrls.length > 0}
+                imageUrls={ofertCarouselImageUrls}
+                position={normalizeOfertCarouselPosition(ofertCarouselPosition)}
+                slot="below_title"
+                variant="classic"
+                eyebrow="Destaques"
+              />
+
+              <CaptureYoutubeAtSlot
+                url={yt}
+                position={ytPos}
+                slot="below_title"
+                className="mt-4 w-full"
+              />
+
               {/* 3) Descrição */}
               <p
                 className={`${CAPTURE_BODY} mt-4 max-w-sm mx-auto font-semibold`}
@@ -142,11 +180,21 @@ export default function CapturePreviewCard(props: {
                 </div>
               )}
 
-              {yt ? (
-                <div className="mt-6 sm:mt-7 w-full">
-                  <CaptureYoutubeEmbed url={yt} />
-                </div>
-              ) : null}
+              <CaptureYoutubeAtSlot
+                url={yt}
+                position={ytPos}
+                slot="above_cta"
+                className="mt-6 sm:mt-7 w-full"
+              />
+
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled && ofertCarouselImageUrls.length > 0}
+                imageUrls={ofertCarouselImageUrls}
+                position={normalizeOfertCarouselPosition(ofertCarouselPosition)}
+                slot="above_cta"
+                variant="classic"
+                eyebrow="Destaques"
+              />
 
               {/* 5) Botão */}
               <div className="flex justify-center mt-7 sm:mt-8">
@@ -169,6 +217,38 @@ export default function CapturePreviewCard(props: {
                   <span className={CAPTURE_CTA_LABEL}>{safeButtonText}</span>
                 </button>
               </div>
+
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled && ofertCarouselImageUrls.length > 0}
+                imageUrls={ofertCarouselImageUrls}
+                position={normalizeOfertCarouselPosition(ofertCarouselPosition)}
+                slot="below_cta"
+                variant="classic"
+                eyebrow="Destaques"
+              />
+
+              <CaptureYoutubeAtSlot
+                url={yt}
+                position={ytPos}
+                slot="below_cta"
+                className="mt-5 w-full"
+              />
+
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled && ofertCarouselImageUrls.length > 0}
+                imageUrls={ofertCarouselImageUrls}
+                position={normalizeOfertCarouselPosition(ofertCarouselPosition)}
+                slot="card_end"
+                variant="classic"
+                eyebrow="Destaques"
+              />
+
+              <CaptureYoutubeAtSlot
+                url={yt}
+                position={ytPos}
+                slot="card_end"
+                className="mt-5 w-full"
+              />
             </div>
           </div>
         </div>

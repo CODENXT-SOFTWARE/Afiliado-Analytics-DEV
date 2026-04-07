@@ -10,7 +10,7 @@ import { detectBot } from "../../../lib/bot-detection";
 import CTAButton from "./CTAButton";
 import { CAPTURE_BODY, CAPTURE_TITLE_HERO } from "./capture-responsive-classes";
 import CaptureVipLanding from "./CaptureVipLanding";
-import CaptureYoutubeEmbed from "./CaptureYoutubeEmbed";
+import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import type { PageTemplate } from "@/app/(main)/dashboard/captura/_lib/types";
 import { normalizeCapturePageTemplate } from "@/lib/capture-page-template";
 import {
@@ -18,6 +18,13 @@ import {
   normalizeNotificationsPosition,
 } from "@/lib/capture-notifications";
 import { CAPTURE_PUBLIC_DOMAIN, loadCaptureSiteRow } from "@/lib/capture-load-site";
+import {
+  carouselPublicUrls,
+  normalizeOfertCarouselPosition,
+  normalizeOfertCarouselSlots,
+} from "@/lib/capture-ofert-carousel";
+import { normalizeYoutubePosition } from "@/lib/capture-block-position";
+import { OfertCarouselAtSlot } from "./CaptureOfertCarouselIf";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -255,9 +262,25 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
     pageTemplate === "aurora_ledger" ||
     pageTemplate === "jardim_floral";
   const youtubeUrl = (site.youtube_url ?? "").trim();
+  const youtubePosition = normalizeYoutubePosition(
+    (site as { youtube_position?: unknown }).youtube_position,
+  );
 
   const notificationsEnabled = normalizeNotificationsEnabled(site.notifications_enabled);
   const notificationsPosition = normalizeNotificationsPosition(site.notifications_position);
+
+  const ofertSlots = normalizeOfertCarouselSlots(
+    (site as { ofert_carousel_image_paths?: unknown }).ofert_carousel_image_paths,
+  );
+  const ofertCarouselImageUrls = carouselPublicUrls(ofertSlots, (path) => {
+    const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
+    return data.publicUrl ?? null;
+  });
+  const ofertCarouselEnabled =
+    (site as { ofert_carousel_enabled?: boolean | null }).ofert_carousel_enabled === true;
+  const ofertCarouselPosition = normalizeOfertCarouselPosition(
+    (site as { ofert_carousel_position?: unknown }).ofert_carousel_position,
+  );
 
   return (
     <>
@@ -303,8 +326,12 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
           logoUrl={logoUrl}
           buttonColor={buttonColor}
           youtubeUrl={youtubeUrl || null}
+          youtubePosition={youtubePosition}
           notificationsEnabled={notificationsEnabled}
           notificationsPosition={notificationsPosition}
+          ofertCarouselEnabled={ofertCarouselEnabled}
+          ofertCarouselPosition={ofertCarouselPosition}
+          ofertCarouselImageUrls={ofertCarouselImageUrls}
         />
       ) : null}
 
@@ -385,6 +412,22 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
               {title}
             </h1>
 
+            <OfertCarouselAtSlot
+              enabled={ofertCarouselEnabled}
+              imageUrls={ofertCarouselImageUrls}
+              position={ofertCarouselPosition}
+              slot="below_title"
+              variant="classic"
+              eyebrow="Destaques"
+            />
+
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="below_title"
+              className="mt-4 sm:mt-5 w-full"
+            />
+
             <p
               className={`${CAPTURE_BODY} mt-4 max-w-sm mx-auto font-semibold`}
               style={{ color: "rgb(60, 60, 60)" }}
@@ -428,11 +471,21 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
               </div>
             )}
 
-            {youtubeUrl ? (
-              <div className="mt-6 sm:mt-7 w-full">
-                <CaptureYoutubeEmbed url={youtubeUrl} />
-              </div>
-            ) : null}
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="above_cta"
+              className="mt-6 sm:mt-7 w-full"
+            />
+
+            <OfertCarouselAtSlot
+              enabled={ofertCarouselEnabled}
+              imageUrls={ofertCarouselImageUrls}
+              position={ofertCarouselPosition}
+              slot="above_cta"
+              variant="classic"
+              eyebrow="Destaques"
+            />
 
             {/* ✅ CORRIGIDO: removida div duplicada */}
             <div className="flex justify-center mt-7 sm:mt-8">
@@ -452,12 +505,44 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
               Após clicar no botão acima, clique na opção &quot;CONTINUAR&quot;
             </p>
 
+            <OfertCarouselAtSlot
+              enabled={ofertCarouselEnabled}
+              imageUrls={ofertCarouselImageUrls}
+              position={ofertCarouselPosition}
+              slot="below_cta"
+              variant="classic"
+              eyebrow="Destaques"
+            />
+
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="below_cta"
+              className="mt-5 sm:mt-6 w-full"
+            />
+
             <div className="flex justify-center items-center gap-2 mt-6">
               <Lock size={16} color="rgb(34, 197, 94)" />
               <span className="font-semibold" style={{ color: "rgb(34, 197, 94)", fontSize: "15px" }}>
                 Site seguro
               </span>
             </div>
+
+            <OfertCarouselAtSlot
+              enabled={ofertCarouselEnabled}
+              imageUrls={ofertCarouselImageUrls}
+              position={ofertCarouselPosition}
+              slot="card_end"
+              variant="classic"
+              eyebrow="Destaques"
+            />
+
+            <CaptureYoutubeAtSlot
+              url={youtubeUrl}
+              position={youtubePosition}
+              slot="card_end"
+              className="mt-6 sm:mt-7 w-full"
+            />
           </div>
         </div>
 

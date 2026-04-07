@@ -7,13 +7,14 @@ import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { isWhatsAppUrl, useCaptureVipFonts } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
-import CaptureYoutubeEmbed from "./CaptureYoutubeEmbed";
+import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
   CAPTURE_BODY,
   CAPTURE_CTA_CLASS,
   CAPTURE_CTA_LABEL,
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
+import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
 
 const TERROSO_BENEFITS: { emoji: string; title: string; body: string }[] = [
   {
@@ -66,6 +67,7 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
     ctaHref,
     logoUrl,
     youtubeUrl,
+    youtubePosition,
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
@@ -81,8 +83,6 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
   const safeBtn = buttonText.trim() || "Quero entrar agora";
   const showWa =
     previewMode || isWhatsAppUrl(ctaHref) || /\/go\/?(\?.*)?$/i.test(ctaHref.trim());
-
-  const yt = (youtubeUrl ?? "").trim();
 
   const [spotsLeft, setSpotsLeft] = useState(42);
   const [spotsPulse, setSpotsPulse] = useState(false);
@@ -201,15 +201,27 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
             {safeTitle}
           </h1>
 
+          <CaptureOfertCarouselIf {...props} slot="below_title" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="below_title"
+            className="w-full"
+          />
+
           <p className={`${CAPTURE_BODY} font-medium`} style={{ color: TERROSO.textMuted }}>
             {safeDesc}
           </p>
 
-          {yt ? (
-            <div className="w-full">
-              <CaptureYoutubeEmbed url={yt} />
-            </div>
-          ) : null}
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="above_cta"
+            className="w-full"
+          />
+
+          <CaptureOfertCarouselIf {...props} slot="above_cta" variant="light" eyebrow="Destaques" />
 
           <div className="w-full">
             <a
@@ -224,6 +236,15 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
               <span className={CAPTURE_CTA_LABEL}>{safeBtn.toUpperCase()}</span>
             </a>
           </div>
+
+          <CaptureOfertCarouselIf {...props} slot="below_cta" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="below_cta"
+            className="w-full"
+          />
 
           <div
             className="flex w-full flex-col items-center rounded-xl border px-4 py-3.5 text-center sm:px-5 sm:py-3.5"
@@ -304,6 +325,15 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
             ))}
             <span className="ml-1">+2.400 membros satisfeitos</span>
           </div>
+
+          <CaptureOfertCarouselIf {...props} slot="card_end" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="card_end"
+            className="w-full"
+          />
 
           <div className="pb-2 text-center text-xs" style={{ color: TERROSO.textFooterFaint }}>
             Feito com{" "}

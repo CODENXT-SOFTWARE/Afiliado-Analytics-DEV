@@ -7,13 +7,14 @@ import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
 import { isWhatsAppUrl } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
-import CaptureYoutubeEmbed from "./CaptureYoutubeEmbed";
+import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
   CAPTURE_BODY,
   CAPTURE_CTA_CLASS_UPPER,
   CAPTURE_CTA_LABEL,
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
+import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
 
 const BG = "#FFF5F7";
 const CARD = "#ffffff";
@@ -75,6 +76,7 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
     logoUrl,
     buttonColor,
     youtubeUrl,
+    youtubePosition,
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
@@ -92,8 +94,6 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
   const { r, g, b } = parseColorToRgb(color);
   const showWa =
     previewMode || isWhatsAppUrl(ctaHref) || /\/go\/?(\?.*)?$/i.test(ctaHref.trim());
-
-  const yt = (youtubeUrl ?? "").trim();
 
   return (
     <>
@@ -148,15 +148,29 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
 
           <h1 className={CAPTURE_TITLE_HERO}>{safeTitle}</h1>
 
+          <CaptureOfertCarouselIf {...props} slot="below_title" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="below_title"
+            className="w-full"
+            classNameEmbed="shadow-lg"
+          />
+
           <p className={CAPTURE_BODY} style={{ color: MUTED }}>
             {safeDesc}
           </p>
 
-          {yt ? (
-            <div className="w-full">
-              <CaptureYoutubeEmbed url={yt} className="shadow-lg" />
-            </div>
-          ) : null}
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="above_cta"
+            className="w-full"
+            classNameEmbed="shadow-lg"
+          />
+
+          <CaptureOfertCarouselIf {...props} slot="above_cta" variant="light" eyebrow="Destaques" />
 
           <CtaBlock
             ctaHref={ctaHref}
@@ -166,6 +180,16 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
             r={r}
             g={g}
             b={b}
+          />
+
+          <CaptureOfertCarouselIf {...props} slot="below_cta" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="below_cta"
+            className="w-full"
+            classNameEmbed="shadow-lg"
           />
 
           <div className="flex justify-center">
@@ -236,6 +260,16 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
               b={b}
             />
           </div>
+
+          <CaptureOfertCarouselIf {...props} slot="card_end" variant="light" eyebrow="Destaques" />
+
+          <CaptureYoutubeAtSlot
+            url={youtubeUrl}
+            position={youtubePosition}
+            slot="card_end"
+            className="w-full"
+            classNameEmbed="shadow-lg"
+          />
 
           <p className="text-center text-[11px]" style={{ color: "#9ca3af" }}>
             © {new Date().getFullYear()} Afiliado Analytics
