@@ -37,7 +37,7 @@ export function buildListaOfferDescription(input: ListaOfferWebhookInput): strin
   const rate = discountRate;
   return (
     `✨ ${nomeProduto}\n\n` +
-    `💰 APROVEITE:${rate > 0 ? ` _${Math.round(rate)}% de DESCONTO!!!!_` : ""} \n  🔴 De: ~${formatBRL(precoRiscado)}~ \n 🔥 Por: *${formatBRL(precoPor)}* 😱\n` +
+    `💰 APROVEITE:${rate > 0 ? ` _${Math.round(rate)}% de DESCONTO!!!!_` : ""} \n🔴 De: ~${formatBRL(precoRiscado)}~ \n🔥 Por: *${formatBRL(precoPor)}* 😱\n` +
     `🏷️ PROMOÇÃO - CLIQUE NO LINK 👇\n` +
     linkAfiliado
   );

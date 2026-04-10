@@ -146,10 +146,12 @@ function WizardStepper({ currentStep, onClose }: { currentStep: number; onClose:
 }
 
 // ─── DisparoCard ────────────────────────────────────────────────────────────────
-function DisparoCard({ c, togglingId, onToggle, onRemove }: {
+function DisparoCard({ c, togglingId, onToggle, onRemove, onTestPulse, testPulseId }: {
   c: ContinuoItem; togglingId: string | null;
   onToggle: (id: string, ativar: boolean) => void;
   onRemove: (id: string) => void;
+  onTestPulse?: (id: string) => void;
+  testPulseId?: string | null;
 }) {
   const isActive = c.ativo;
   const hasShopeeList = !!c.listaOfertasId;
@@ -244,19 +246,37 @@ function DisparoCard({ c, togglingId, onToggle, onRemove }: {
       </div>
       <div className="flex items-center gap-1.5 pt-2 border-t border-[#2c2c32]">
         {isActive ? (
-          <button onClick={() => onToggle(c.id, false)} disabled={togglingId === c.id}
+          <button type="button" onClick={() => onToggle(c.id, false)} disabled={togglingId === c.id}
             className="flex-1 flex items-center justify-center gap-1 text-[9px] font-bold text-red-400 border border-red-400/15 bg-red-400/5 py-1.5 rounded-lg hover:bg-red-400/15 disabled:opacity-40 transition">
             {togglingId === c.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Pause className="w-2.5 h-2.5 fill-red-400" />}
             Pausar
           </button>
         ) : (
-          <button onClick={() => onToggle(c.id, true)} disabled={togglingId === c.id}
-            className="flex-1 flex items-center justify-center gap-1 text-[9px] font-bold text-emerald-400 border border-emerald-500/15 bg-emerald-500/5 py-1.5 rounded-lg hover:bg-emerald-500/15 disabled:opacity-40 transition">
-            {togglingId === c.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Play className="w-2.5 h-2.5 fill-emerald-400" />}
-            Ativar
-          </button>
+          <div className="flex flex-1 items-center gap-1.5 min-w-0">
+            <button type="button" onClick={() => onToggle(c.id, true)} disabled={togglingId === c.id}
+              className="flex-1 min-w-0 flex items-center justify-center gap-1 text-[9px] font-bold text-emerald-400 border border-emerald-500/15 bg-emerald-500/5 py-1.5 rounded-lg hover:bg-emerald-500/15 disabled:opacity-40 transition">
+              {togglingId === c.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Play className="w-2.5 h-2.5 fill-emerald-400" />}
+              Ativar
+            </button>
+            {onTestPulse && (
+              <button
+                type="button"
+                onClick={() => onTestPulse(c.id)}
+                disabled={testPulseId === c.id || togglingId === c.id}
+                title="Enviar próximo item da fila ao n8n (avança como o cron; não ativa a automação)"
+                className="shrink-0 flex items-center justify-center p-1.5 rounded-lg border border-amber-400/30 bg-amber-400/8 text-amber-400 hover:bg-amber-400/15 disabled:opacity-40 transition"
+                aria-label="Testar próximo envio ao n8n"
+              >
+                {testPulseId === c.id ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Zap className="w-3 h-3 fill-amber-400" strokeWidth={2} />
+                )}
+              </button>
+            )}
+          </div>
         )}
-        <button onClick={() => onRemove(c.id)}
+        <button type="button" onClick={() => onRemove(c.id)}
           className="text-[#a0a0a0] hover:text-red-400 transition bg-[#121214] border border-[#2c2c32] p-1.5 rounded-lg hover:border-red-400/20 shrink-0">
           <Trash2 className="w-3 h-3" />
         </button>
@@ -289,6 +309,7 @@ export default function GruposVendaPage() {
   const [deletingListaId, setDeletingListaId] = useState<string | null>(null);
   const [cronTestLoading, setCronTestLoading] = useState(false);
   const [cronTestFeedback, setCronTestFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const [testPulseId, setTestPulseId] = useState<string | null>(null);
   const [listasOfertas, setListasOfertas] = useState<ListaOfertasItem[]>([]);
   const [loadingListasOfertas, setLoadingListasOfertas] = useState(false);
   const [selectedListaOfertasId, setSelectedListaOfertasId] = useState("");
@@ -542,22 +563,34 @@ export default function GruposVendaPage() {
     } catch { setError("Erro ao remover disparo"); }
   }, [loadContinuo]);
 
+  const postCronTest = useCallback(
+    async (body: Record<string, string>) => {
+      const supabase = createBrowserSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      return fetch("/api/grupos-venda/cron-disparo", {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: JSON.stringify(body),
+      });
+    },
+    [],
+  );
+
   const handleTestCron = useCallback(async () => {
     setCronTestLoading(true);
     setCronTestFeedback(null);
     setError(null);
     try {
-      const supabase = createBrowserSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: HeadersInit = {};
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-
-      const res = await fetch("/api/grupos-venda/cron-disparo", {
-        method: "POST",
-        credentials: "include",
-        headers,
-      });
-      const data = await res.json().catch(() => ({}));
+      const res = await postCronTest({});
+      const data = (await res.json().catch(() => ({}))) as {
+        results?: { keyword?: string; ok?: boolean; error?: string }[];
+        processed?: number;
+        message?: string;
+        error?: string;
+      };
 
       type CronRow = { keyword?: string; ok?: boolean; error?: string };
       const results = (data.results ?? []) as CronRow[];
@@ -565,44 +598,95 @@ export default function GruposVendaPage() {
       const enviados = results.filter((r) => r.ok && !r.error).length;
       const ignorados = results.filter((r) => r.ok && !!r.error).length;
       const falhas = results.filter((r) => !r.ok).length;
-      const linhas = results.map((r) => {
-        if (!r.ok) return `"${r.keyword ?? "—"}": ${r.error ?? "erro"}`;
-        if (r.error) return r.error;
-        const rotulo = r.keyword?.trim() || "Oferta";
-        return `"${rotulo}" enviado`;
-      });
+      const msg = typeof data.message === "string" ? data.message : "";
 
       if (!res.ok) {
-        console.error("[grupos-venda cron teste manual]", {
-          httpStatus: res.status,
-          body: data,
-          derived: { processed, enviados, ignorados, falhas },
-          detailLines: linhas,
+        setCronTestFeedback({
+          ok: false,
+          message: data.error ?? `Erro HTTP ${res.status}. Confira se está logado.`,
         });
-        setCronTestFeedback({ ok: false, message: "Erro. Entre em contato com o suporte." });
         return;
       }
 
-      console.log("[grupos-venda cron teste manual]", {
-        httpStatus: res.status,
-        body: data,
-        derived: { processed, enviados, ignorados, falhas },
-        detailLines: linhas.length ? linhas : [(data as { message?: string }).message ?? "—"],
-      });
+      if (processed === 0 && results.length === 0) {
+        const benign = /Nenhum disparo ativo/i.test(msg);
+        setCronTestFeedback({ ok: benign, message: msg || "Nenhuma automação ativa para testar." });
+        return;
+      }
 
       if (falhas > 0) {
-        setCronTestFeedback({ ok: false, message: "Erro. Entre em contato com o suporte." });
+        const failLines = results
+          .filter((r) => !r.ok)
+          .map((r) => r.error || r.keyword || "falha")
+          .slice(0, 4);
+        setCronTestFeedback({
+          ok: false,
+          message: `${falhas} falha(s): ${failLines.join(" · ")}`,
+        });
+      } else if (enviados > 0) {
+        setCronTestFeedback({
+          ok: true,
+          message: `${enviados} teste(s) enviado(s) ao n8n.`,
+        });
+        loadContinuo();
       } else {
-        setCronTestFeedback({ ok: true, message: "Conexão ativa." });
+        setCronTestFeedback({
+          ok: true,
+          message:
+            ignorados > 0
+              ? results.map((r) => r.error).filter(Boolean).slice(0, 3).join(" · ") || "Nenhum envio neste teste."
+              : "Teste concluído.",
+        });
       }
-      if (processed > 0) loadContinuo();
     } catch (e) {
-      console.error("[grupos-venda cron teste manual]", e);
-      setCronTestFeedback({ ok: false, message: "Erro. Entre em contato com o suporte." });
+      setCronTestFeedback({
+        ok: false,
+        message: e instanceof Error ? e.message : "Falha de rede ao testar.",
+      });
     } finally {
       setCronTestLoading(false);
     }
-  }, [loadContinuo]);
+  }, [loadContinuo, postCronTest]);
+
+  const handleTestPulse = useCallback(
+    async (configId: string) => {
+      setTestPulseId(configId);
+      setError(null);
+      setCronTestFeedback(null);
+      try {
+        const res = await postCronTest({ configId });
+        const data = (await res.json().catch(() => ({}))) as {
+          results?: { keyword?: string; ok?: boolean; error?: string }[];
+          processed?: number;
+          message?: string;
+          error?: string;
+        };
+        const results = data.results ?? [];
+        if (!res.ok) {
+          setError(data.error ?? `Erro HTTP ${res.status}`);
+          return;
+        }
+        if (data.processed === 0 && results.length === 0) {
+          setError(data.message || "Automação não encontrada.");
+          return;
+        }
+        const fail = results.find((r) => !r.ok);
+        if (fail) {
+          setError(fail.error ?? "Falha ao enviar teste ao n8n.");
+          return;
+        }
+        const okRow = results.find((r) => r.ok && !r.error);
+        await loadContinuo();
+        setFeedback(okRow?.keyword ? `Teste enviado: ${okRow.keyword}` : "Teste enviado ao n8n.");
+        setTimeout(() => setFeedback(""), 5000);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erro ao testar");
+      } finally {
+        setTestPulseId(null);
+      }
+    },
+    [postCronTest, loadContinuo],
+  );
 
   const activeCount = continuoList.filter((c) => c.ativo).length;
   const keywordCount = keywords.split("\n").filter((k) => k.trim()).length;
@@ -889,7 +973,15 @@ export default function GruposVendaPage() {
                   </div>
                 ) : filteredDisparos.length > 0 ? (
                   pagedDisparos.map((item) => (
-                    <DisparoCard key={item.id} c={item} togglingId={continuoTogglingId} onToggle={handleContinuoToggle} onRemove={handleRemoveContinuo} />
+                    <DisparoCard
+                      key={item.id}
+                      c={item}
+                      togglingId={continuoTogglingId}
+                      onToggle={handleContinuoToggle}
+                      onRemove={handleRemoveContinuo}
+                      onTestPulse={handleTestPulse}
+                      testPulseId={testPulseId}
+                    />
                   ))
                 ) : (
                   <div className="col-span-full flex flex-col items-center justify-center gap-2 py-10 text-center">

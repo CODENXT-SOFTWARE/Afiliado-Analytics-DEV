@@ -50,19 +50,41 @@ type CronResultBody =
   | { ok: true; processed: 0; message: string }
   | { ok: true; processed: number; results: { userId: string; keyword?: string; ok: boolean; error?: string }[] };
 
+type CronRunOptions = {
+  /** POST do painel: só processa automações deste usuário. */
+  manualUserId?: string | null;
+  /** Teste manual: dispara mesmo fora da janela de horário. */
+  skipWindowCheck?: boolean;
+  /** Teste de um card (ativa ou pausada); avança `proximo_indice` / pool como um tick real. */
+  singleConfigId?: string | null;
+};
+
 /** Lógica compartilhada: Vercel Cron (GET + Bearer) ou teste no app (POST + sessão). */
-async function runCronDisparo(): Promise<CronResultBody> {
+async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: configs, error: configError } = await supabase
-    .from("grupos_venda_continuo")
-    .select("id, user_id, instance_id, lista_id, lista_ofertas_id, lista_ofertas_ml_id, keywords, sub_id_1, sub_id_2, sub_id_3, proximo_indice, keyword_pool_indices, horario_inicio, horario_fim")
-    .eq("ativo", true);
+  const sel = "id, user_id, instance_id, lista_id, lista_ofertas_id, lista_ofertas_ml_id, keywords, sub_id_1, sub_id_2, sub_id_3, proximo_indice, keyword_pool_indices, horario_inicio, horario_fim";
 
-  if (configError || !configs?.length) {
+  let configQuery = supabase.from("grupos_venda_continuo").select(sel);
+  if (opts?.singleConfigId && opts.manualUserId) {
+    configQuery = configQuery.eq("id", opts.singleConfigId).eq("user_id", opts.manualUserId);
+  } else {
+    configQuery = configQuery.eq("ativo", true);
+    if (opts?.manualUserId) configQuery = configQuery.eq("user_id", opts.manualUserId);
+  }
+
+  const { data: configs, error: configError } = await configQuery;
+
+  if (configError) {
+    return { ok: true, processed: 0, message: configError.message };
+  }
+  if (!configs?.length) {
+    if (opts?.singleConfigId) {
+      return { ok: true, processed: 0, message: "Automação não encontrada ou sem permissão." };
+    }
     return { ok: true, processed: 0, message: "Nenhum disparo ativo" };
   }
 
@@ -90,7 +112,7 @@ async function runCronDisparo(): Promise<CronResultBody> {
       continue;
     }
 
-    if (!isWithinBrasiliaWindow(horarioInicio, horarioFim)) {
+    if (!opts?.skipWindowCheck && !isWithinBrasiliaWindow(horarioInicio, horarioFim)) {
       results.push({ userId, ok: true, error: "Fora do horário configurado" });
       continue;
     }
@@ -380,6 +402,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
-  const body = await runCronDisparo();
+  let configId = "";
+  try {
+    const raw = (await req.json()) as unknown;
+    if (raw && typeof raw === "object" && "configId" in raw) {
+      const v = (raw as { configId?: unknown }).configId;
+      if (typeof v === "string") configId = v.trim();
+    }
+  } catch {
+    /* corpo vazio: teste geral */
+  }
+
+  const body = await runCronDisparo({
+    manualUserId: user.id,
+    skipWindowCheck: true,
+    singleConfigId: configId || null,
+  });
   return NextResponse.json(body);
 }

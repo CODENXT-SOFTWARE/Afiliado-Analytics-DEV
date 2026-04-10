@@ -1549,7 +1549,7 @@ export default function MinhaListaOfertasMlPage() {
       {(!mlSessionToken.trim() || !mlAffiliateTag.trim()) && (
         <div className="px-3 sm:px-4 py-3 border-b border-amber-500/35 bg-amber-950/35 text-[11px] text-amber-100/95 leading-relaxed flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="min-w-0">
-            Instale a extensão CodeNXT e salve <span className="font-semibold">etiqueta</span> e{" "}
+            Instale a extensão do Afiliado Analytics e salve a<span className="font-semibold">etiqueta</span> e{" "}
             <span className="font-semibold">token</span> em Minha Conta para buscar e converter no ML.
           </p>
           <div className="flex flex-wrap items-center gap-2 shrink-0">

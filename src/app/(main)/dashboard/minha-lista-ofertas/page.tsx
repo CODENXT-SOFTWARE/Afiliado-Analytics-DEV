@@ -355,38 +355,33 @@ export default function MinhaListaOfertasPage() {
                           key={lista.id}
                           className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden"
                         >
-                          <button
-                            type="button"
-                            onClick={() => toggleLista(lista.id)}
-                            className="w-full p-4 flex flex-wrap items-center justify-between gap-2 text-left hover:bg-[#2f2f34]/80 transition-colors"
-                          >
-                            <span className="flex items-center gap-2 min-w-0">
-                              {isExpanded ? (
-                                <ChevronDown className="h-5 w-5 text-[#a0a0a0] shrink-0" />
-                              ) : (
-                                <ChevronRight className="h-5 w-5 text-[#a0a0a0] shrink-0" />
-                              )}
-                              <div className="w-8 h-8 rounded-lg border border-[#e24c30]/35 bg-[#e24c30]/10 flex items-center justify-center shrink-0">
-                                <ShoppingBag className="h-4 w-4 text-[#e24c30]" />
-                              </div>
-                              <span className="text-sm font-bold uppercase tracking-wide text-[#f0f0f2] truncate">
-                                {lista.nome}
-                              </span>
-                              <span className="text-sm text-[#9a9aa2] shrink-0">
-                                ({lista.totalItens ?? 0} itens)
-                              </span>
-                            </span>
-                            <span
-                              className="flex items-center gap-2 shrink-0 flex-wrap justify-end"
-                              onClick={(e) => e.stopPropagation()}
+                          <div className="flex flex-wrap items-stretch gap-0">
+                            <button
+                              type="button"
+                              onClick={() => toggleLista(lista.id)}
+                              className="flex-1 min-w-0 p-4 flex flex-wrap items-center justify-between gap-2 text-left hover:bg-[#2f2f34]/80 transition-colors"
                             >
+                              <span className="flex items-center gap-2 min-w-0">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-5 w-5 text-[#a0a0a0] shrink-0" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-[#a0a0a0] shrink-0" />
+                                )}
+                                <div className="w-8 h-8 rounded-lg border border-[#e24c30]/35 bg-[#e24c30]/10 flex items-center justify-center shrink-0">
+                                  <ShoppingBag className="h-4 w-4 text-[#e24c30]" />
+                                </div>
+                                <span className="text-sm font-bold uppercase tracking-wide text-[#f0f0f2] truncate">
+                                  {lista.nome}
+                                </span>
+                                <span className="text-sm text-[#9a9aa2] shrink-0">
+                                  ({lista.totalItens ?? 0} itens)
+                                </span>
+                              </span>
+                            </button>
+                            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end px-4 py-4 pl-0 sm:pl-2 border-t border-[#2c2c32] sm:border-t-0 w-full sm:w-auto">
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleEmptyListClick(lista.id);
-                                }}
+                                onClick={() => handleEmptyListClick(lista.id)}
                                 disabled={(itemsByLista[lista.id]?.length ?? 0) === 0}
                                 className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[#3e3e46] text-[#d2d2d2] text-xs hover:bg-[#e24c30]/10 hover:text-[#e24c30] hover:border-[#e24c30]/40 disabled:opacity-40"
                                 title="Esvaziar lista"
@@ -395,18 +390,14 @@ export default function MinhaListaOfertasPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleDeleteListClick(lista.id);
-                                }}
+                                onClick={() => handleDeleteListClick(lista.id)}
                                 className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[#3e3e46] text-[#d2d2d2] text-xs hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30"
                                 title="Apagar lista"
                               >
                                 <Trash2 className="h-3.5 w-3.5" /> Apagar
                               </button>
-                            </span>
-                          </button>
+                            </div>
+                          </div>
                           {isExpanded && (
                             <div className="border-t border-[#2c2c32] p-4 bg-[#1c1c1f]">
                               {loadingListaId === lista.id ? (
