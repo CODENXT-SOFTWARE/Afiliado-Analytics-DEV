@@ -278,6 +278,14 @@ export default function GplCalculatorPage() {
   const [selectedTraficoCampaignIds, setSelectedTraficoCampaignIds] = useState<Set<string>>(new Set());
   const [traficoGruposCache, setTraficoGruposCache, isTraficoCacheLoading] = useIdbKeyState<Record<string, { campaigns: TraficoGruposCampaignDetail[]; fetchedAt: string }>>("gpl_trafico_grupos_cache", {});
 
+  /** Período só para Meta (ATI / tráfico grupos). Vazio = usar o mesmo período da Shopee (`startDateApplied` / `endDateApplied`). */
+  const [metaTraficoStartApplied, setMetaTraficoStartApplied] = useState("");
+  const [metaTraficoEndApplied, setMetaTraficoEndApplied] = useState("");
+  const [metaTraficoStartDraft, setMetaTraficoStartDraft] = useState("");
+  const [metaTraficoEndDraft, setMetaTraficoEndDraft] = useState("");
+  const [metaPeriodPopoverOpen, setMetaPeriodPopoverOpen] = useState(false);
+  const metaPeriodPopoverRef = useRef<HTMLDivElement>(null);
+
   // Tab state (mock: "grupos" | "campanhas")
   const [activeTab, setActiveTab] = useState<"grupos" | "campanhas">("grupos");
   const [groupSearchFilter, setGroupSearchFilter] = useState("");
@@ -423,6 +431,20 @@ export default function GplCalculatorPage() {
     const finalMax = maxAllowed < reportMax ? maxAllowed : reportMax;
     return localYMD(finalMax);
   }, [startDateDraft, effectiveRange]);
+
+  const metaTraficoStartResolved = metaTraficoStartApplied.trim() || startDateApplied;
+  const metaTraficoEndResolved = metaTraficoEndApplied.trim() || endDateApplied;
+
+  /** Fim do intervalo Meta: até o máximo permitido na página (ex. ontem na API Shopee); sem tampa de 30 dias — a Meta não exige isso aqui. */
+  const maxMetaEndDraft = useMemo(() => effectiveRange?.max ?? "", [effectiveRange]);
+
+  const metaDraftDays = useMemo(() => {
+    if (!metaTraficoStartDraft || !metaTraficoEndDraft) return 0;
+    const end = new Date(metaTraficoEndDraft + "T00:00:00");
+    const start = new Date(metaTraficoStartDraft + "T00:00:00");
+    if (end < start) return 0;
+    return getInclusiveDays(metaTraficoStartDraft, metaTraficoEndDraft);
+  }, [metaTraficoStartDraft, metaTraficoEndDraft]);
 
   useEffect(() => {
     if (!startDateApplied || !endDateApplied) { setDaysInPeriod(0); return; }
@@ -650,9 +672,9 @@ export default function GplCalculatorPage() {
   const cplMeta = useMemo(() => { if (custoTráfegoGrupos <= 0 || totalCliquesMeta <= 0) return 0; return custoTráfegoGrupos / totalCliquesMeta; }, [custoTráfegoGrupos, totalCliquesMeta]);
   const cplReal = useMemo(() => { if (custoTráfegoGrupos <= 0) return 0; const liquido = totalNovos - totalSaidas; if (liquido <= 0) return 0; return custoTráfegoGrupos / liquido; }, [custoTráfegoGrupos, totalNovos, totalSaidas]);
 
-  const fetchTraficoGrupos = async () => {
-    const start = startDateApplied || getYesterday();
-    const end = endDateApplied || getYesterday();
+  const fetchTraficoGrupos = async (opts?: { start: string; end: string }) => {
+    const start = opts?.start ?? (metaTraficoStartResolved || getYesterday());
+    const end = opts?.end ?? (metaTraficoEndResolved || getYesterday());
     setTraficoGruposLoading(true); setTraficoGruposError(null);
     try {
       const res = await fetch(`/api/ati/trafico-grupos?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`, { cache: "no-store" });
@@ -668,12 +690,22 @@ export default function GplCalculatorPage() {
 
   useEffect(() => {
     if (isTraficoCacheLoading) return;
-    const start = startDateApplied || getYesterday();
-    const end = endDateApplied || getYesterday();
+    const start = metaTraficoStartResolved || getYesterday();
+    const end = metaTraficoEndResolved || getYesterday();
     const periodKey = `${start}_${end}`;
     const cached = traficoGruposCache[periodKey];
     setTraficoGruposCampaigns(cached?.campaigns ?? []);
-  }, [startDateApplied, endDateApplied, traficoGruposCache, isTraficoCacheLoading]);
+  }, [metaTraficoStartResolved, metaTraficoEndResolved, traficoGruposCache, isTraficoCacheLoading]);
+
+  useEffect(() => {
+    if (!metaPeriodPopoverOpen) return;
+    const onDocDown = (e: MouseEvent) => {
+      const el = metaPeriodPopoverRef.current;
+      if (el && !el.contains(e.target as Node)) setMetaPeriodPopoverOpen(false);
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [metaPeriodPopoverOpen]);
 
   const performanceBadge = useMemo(() => {
     if (gplMonthly >= 1.5) return { text: "Excelente", className: "bg-green-500/10 text-green-400 border-green-500/20" };
@@ -695,7 +727,32 @@ export default function GplCalculatorPage() {
 
   const tabInfoTooltip = activeTab === "grupos"
     ? "Selecione uma instância no canto superior direito para carregar os grupos automaticamente. Use a busca abaixo para filtrar a lista. Marque os grupos para somar em 'Pessoas no grupo'."
-    : "Selecione campanhas para somar o custo de tráfego. Certifique-se de marcar a tag no ATI para que elas apareçam aqui.";
+    : "Selecione campanhas para somar o custo de tráfego. O período do gasto Meta pode ser alterado pelo calendário ao lado (independente do período da Shopee). Marque a tag no ATI para as campanhas aparecerem aqui.";
+
+  const openMetaPeriodPopover = () => {
+    const s = metaTraficoStartResolved || getYesterday();
+    const e = metaTraficoEndResolved || getYesterday();
+    setMetaTraficoStartDraft(s);
+    setMetaTraficoEndDraft(e);
+    setMetaPeriodPopoverOpen(true);
+  };
+
+  const applyMetaTraficoPeriod = () => {
+    if (!metaTraficoStartDraft || !metaTraficoEndDraft || metaDraftDays <= 0) return;
+    setMetaTraficoStartApplied(metaTraficoStartDraft);
+    setMetaTraficoEndApplied(metaTraficoEndDraft);
+    setMetaPeriodPopoverOpen(false);
+    void fetchTraficoGrupos({ start: metaTraficoStartDraft, end: metaTraficoEndDraft });
+  };
+
+  const resetMetaTraficoPeriod = () => {
+    const s = startDateApplied || getYesterday();
+    const e = endDateApplied || getYesterday();
+    setMetaTraficoStartApplied("");
+    setMetaTraficoEndApplied("");
+    setMetaPeriodPopoverOpen(false);
+    void fetchTraficoGrupos({ start: s, end: e });
+  };
 
   function onClickBuscar() {
     if (!hasShopeeKeys || !startDateDraft || !endDateDraft) return;
@@ -954,9 +1011,72 @@ export default function GplCalculatorPage() {
                       {groupsLastFetchedAt ? `Atualizado: ${new Date(groupsLastFetchedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : "Selecione uma instância para carregar os grupos"}
                     </p>
                   ) : (
-                    <p className="text-[11px] text-sky-300 flex items-center gap-1.5 font-semibold min-w-0">
-                      <Calendar className="w-3.5 h-3.5 shrink-0" /> Período: {formatDateBR(startDateApplied)} a {formatDateBR(endDateApplied)}
-                    </p>
+                    <div ref={metaPeriodPopoverRef} className="relative flex flex-wrap items-center gap-1.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={openMetaPeriodPopover}
+                        className="inline-flex items-center justify-center rounded-md p-1 text-sky-300 hover:bg-sky-500/15 hover:text-sky-200 border border-transparent hover:border-sky-500/25 transition shrink-0"
+                        title="Alterar período do gasto Meta (ATI)"
+                        aria-expanded={metaPeriodPopoverOpen}
+                        aria-haspopup="dialog"
+                      >
+                        <Calendar className="w-3.5 h-3.5 shrink-0" />
+                      </button>
+                      <p className="text-[11px] text-sky-300 font-semibold min-w-0">
+                        Período Meta: {formatDateBR(metaTraficoStartResolved)} a {formatDateBR(metaTraficoEndResolved)}
+                        {metaTraficoStartApplied && metaTraficoEndApplied ? (
+                          <span className="ml-1.5 text-[9px] font-medium text-sky-400/80 normal-case">(Facebook)</span>
+                        ) : null}
+                      </p>
+                      {metaPeriodPopoverOpen ? (
+                        <div
+                          className="absolute left-0 top-full z-[80] mt-1 w-[min(100vw-2rem,280px)] rounded-lg border border-[#2c2c32] bg-[#1c1c1f] p-3 shadow-xl space-y-2"
+                          role="dialog"
+                          aria-label="Período Meta"
+                        >
+                          
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[9px] text-text-secondary">Início</span>
+                            <input
+                              type="date"
+                              value={metaTraficoStartDraft}
+                              min={effectiveRange?.min}
+                              max={effectiveRange?.max}
+                              onChange={(e) => setMetaTraficoStartDraft(e.target.value)}
+                              className="w-full bg-[#27272a] border border-[#2c2c32] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#e24c30]"
+                            />
+                            <span className="text-[9px] text-text-secondary pt-1">Fim</span>
+                            <input
+                              type="date"
+                              value={metaTraficoEndDraft}
+                              min={metaTraficoStartDraft || effectiveRange?.min}
+                              max={maxMetaEndDraft || effectiveRange?.max}
+                              disabled={!metaTraficoStartDraft}
+                              onChange={(e) => setMetaTraficoEndDraft(e.target.value)}
+                              className="w-full bg-[#27272a] border border-[#2c2c32] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#e24c30] disabled:opacity-40"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5 pt-1">
+                            <button
+                              type="button"
+                              onClick={applyMetaTraficoPeriod}
+                              disabled={metaDraftDays <= 0}
+                              className="w-full py-1.5 rounded-md bg-[#e24c30] text-white text-[11px] font-semibold hover:opacity-90 disabled:opacity-40"
+                            >
+                              Aplicar e carregar Meta
+                            </button>
+                            <button
+                              type="button"
+                              onClick={resetMetaTraficoPeriod}
+                              disabled={!metaTraficoStartApplied && !metaTraficoEndApplied}
+                              className="w-full py-1.5 rounded-md border border-[#3e3e46] text-[10px] text-text-secondary hover:text-white hover:border-[#585858] disabled:opacity-40"
+                            >
+                              Usar mesmo período da Shopee
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   )}
                   <InlineInfoTooltip text={tabInfoTooltip} iconClassName={activeTab === "grupos" ? "text-emerald-400" : "text-sky-300"} />
               </div>
