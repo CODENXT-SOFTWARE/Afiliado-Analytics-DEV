@@ -53,4 +53,12 @@ export type CaptureSiteRow = {
   /** JSON array de até 4 strings (paths no Storage) ou null por slot. */
   ofert_carousel_image_paths: unknown;
 
+  /** Blocos tipo benefícios / depoimentos nos templates VIP. */
+  promo_sections_enabled?: boolean | null;
+  /** `{ benefits?, testimonials?, in_group? }` — strings curtas. */
+  promo_section_titles?: unknown;
+
+  /** Array de cards conforme `page_template` (benefícios, depoimentos, linhas simples). */
+  promo_section_cards?: unknown;
+
 };

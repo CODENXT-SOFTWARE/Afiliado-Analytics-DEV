@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Clock, Shield, Star } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -15,29 +15,7 @@ import {
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
 import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
-
-const TERROSO_BENEFITS: { emoji: string; title: string; body: string }[] = [
-  {
-    emoji: "📦",
-    title: "Links de produtos todo dia",
-    body: "Acesso aos links das melhores ofertas dos marketplaces",
-  },
-  {
-    emoji: "💸",
-    title: "Descontos de até 70%",
-    body: "Economia real em produtos selecionados a dedo para você",
-  },
-  {
-    emoji: "🎟️",
-    title: "Cupons Secretos",
-    body: "Acesso a cupons exclusivos que só a nossa comunidade tem",
-  },
-  {
-    emoji: "🔥",
-    title: "Os melhores produtos com os melhores preços",
-    body: "Casa, beleza, eletrônicos e muito mais",
-  },
-];
+import { normalizeVipTerrosoCardsFromDb } from "@/lib/capture-promo-cards";
 
 const TERROSO = {
   accent: "rgb(160, 117, 90)",
@@ -71,7 +49,15 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
+    promoSectionsEnabled,
+    promoTitles,
+    promoCards,
   } = props;
+
+  const promoOn = promoSectionsEnabled !== false;
+  const inGroupHeading =
+    (promoTitles?.inGroup ?? "").trim() || "No grupo você vai encontrar:";
+  const terrosoRows = useMemo(() => normalizeVipTerrosoCardsFromDb(promoCards), [promoCards]);
 
   const notifOn = notificationsEnabled !== false;
   const notifPos = notificationsPosition ?? "top_right";
@@ -270,37 +256,39 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
             </p>
           </div>
 
-          <div className="mt-2 w-full space-y-3">
-            <h2
-              className="text-center text-sm font-bold uppercase tracking-widest"
-              style={{ color: TERROSO.accent }}
-            >
-              No grupo você vai encontrar:
-            </h2>
-            <div className="grid grid-cols-1 gap-3">
-              {TERROSO_BENEFITS.map((row) => (
-                <div
-                  key={row.title}
-                  className="flex flex-col items-center gap-1 rounded-xl px-4 py-4 text-center"
-                  style={{
-                    background: "rgb(255, 255, 255)",
-                    border: `1px solid ${TERROSO.cardBorder}`,
-                    boxShadow: TERROSO.cardShadow,
-                  }}
-                >
-                  <span className="text-3xl" aria-hidden>
-                    {row.emoji}
-                  </span>
-                  <p className="text-sm font-bold" style={{ color: TERROSO.text }}>
-                    {row.title}
-                  </p>
-                  <p className="text-xs leading-relaxed" style={{ color: "rgba(26, 26, 46, 0.6)" }}>
-                    {row.body}
-                  </p>
-                </div>
-              ))}
+          {promoOn ? (
+            <div className="mt-2 w-full space-y-3">
+              <h2
+                className="text-center text-sm font-bold uppercase tracking-widest"
+                style={{ color: TERROSO.accent }}
+              >
+                {inGroupHeading}
+              </h2>
+              <div className="grid grid-cols-1 gap-3">
+                {terrosoRows.map((row, i) => (
+                  <div
+                    key={`terroso-benefit-${i}`}
+                    className="flex flex-col items-center gap-1 rounded-xl px-4 py-4 text-center"
+                    style={{
+                      background: "rgb(255, 255, 255)",
+                      border: `1px solid ${TERROSO.cardBorder}`,
+                      boxShadow: TERROSO.cardShadow,
+                    }}
+                  >
+                    <span className="text-3xl" aria-hidden>
+                      {row.emoji}
+                    </span>
+                    <p className="text-sm font-bold" style={{ color: TERROSO.text }}>
+                      {row.title}
+                    </p>
+                    <p className="text-xs leading-relaxed" style={{ color: "rgba(26, 26, 46, 0.6)" }}>
+                      {row.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="mt-2 flex items-center gap-2 text-xs" style={{ color: TERROSO.textFooter }}>
             <Shield className="h-4 w-4 shrink-0" aria-hidden />

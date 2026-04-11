@@ -24,6 +24,11 @@ import {
   normalizeOfertCarouselSlots,
 } from "@/lib/capture-ofert-carousel";
 import { normalizeYoutubePosition } from "@/lib/capture-block-position";
+import {
+  normalizePromoSectionsEnabled,
+  resolvePromoTitlesForPublicPage,
+} from "@/lib/capture-promo-sections";
+import { resolvePromoCardsForPublicPage } from "@/lib/capture-promo-cards";
 import { OfertCarouselAtSlot } from "./CaptureOfertCarouselIf";
 
 export const dynamic = "force-dynamic";
@@ -282,6 +287,26 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
     (site as { ofert_carousel_position?: unknown }).ofert_carousel_position,
   );
 
+  const promoSectionsEnabled = normalizePromoSectionsEnabled(
+    (site as { promo_sections_enabled?: unknown }).promo_sections_enabled,
+  );
+  const promoTitles = resolvePromoTitlesForPublicPage(pageTemplate, site.promo_section_titles ?? null);
+  const promoCards = resolvePromoCardsForPublicPage(pageTemplate, site.promo_section_cards ?? null);
+
+  const promoAuroraAvatarUrls =
+    pageTemplate === "aurora_ledger" && Array.isArray(promoCards)
+      ? (
+          promoCards as {
+            avatar_path?: string | null;
+          }[]
+        ).map((row) => {
+          const p = row.avatar_path?.trim();
+          if (!p) return null;
+          const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
+          return data.publicUrl ?? null;
+        })
+      : undefined;
+
   return (
     <>
       {/* Injeção do Meta Pixel (se existir) */}
@@ -332,6 +357,10 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
           ofertCarouselEnabled={ofertCarouselEnabled}
           ofertCarouselPosition={ofertCarouselPosition}
           ofertCarouselImageUrls={ofertCarouselImageUrls}
+          promoSectionsEnabled={promoSectionsEnabled}
+          promoTitles={promoTitles}
+          promoCards={promoCards}
+          promoAuroraAvatarUrls={promoAuroraAvatarUrls}
         />
       ) : null}
 

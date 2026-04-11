@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import Image from "next/image";
 import { Clock } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -16,6 +16,7 @@ import {
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
 import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
+import { AURORA_CARD_DEFAULTS, normalizeAuroraCardsFromDb } from "@/lib/capture-promo-cards";
 
 const ACCENT = "#5eead4";
 const AMBER = "#fbbf24";
@@ -24,31 +25,6 @@ const PARTNER_LOGOS = [
   { src: "/logo-shopee_ae8b716c.png", alt: "Shopee" },
   { src: "/logo-mercadolivre_5d835dbf.png", alt: "Mercado Livre" },
   { src: "/logo-amazon_99ccd542.png", alt: "Amazon" },
-] as const;
-
-/** Depoimentos fictícios para prova social (ilustração). Fotos em `public/notifi`. */
-const FAKE_TESTIMONIALS = [
-  {
-    name: "Mariana",
-    city: "São Paulo",
-    avatar: "/notifi/w3.jpg",
-    quote:
-      "Comprei um fone que tava mais de R$100 por menos da metade — o cupom apareceu no grupo antes de viralizar na loja. Valeu demais.",
-  },
-  {
-    name: "Ricardo",
-    city: "Belo Horizonte",
-    avatar: "/notifi/08.jpg",
-    quote:
-      "Air fryer com desconto forte e ainda peguei cashback que só mostraram aqui. No fim do mês a economia foi real.",
-  },
-  {
-    name: "Camila",
-    city: "Rio de Janeiro",
-    avatar: "/notifi/w10.jpg",
-    quote:
-      "Entrei por curiosidade e no mesmo dia fechei presente com quase 60% off. É objetivo, sem ficção — só oferta boa.",
-  },
 ] as const;
 
 function CtaButton(props: {
@@ -97,7 +73,16 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
+    promoSectionsEnabled,
+    promoTitles,
+    promoCards,
+    promoAuroraAvatarUrls,
   } = props;
+
+  const promoOn = promoSectionsEnabled !== false;
+  const testimonialsHeading =
+    (promoTitles?.testimonials ?? "").trim() || "Quem já economizou no grupo";
+  const auroraRows = useMemo(() => normalizeAuroraCardsFromDb(promoCards), [promoCards]);
 
   const notifOn = notificationsEnabled !== false;
   const notifPos = notificationsPosition ?? "top_right";
@@ -305,48 +290,55 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
             </div>
 
             {/* Depoimentos (fictícios — ilustração de prova social) */}
-            <div className="mt-8">
-              <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-                Quem já economizou no grupo
-              </p>
-              <ul className="space-y-5" aria-label="Depoimentos de participantes">
-                {FAKE_TESTIMONIALS.map((row, i) => (
-                  <li key={row.name} className="flex gap-4">
-                    <div
-                      className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-md ring-1 ring-teal-400/25"
-                      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)" }}
-                    >
-                      <Image
-                        src={row.avatar}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                        unoptimized
-                      />
-                    </div>
-                    <div className="min-w-0 pt-0.5">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                        {String(i + 1).padStart(2, "0")}
-                      </p>
-                      <p className="font-bold text-zinc-100">
-                        {row.name}
-                        <span className="font-medium text-zinc-500"> · {row.city}</span>
-                      </p>
-                      <p className="mt-1.5 text-sm leading-snug text-zinc-400">
-                        <span className="text-teal-400/90" aria-hidden>
-                          “
-                        </span>
-                        {row.quote}
-                        <span className="text-teal-400/90" aria-hidden>
-                          ”
-                        </span>
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {promoOn ? (
+              <div className="mt-8">
+                <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  {testimonialsHeading}
+                </p>
+                <ul className="space-y-5" aria-label="Depoimentos de participantes">
+                  {auroraRows.map((text, i) => {
+                    const fallback =
+                      AURORA_CARD_DEFAULTS[Math.min(i, AURORA_CARD_DEFAULTS.length - 1)]!.defaultAvatar;
+                    const imgSrc = promoAuroraAvatarUrls?.[i] ?? fallback;
+                    return (
+                      <li key={`aurora-t-${i}`} className="flex gap-4">
+                        <div
+                          className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-md ring-1 ring-teal-400/25"
+                          style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)" }}
+                        >
+                          <Image
+                            src={imgSrc}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                            unoptimized={imgSrc.startsWith("blob:") || imgSrc.startsWith("http")}
+                          />
+                        </div>
+                        <div className="min-w-0 pt-0.5">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                            {String(i + 1).padStart(2, "0")}
+                          </p>
+                          <p className="font-bold text-zinc-100">
+                            {text.name}
+                            <span className="font-medium text-zinc-500"> · {text.city}</span>
+                          </p>
+                          <p className="mt-1.5 text-sm leading-snug text-zinc-400">
+                            <span className="text-teal-400/90" aria-hidden>
+                              “
+                            </span>
+                            {text.quote}
+                            <span className="text-teal-400/90" aria-hidden>
+                              ”
+                            </span>
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
 
             <div className="mt-8">
               <CtaButton href={ctaHref} r={r} g={g} b={b}>

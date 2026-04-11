@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Image from "next/image";
 import { Check, Flame } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -15,6 +16,7 @@ import {
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
 import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
+import { normalizeSimpleFourLinesFromDb } from "@/lib/capture-promo-cards";
 
 const BG = "#FFF5F7";
 const CARD = "#ffffff";
@@ -80,7 +82,14 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
+    promoSectionsEnabled,
+    promoTitles,
+    promoCards,
   } = props;
+
+  const promoOn = promoSectionsEnabled !== false;
+  const optionalBenefitsTitle = (promoTitles?.benefits ?? "").trim();
+  const simpleLines = useMemo(() => normalizeSimpleFourLinesFromDb(promoCards), [promoCards]);
 
   const notifOn = notificationsEnabled !== false;
   const notifPos = notificationsPosition ?? "top_right";
@@ -192,62 +201,72 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
             classNameEmbed="shadow-lg"
           />
 
-          <div className="flex justify-center">
-            <div
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md"
-              style={{ backgroundColor: RED }}
-            >
-              <Flame className="h-4 w-4 shrink-0" aria-hidden />
-              Últimas 2 vagas no grupo!
-            </div>
-          </div>
+          {promoOn ? (
+            <>
+              <div className="flex justify-center">
+                <div
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md"
+                  style={{ backgroundColor: RED }}
+                >
+                  <Flame className="h-4 w-4 shrink-0" aria-hidden />
+                  Últimas 2 vagas no grupo!
+                </div>
+              </div>
 
-          <div className="flex flex-col gap-3">
-            {BENEFITS.map((line) => (
+              {optionalBenefitsTitle ? (
+                <p className="text-center text-sm font-extrabold leading-snug" style={{ color: TEXT }}>
+                  {optionalBenefitsTitle}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-3">
+                {BENEFITS.map((line, i) => (
+                  <div
+                    key={`vinho-line-${i}`}
+                    className="flex items-start gap-3 rounded-2xl border px-4 py-3.5 shadow-sm"
+                    style={{
+                      backgroundColor: CARD,
+                      borderColor: "rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <div
+                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: `${RED}18` }}
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: RED }} aria-hidden />
+                    </div>
+                    <p className="text-left text-sm font-semibold leading-snug" style={{ color: TEXT }}>
+                      {simpleLines[i] ?? line}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
               <div
-                key={line}
-                className="flex items-start gap-3 rounded-2xl border px-4 py-3.5 shadow-sm"
+                className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 rounded-2xl border px-4 py-5"
                 style={{
-                  backgroundColor: CARD,
+                  backgroundColor: "rgba(255,255,255,0.65)",
                   borderColor: "rgba(0,0,0,0.06)",
                 }}
               >
-                <div
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${RED}18` }}
-                >
-                  <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: RED }} aria-hidden />
-                </div>
-                <p className="text-left text-sm font-semibold leading-snug" style={{ color: TEXT }}>
-                  {line}
-                </p>
+                {PARTNER_LOGOS.map((p) => (
+                  <div
+                    key={p.src}
+                    className="relative flex h-10 w-[7.25rem] items-center justify-center sm:h-11 sm:w-[8rem]"
+                  >
+                    <Image
+                      src={p.src}
+                      alt={p.alt}
+                      width={160}
+                      height={48}
+                      className="h-10 w-auto max-h-10 max-w-full object-contain object-center sm:h-11 sm:max-h-11"
+                      sizes="(max-width: 640px) 116px, 128px"
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-
-          <div
-            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 rounded-2xl border px-4 py-5"
-            style={{
-              backgroundColor: "rgba(255,255,255,0.65)",
-              borderColor: "rgba(0,0,0,0.06)",
-            }}
-          >
-            {PARTNER_LOGOS.map((p) => (
-              <div
-                key={p.src}
-                className="relative flex h-10 w-[7.25rem] items-center justify-center sm:h-11 sm:w-[8rem]"
-              >
-                <Image
-                  src={p.src}
-                  alt={p.alt}
-                  width={160}
-                  height={48}
-                  className="h-10 w-auto max-h-10 max-w-full object-contain object-center sm:h-11 sm:max-h-11"
-                  sizes="(max-width: 640px) 116px, 128px"
-                />
-              </div>
-            ))}
-          </div>
+            </>
+          ) : null}
 
           <div className="border-t border-black/5 pt-6">
             <CtaBlock

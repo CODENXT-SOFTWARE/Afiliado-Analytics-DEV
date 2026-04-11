@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Flame } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
@@ -16,6 +16,7 @@ import {
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
 import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
+import { normalizeSimpleFourLinesFromDb } from "@/lib/capture-promo-cards";
 
 const CARD = "#ffffff";
 const TEXT = "#1c1917";
@@ -155,7 +156,14 @@ export default function CaptureTheNewChance(props: CaptureVipLandingProps) {
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
+    promoSectionsEnabled,
+    promoTitles,
+    promoCards,
   } = props;
+
+  const promoOn = promoSectionsEnabled !== false;
+  const optionalBenefitsTitle = (promoTitles?.benefits ?? "").trim();
+  const simpleLines = useMemo(() => normalizeSimpleFourLinesFromDb(promoCards), [promoCards]);
 
   const notifOn = notificationsEnabled !== false;
   const notifPos = notificationsPosition ?? "top_right";
@@ -534,55 +542,65 @@ export default function CaptureTheNewChance(props: CaptureVipLandingProps) {
             ) : null}
           </div>
 
-          <div className="flex justify-center">
-            <div
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md"
-              style={{ backgroundColor: RED }}
-            >
-              <Flame className="h-4 w-4 shrink-0" aria-hidden />
-              Últimas vagas no grupo!
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {BENEFITS.map((line) => (
-              <div
-                key={line}
-                className="flex items-start gap-3 rounded-2xl border border-amber-200/90 bg-white px-4 py-3.5 shadow-sm"
-              >
+          {promoOn ? (
+            <>
+              <div className="flex justify-center">
                 <div
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${RED}14` }}
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md"
+                  style={{ backgroundColor: RED }}
                 >
-                  <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: RED }} aria-hidden />
+                  <Flame className="h-4 w-4 shrink-0" aria-hidden />
+                  Últimas vagas no grupo!
                 </div>
-                <p className="text-left text-sm font-semibold leading-snug" style={{ color: TEXT }}>
-                  {line}
-                </p>
               </div>
-            ))}
-          </div>
 
-          <div
-            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 rounded-2xl border border-amber-200/80 bg-white/90 px-4 py-5"
-            style={{ boxShadow: "0 1px 0 rgba(253, 224, 71, 0.35) inset" }}
-          >
-            {PARTNER_LOGOS.map((p) => (
-              <div
-                key={p.src}
-                className="relative flex h-10 w-[7.25rem] items-center justify-center sm:h-11 sm:w-[8rem]"
-              >
-                <Image
-                  src={p.src}
-                  alt={p.alt}
-                  width={160}
-                  height={48}
-                  className="h-10 w-auto max-h-10 max-w-full object-contain object-center sm:h-11 sm:max-h-11"
-                  sizes="(max-width: 640px) 116px, 128px"
-                />
+              {optionalBenefitsTitle ? (
+                <p className="text-center text-sm font-extrabold leading-snug" style={{ color: TEXT }}>
+                  {optionalBenefitsTitle}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-3">
+                {BENEFITS.map((line, i) => (
+                  <div
+                    key={`newchance-line-${i}`}
+                    className="flex items-start gap-3 rounded-2xl border border-amber-200/90 bg-white px-4 py-3.5 shadow-sm"
+                  >
+                    <div
+                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: `${RED}14` }}
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: RED }} aria-hidden />
+                    </div>
+                    <p className="text-left text-sm font-semibold leading-snug" style={{ color: TEXT }}>
+                      {simpleLines[i] ?? line}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+
+              <div
+                className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 rounded-2xl border border-amber-200/80 bg-white/90 px-4 py-5"
+                style={{ boxShadow: "0 1px 0 rgba(253, 224, 71, 0.35) inset" }}
+              >
+                {PARTNER_LOGOS.map((p) => (
+                  <div
+                    key={p.src}
+                    className="relative flex h-10 w-[7.25rem] items-center justify-center sm:h-11 sm:w-[8rem]"
+                  >
+                    <Image
+                      src={p.src}
+                      alt={p.alt}
+                      width={160}
+                      height={48}
+                      className="h-10 w-auto max-h-10 max-w-full object-contain object-center sm:h-11 sm:max-h-11"
+                      sizes="(max-width: 640px) 116px, 128px"
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
 
           <div className="border-t border-amber-200/70 pt-6">
             <CtaBlock

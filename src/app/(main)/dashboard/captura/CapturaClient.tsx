@@ -51,6 +51,36 @@ import {
   normalizeOfertCarouselSlots,
   type OfertCarouselPosition,
 } from "@/lib/capture-ofert-carousel";
+import {
+  normalizePromoSectionsEnabled,
+  promoSectionTitlesToJsonb,
+  promoTitlesForForm,
+  resolvePromoTitlesForPublicPage,
+} from "@/lib/capture-promo-sections";
+import {
+  AURORA_CARD_DEFAULTS,
+  appendEmptyAuroraCard,
+  appendEmptyRosaCard,
+  appendEmptyTerrosoCard,
+  appendSimpleLine,
+  createDefaultPromoCardsDraft,
+  mergePromoCardsDraftFromDb,
+  promoSectionCardsToDbValue,
+  PROMO_AURORA_MAX,
+  PROMO_AURORA_MIN,
+  PROMO_ROSA_MAX,
+  PROMO_ROSA_MIN,
+  PROMO_SIMPLE_MAX,
+  PROMO_SIMPLE_MIN,
+  PROMO_TERRO_MAX,
+  PROMO_TERRO_MIN,
+  removeAuroraCardAt,
+  removeRosaCardAt,
+  removeSimpleLineAt,
+  removeTerrosoCardAt,
+  resolvePromoCardsForPublicPage,
+} from "@/lib/capture-promo-cards";
+import { normalizeRosaIconKey, vipRosaIconPickerOptions } from "@/lib/capture-promo-icons";
 import { isValidOptionalYoutubeUrl } from "@/lib/youtube-embed";
 import { formatDateTimePtBR, isExpired, sanitizeSlug } from "./_lib/captureUtils";
 
@@ -58,6 +88,7 @@ import CapturePreviewCard from "./_components/CapturePreviewCard";
 import CaptureVipLanding from "@/app/capture/[slug]/CaptureVipLanding";
 import { CapturePreviewPortalContext } from "@/app/capture/[slug]/CapturePreviewPortalContext";
 import DeleteSiteModal from "./_components/DeleteSiteModal";
+import VipRosaIconPicker from "./_components/VipRosaIconPicker";
 import LayoutVariantField from "./_components/LayoutVariantField";
 import ResetMetricsModal from "./_components/ResetMetricsModal";
 import { persistOfertCarouselSlots } from "./_lib/ofertCarouselPersist";
@@ -258,6 +289,24 @@ export default function CapturaClient() {
   const initialCarouselPathsRef = useRef<(string | null)[]>([null, null, null, null]);
   const [carouselBlobUrls, setCarouselBlobUrls] = useState<(string | null)[]>([null, null, null, null]);
 
+  const [promoSectionsEnabled, setPromoSectionsEnabled] = useState(true);
+  const [promoTitleBenefits, setPromoTitleBenefits] = useState("");
+  const [promoTitleTestimonials, setPromoTitleTestimonials] = useState("");
+  const [promoTitleInGroup, setPromoTitleInGroup] = useState("");
+  const [promoCardsDraft, setPromoCardsDraft] = useState(createDefaultPromoCardsDraft);
+  const [auroraAvatarFiles, setAuroraAvatarFiles] = useState<(File | null)[]>(() =>
+    Array.from({ length: createDefaultPromoCardsDraft().aurora.length }, () => null),
+  );
+  const [auroraAvatarBlobUrls, setAuroraAvatarBlobUrls] = useState<(string | null)[]>([]);
+
+  useEffect(() => {
+    const urls = auroraAvatarFiles.map((f) => (f ? URL.createObjectURL(f) : null));
+    setAuroraAvatarBlobUrls(urls);
+    return () => {
+      urls.forEach((u) => u && URL.revokeObjectURL(u));
+    };
+  }, [auroraAvatarFiles]);
+
   useEffect(() => {
     const urls = carouselSlotFile.map((f) => (f ? URL.createObjectURL(f) : null));
     setCarouselBlobUrls(urls);
@@ -381,6 +430,51 @@ export default function CapturaClient() {
     }
     return out;
   }, [supabase, carouselBlobUrls, carouselSlotPath]);
+
+  const promoAuroraAvatarUrlsPreview = useMemo(() => {
+    if (pageTemplate !== "aurora_ledger" || !supabase) return undefined;
+    return promoCardsDraft.aurora.map((row, i) => {
+      if (auroraAvatarBlobUrls[i]) return auroraAvatarBlobUrls[i];
+      const p = row.avatar_path?.trim();
+      if (p) {
+        const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
+        return data.publicUrl ?? null;
+      }
+      return null;
+    });
+  }, [pageTemplate, supabase, promoCardsDraft.aurora, auroraAvatarBlobUrls]);
+
+  const clearAuroraSlotPhoto = useCallback(
+    async (index: number, storedPath: string | null | undefined) => {
+      const path = storedPath?.trim();
+      if (site?.id && path) {
+        try {
+          const r = await fetch("/api/captura/ofert-carousel-delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ site_id: site.id, path }),
+          });
+          const j = (await r.json()) as { error?: string };
+          if (!r.ok) throw new Error(j?.error || "Erro ao remover a foto.");
+        } catch (e: unknown) {
+          setError(getErrorMessage(e, "Erro ao remover a foto."));
+          return;
+        }
+      }
+      setAuroraAvatarFiles((prev) => {
+        const next = [...prev];
+        if (index >= 0 && index < next.length) next[index] = null;
+        return next;
+      });
+      setPromoCardsDraft((d) => {
+        const aurora = [...d.aurora];
+        if (!aurora[index]) return d;
+        aurora[index] = { ...aurora[index]!, avatar_path: null };
+        return { ...d, aurora };
+      });
+    },
+    [site?.id],
+  );
 
   const blockPositionPickerOptions = useMemo(
     () =>
@@ -543,6 +637,15 @@ export default function CapturaClient() {
     setCarouselSlotFile([null, null, null, null]);
     initialCarouselPathsRef.current = [null, null, null, null];
 
+    const promoForm = promoTitlesForForm(t, {});
+    setPromoSectionsEnabled(true);
+    setPromoTitleBenefits(promoForm.benefits);
+    setPromoTitleTestimonials(promoForm.testimonials);
+    setPromoTitleInGroup(promoForm.inGroup);
+    const fresh = createDefaultPromoCardsDraft();
+    setPromoCardsDraft(fresh);
+    setAuroraAvatarFiles(Array.from({ length: fresh.aurora.length }, () => null));
+
     setLogoFile(null);
     setLogoPendingAction("keep");
     setLogoToast(null);
@@ -578,6 +681,21 @@ export default function CapturaClient() {
     setCarouselSlotPath([...ocSlots]);
     initialCarouselPathsRef.current = [...ocSlots];
     setCarouselSlotFile([null, null, null, null]);
+
+    const promoForm = promoTitlesForForm(
+      (row.page_template ?? "classic") as PageTemplate,
+      row.promo_section_titles,
+    );
+    setPromoSectionsEnabled(normalizePromoSectionsEnabled(row.promo_sections_enabled));
+    setPromoTitleBenefits(promoForm.benefits);
+    setPromoTitleTestimonials(promoForm.testimonials);
+    setPromoTitleInGroup(promoForm.inGroup);
+    const mergedCards = mergePromoCardsDraftFromDb(
+      (row.page_template ?? "classic") as PageTemplate,
+      row.promo_section_cards,
+    );
+    setPromoCardsDraft(mergedCards);
+    setAuroraAvatarFiles(Array.from({ length: mergedCards.aurora.length }, () => null));
 
     setLogoFile(null);
     setLogoPendingAction("keep");
@@ -621,6 +739,21 @@ export default function CapturaClient() {
       initialCarouselPathsRef.current = [...ocSlotsCancel];
       setCarouselSlotFile([null, null, null, null]);
 
+      const promoCancel = promoTitlesForForm(
+        (site.page_template ?? "classic") as PageTemplate,
+        site.promo_section_titles,
+      );
+      setPromoSectionsEnabled(normalizePromoSectionsEnabled(site.promo_sections_enabled));
+      setPromoTitleBenefits(promoCancel.benefits);
+      setPromoTitleTestimonials(promoCancel.testimonials);
+      setPromoTitleInGroup(promoCancel.inGroup);
+      const mergedCancel = mergePromoCardsDraftFromDb(
+        (site.page_template ?? "classic") as PageTemplate,
+        site.promo_section_cards,
+      );
+      setPromoCardsDraft(mergedCancel);
+      setAuroraAvatarFiles(Array.from({ length: mergedCancel.aurora.length }, () => null));
+
       originalButtonUrlRef.current = (site.whatsapp_url ?? "").trim();
 
       modeRef.current = "view";
@@ -643,6 +776,14 @@ export default function CapturaClient() {
       setCarouselSlotPath([null, null, null, null]);
       setCarouselSlotFile([null, null, null, null]);
       initialCarouselPathsRef.current = [null, null, null, null];
+      const promoEmpty = promoTitlesForForm("classic", {});
+      setPromoSectionsEnabled(true);
+      setPromoTitleBenefits(promoEmpty.benefits);
+      setPromoTitleTestimonials(promoEmpty.testimonials);
+      setPromoTitleInGroup(promoEmpty.inGroup);
+      const fresh2 = createDefaultPromoCardsDraft();
+      setPromoCardsDraft(fresh2);
+      setAuroraAvatarFiles(Array.from({ length: fresh2.aurora.length }, () => null));
     } else {
       originalButtonUrlRef.current = "";
       modeRef.current = "empty";
@@ -658,6 +799,14 @@ export default function CapturaClient() {
       setCarouselSlotPath([null, null, null, null]);
       setCarouselSlotFile([null, null, null, null]);
       initialCarouselPathsRef.current = [null, null, null, null];
+      const promoEmpty2 = promoTitlesForForm("classic", {});
+      setPromoSectionsEnabled(true);
+      setPromoTitleBenefits(promoEmpty2.benefits);
+      setPromoTitleTestimonials(promoEmpty2.testimonials);
+      setPromoTitleInGroup(promoEmpty2.inGroup);
+      const fresh3 = createDefaultPromoCardsDraft();
+      setPromoCardsDraft(fresh3);
+      setAuroraAvatarFiles(Array.from({ length: fresh3.aurora.length }, () => null));
     }
   }
 
@@ -841,6 +990,16 @@ export default function CapturaClient() {
         youtube_position: youtubePosition,
         notifications_enabled: notificationsEnabled,
         notifications_position: notificationsPosition,
+        promo_sections_enabled: promoSectionsEnabled,
+        promo_section_titles: promoSectionTitlesToJsonb({
+          benefits: promoTitleBenefits,
+          testimonials: promoTitleTestimonials,
+          inGroup: promoTitleInGroup,
+        }),
+        promo_section_cards: promoSectionCardsToDbValue(
+          normalizeCapturePageTemplate(pageTemplateRef.current) as PageTemplate,
+          promoCardsDraft,
+        ),
       }),
     });
     const created = (await res.json()) as { id?: string; error?: string; page_template?: unknown };
@@ -894,6 +1053,40 @@ export default function CapturaClient() {
         setCarouselSlotFile([null, null, null, null]);
         await fetchSites();
       }
+
+      let draftAfterCreate = structuredClone(promoCardsDraft);
+      let auroraUploaded = false;
+      if (supabase && created?.id && wantedTpl === "aurora_ledger") {
+        for (let i = 0; i < auroraAvatarFiles.length; i++) {
+          const f = auroraAvatarFiles[i];
+          if (!f) continue;
+          const fd = new FormData();
+          fd.append("file", f);
+          fd.append("site_id", created.id);
+          fd.append("slot", String(i));
+          const oldPath = draftAfterCreate.aurora[i]?.avatar_path;
+          if (oldPath) fd.append("old_path", oldPath);
+          const up = await fetch("/api/captura/promo-avatar-upload", { method: "POST", body: fd });
+          const ju = (await up.json()) as { error?: string; path?: string };
+          if (!up.ok) throw new Error(ju?.error || "Erro ao enviar foto do depoimento.");
+          const aurora = [...draftAfterCreate.aurora];
+          aurora[i] = { ...aurora[i]!, avatar_path: ju.path ?? null };
+          draftAfterCreate = { ...draftAfterCreate, aurora };
+          auroraUploaded = true;
+        }
+        if (auroraUploaded) {
+          const { error: prErr } = await supabase
+            .from("capture_sites")
+            .update({
+              promo_section_cards: promoSectionCardsToDbValue(wantedTpl as PageTemplate, draftAfterCreate),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", created.id);
+          if (prErr) throw new Error(prErr.message);
+        }
+      }
+      setPromoCardsDraft(draftAfterCreate);
+      setAuroraAvatarFiles(Array.from({ length: draftAfterCreate.aurora.length }, () => null));
 
       setPageLoading(true);
       setStep(1);
@@ -983,6 +1176,30 @@ export default function CapturaClient() {
 
     const wantedTpl = normalizeCapturePageTemplate(pageTemplateRef.current);
 
+    let workingPromoDraft = structuredClone(promoCardsDraft);
+    if (wantedTpl === "aurora_ledger") {
+      for (let i = 0; i < auroraAvatarFiles.length; i++) {
+        const f = auroraAvatarFiles[i];
+        if (!f) continue;
+        const fd = new FormData();
+        fd.append("file", f);
+        fd.append("site_id", site.id);
+        fd.append("slot", String(i));
+        const oldPath = workingPromoDraft.aurora[i]?.avatar_path;
+        if (oldPath) fd.append("old_path", oldPath);
+        const res = await fetch("/api/captura/promo-avatar-upload", { method: "POST", body: fd });
+        const j = (await res.json()) as { error?: string; path?: string };
+        if (!res.ok) {
+          setError(j?.error || "Erro ao enviar foto do depoimento.");
+          setSaving(false);
+          return;
+        }
+        const aurora = [...workingPromoDraft.aurora];
+        aurora[i] = { ...aurora[i]!, avatar_path: j.path ?? null };
+        workingPromoDraft = { ...workingPromoDraft, aurora };
+      }
+    }
+
     const { data: updatedRow, error: upErr } = await supabase
       .from("capture_sites")
       .update({
@@ -998,6 +1215,13 @@ export default function CapturaClient() {
         youtube_position: youtubePosition,
         notifications_enabled: notificationsEnabled,
         notifications_position: notificationsPosition,
+        promo_sections_enabled: promoSectionsEnabled,
+        promo_section_titles: promoSectionTitlesToJsonb({
+          benefits: promoTitleBenefits,
+          testimonials: promoTitleTestimonials,
+          inGroup: promoTitleInGroup,
+        }),
+        promo_section_cards: promoSectionCardsToDbValue(wantedTpl, workingPromoDraft),
         ofert_carousel_enabled: ofertDb.ofert_carousel_enabled,
         ofert_carousel_position: ofertDb.ofert_carousel_position,
         ofert_carousel_image_paths: ofertDb.ofert_carousel_image_paths,
@@ -1062,6 +1286,9 @@ export default function CapturaClient() {
       initialCarouselPathsRef.current = [...slots];
       setCarouselSlotPath(slots);
       setCarouselSlotFile([null, null, null, null]);
+
+      setPromoCardsDraft(workingPromoDraft);
+      setAuroraAvatarFiles(Array.from({ length: workingPromoDraft.aurora.length }, () => null));
 
       setPageLoading(true);
       setStep(1);
@@ -1150,6 +1377,14 @@ export default function CapturaClient() {
       setLogoPendingAction("keep");
       setLogoToast(null);
       originalButtonUrlRef.current = "";
+      const poDel = promoTitlesForForm("classic", {});
+      setPromoSectionsEnabled(true);
+      setPromoTitleBenefits(poDel.benefits);
+      setPromoTitleTestimonials(poDel.testimonials);
+      setPromoTitleInGroup(poDel.inGroup);
+      const freshDel = createDefaultPromoCardsDraft();
+      setPromoCardsDraft(freshDel);
+      setAuroraAvatarFiles(Array.from({ length: freshDel.aurora.length }, () => null));
 
       await fetchSites();
       await refresh();
@@ -2077,6 +2312,450 @@ export default function CapturaClient() {
                       />
                     </div>
                   )}
+
+                  {isVipPreview && pageTemplate !== "jardim_floral" ? (
+                    <div className="rounded-lg border border-dark-border bg-dark-bg/25 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-medium text-text-primary">
+                            Textos da secção promocional
+                          </span>
+                          <Toolist
+                            wide
+                            variant="below"
+                            text="Só aparecem campos do modelo que você escolheu. Desligue o interruptor para esconder toda a secção na página pública."
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={promoSectionsEnabled}
+                          onClick={() => setPromoSectionsEnabled((v) => !v)}
+                          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border border-dark-border transition-colors focus:outline-none focus:ring-2 focus:ring-shopee-orange/50 ${
+                            promoSectionsEnabled ? "bg-shopee-orange" : "bg-dark-bg"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${
+                              promoSectionsEnabled ? "translate-x-[1.35rem]" : "translate-x-0.5"
+                            } mt-px`}
+                          />
+                        </button>
+                      </div>
+                      {promoSectionsEnabled ? (
+                        <div className="space-y-4 max-h-[min(70vh,520px)] overflow-y-auto pr-1 scrollbar-thin">
+                          {pageTemplate === "vip_rosa" ? (
+                            <>
+                              <div>
+                                <label className={labelClass}>Título acima dos cards</label>
+                                <textarea
+                                  value={promoTitleBenefits}
+                                  onChange={(e) => setPromoTitleBenefits(e.target.value)}
+                                  className={textareaClass}
+                                  rows={2}
+                                  maxLength={120}
+                                />
+                              </div>
+                              {promoCardsDraft.rosa.map((row, i) => (
+                                <div
+                                  key={`rosa-card-${i}`}
+                                  className="rounded-lg border border-dark-border/80 bg-dark-bg/30 p-3 space-y-2"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="text-xs font-semibold text-shopee-orange/90">
+                                      Card {i + 1} de {promoCardsDraft.rosa.length}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      disabled={promoCardsDraft.rosa.length <= PROMO_ROSA_MIN}
+                                      onClick={() => setPromoCardsDraft((d) => removeRosaCardAt(d, i))}
+                                      className="h-7 px-2 rounded-md text-xs font-medium border border-dark-border text-text-secondary hover:text-red-400 hover:border-red-400/50 disabled:opacity-40 disabled:pointer-events-none"
+                                    >
+                                      Remover
+                                    </button>
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Título do card</label>
+                                    <input
+                                      type="text"
+                                      value={row.title}
+                                      maxLength={90}
+                                      onChange={(e) =>
+                                        setPromoCardsDraft((d) => {
+                                          const rosa = [...d.rosa];
+                                          rosa[i] = { ...rosa[i]!, title: e.target.value };
+                                          return { ...d, rosa };
+                                        })
+                                      }
+                                      className={inputClass}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Texto do card</label>
+                                    <textarea
+                                      value={row.body}
+                                      maxLength={260}
+                                      onChange={(e) =>
+                                        setPromoCardsDraft((d) => {
+                                          const rosa = [...d.rosa];
+                                          rosa[i] = { ...rosa[i]!, body: e.target.value };
+                                          return { ...d, rosa };
+                                        })
+                                      }
+                                      className={textareaClass}
+                                      rows={3}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Ícone (Lucide)</label>
+                                    <VipRosaIconPicker
+                                      value={row.iconKey}
+                                      onChange={(v) =>
+                                        setPromoCardsDraft((d) => {
+                                          const rosa = [...d.rosa];
+                                          rosa[i] = {
+                                            ...rosa[i]!,
+                                            iconKey: normalizeRosaIconKey(v),
+                                          };
+                                          return { ...d, rosa };
+                                        })
+                                      }
+                                      options={vipRosaIconPickerOptions}
+                                      className="w-full"
+                                      openButtonId={`vip-rosa-icon-card-${i}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Emoji (opcional — substitui o ícone)</label>
+                                    <input
+                                      type="text"
+                                      value={row.emoji}
+                                      maxLength={8}
+                                      placeholder="Ex.: ✨"
+                                      onChange={(e) =>
+                                        setPromoCardsDraft((d) => {
+                                          const rosa = [...d.rosa];
+                                          rosa[i] = { ...rosa[i]!, emoji: e.target.value };
+                                          return { ...d, rosa };
+                                        })
+                                      }
+                                      className={inputClass}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                disabled={promoCardsDraft.rosa.length >= PROMO_ROSA_MAX}
+                                onClick={() => setPromoCardsDraft((d) => appendEmptyRosaCard(d))}
+                                className="h-9 px-3 rounded-md text-sm font-medium border border-shopee-orange/60 text-shopee-orange hover:bg-shopee-orange/10 disabled:opacity-40 disabled:pointer-events-none inline-flex items-center gap-2"
+                              >
+                                <Plus className="h-4 w-4" aria-hidden />
+                                Adicionar card
+                              </button>
+                            </>
+                          ) : null}
+
+                          {pageTemplate === "vip_terroso" ? (
+                            <>
+                              <div>
+                                <label className={labelClass}>Título da grelha</label>
+                                <textarea
+                                  value={promoTitleInGroup}
+                                  onChange={(e) => setPromoTitleInGroup(e.target.value)}
+                                  className={textareaClass}
+                                  rows={2}
+                                  maxLength={120}
+                                />
+                              </div>
+                              {promoCardsDraft.terroso.map((row, i) => (
+                                <div
+                                  key={`terro-card-${i}`}
+                                  className="rounded-lg border border-dark-border/80 bg-dark-bg/30 p-3 space-y-2"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="text-xs font-semibold text-shopee-orange/90">
+                                      Card {i + 1} de {promoCardsDraft.terroso.length}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      disabled={promoCardsDraft.terroso.length <= PROMO_TERRO_MIN}
+                                      onClick={() => setPromoCardsDraft((d) => removeTerrosoCardAt(d, i))}
+                                      className="h-7 px-2 rounded-md text-xs font-medium border border-dark-border text-text-secondary hover:text-red-400 hover:border-red-400/50 disabled:opacity-40 disabled:pointer-events-none"
+                                    >
+                                      Remover
+                                    </button>
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Emoji</label>
+                                    <input
+                                      type="text"
+                                      value={row.emoji}
+                                      maxLength={12}
+                                      placeholder="📦"
+                                      onChange={(e) =>
+                                        setPromoCardsDraft((d) => {
+                                          const terroso = [...d.terroso];
+                                          terroso[i] = { ...terroso[i]!, emoji: e.target.value };
+                                          return { ...d, terroso };
+                                        })
+                                      }
+                                      className={inputClass}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Título</label>
+                                    <input
+                                      type="text"
+                                      value={row.title}
+                                      maxLength={90}
+                                      onChange={(e) =>
+                                        setPromoCardsDraft((d) => {
+                                          const terroso = [...d.terroso];
+                                          terroso[i] = { ...terroso[i]!, title: e.target.value };
+                                          return { ...d, terroso };
+                                        })
+                                      }
+                                      className={inputClass}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Descrição</label>
+                                    <textarea
+                                      value={row.body}
+                                      maxLength={220}
+                                      onChange={(e) =>
+                                        setPromoCardsDraft((d) => {
+                                          const terroso = [...d.terroso];
+                                          terroso[i] = { ...terroso[i]!, body: e.target.value };
+                                          return { ...d, terroso };
+                                        })
+                                      }
+                                      className={textareaClass}
+                                      rows={2}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                disabled={promoCardsDraft.terroso.length >= PROMO_TERRO_MAX}
+                                onClick={() => setPromoCardsDraft((d) => appendEmptyTerrosoCard(d))}
+                                className="h-9 px-3 rounded-md text-sm font-medium border border-shopee-orange/60 text-shopee-orange hover:bg-shopee-orange/10 disabled:opacity-40 disabled:pointer-events-none inline-flex items-center gap-2"
+                              >
+                                <Plus className="h-4 w-4" aria-hidden />
+                                Adicionar card
+                              </button>
+                            </>
+                          ) : null}
+
+                          {pageTemplate === "aurora_ledger" ? (
+                            <>
+                              <div>
+                                <label className={labelClass}>Título da lista de depoimentos</label>
+                                <textarea
+                                  value={promoTitleTestimonials}
+                                  onChange={(e) => setPromoTitleTestimonials(e.target.value)}
+                                  className={textareaClass}
+                                  rows={2}
+                                  maxLength={120}
+                                />
+                              </div>
+                              {promoCardsDraft.aurora.map((row, i) => {
+                                const fallbackImg =
+                                  AURORA_CARD_DEFAULTS[Math.min(i, AURORA_CARD_DEFAULTS.length - 1)]!
+                                    .defaultAvatar;
+                                const thumb = promoAuroraAvatarUrlsPreview?.[i] ?? null;
+                                return (
+                                  <div
+                                    key={`aurora-card-${i}`}
+                                    className="rounded-lg border border-dark-border/80 bg-dark-bg/30 p-3 space-y-2"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="text-xs font-semibold text-shopee-orange/90">
+                                        Depoimento {i + 1} de {promoCardsDraft.aurora.length}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        disabled={promoCardsDraft.aurora.length <= PROMO_AURORA_MIN}
+                                        onClick={() => {
+                                          setPromoCardsDraft((d) => removeAuroraCardAt(d, i));
+                                          setAuroraAvatarFiles((prev) => prev.filter((_, j) => j !== i));
+                                        }}
+                                        className="h-7 px-2 rounded-md text-xs font-medium border border-dark-border text-text-secondary hover:text-red-400 hover:border-red-400/50 disabled:opacity-40 disabled:pointer-events-none"
+                                      >
+                                        Remover
+                                      </button>
+                                    </div>
+                                    <div className="flex flex-wrap items-start gap-3">
+                                      <div className="shrink-0">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={thumb || fallbackImg}
+                                          alt=""
+                                          className="h-16 w-16 rounded-full object-cover border border-dark-border bg-dark-bg"
+                                        />
+                                      </div>
+                                      <div className="min-w-0 flex-1 space-y-2">
+                                        <label className={labelClass}>Foto do depoimento</label>
+                                        <input
+                                          type="file"
+                                          accept="image/png,image/jpeg,image/jpg,image/webp"
+                                          className="block w-full max-w-xs text-xs text-text-secondary file:mr-2 file:rounded file:border-0 file:bg-dark-card file:px-2 file:py-1 file:text-xs file:text-text-primary"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            e.target.value = "";
+                                            if (!file) return;
+                                            if (file.size > 2 * 1024 * 1024) {
+                                              setError("Cada foto pode ter no máximo 2 MB (PNG, JPEG ou WebP).");
+                                              return;
+                                            }
+                                            setError(null);
+                                            setAuroraAvatarFiles((prev) => {
+                                              const next = [...prev];
+                                              while (next.length < promoCardsDraft.aurora.length) {
+                                                next.push(null);
+                                              }
+                                              next[i] = file;
+                                              return next.slice(0, promoCardsDraft.aurora.length);
+                                            });
+                                          }}
+                                        />
+                                        {(row.avatar_path || auroraAvatarFiles[i]) && (
+                                          <button
+                                            type="button"
+                                            onClick={() => void clearAuroraSlotPhoto(i, row.avatar_path)}
+                                            className="h-8 px-2 rounded-md text-xs border border-dark-border text-text-secondary hover:text-red-400 hover:border-red-400/50"
+                                          >
+                                            Remover foto (volta ao avatar padrão até gravar)
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className={labelClass}>Nome</label>
+                                      <input
+                                        type="text"
+                                        value={row.name}
+                                        maxLength={48}
+                                        onChange={(e) =>
+                                          setPromoCardsDraft((d) => {
+                                            const aurora = [...d.aurora];
+                                            aurora[i] = { ...aurora[i]!, name: e.target.value };
+                                            return { ...d, aurora };
+                                          })
+                                        }
+                                        className={inputClass}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className={labelClass}>Cidade</label>
+                                      <input
+                                        type="text"
+                                        value={row.city}
+                                        maxLength={48}
+                                        onChange={(e) =>
+                                          setPromoCardsDraft((d) => {
+                                            const aurora = [...d.aurora];
+                                            aurora[i] = { ...aurora[i]!, city: e.target.value };
+                                            return { ...d, aurora };
+                                          })
+                                        }
+                                        className={inputClass}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className={labelClass}>Citação</label>
+                                      <textarea
+                                        value={row.quote}
+                                        maxLength={320}
+                                        onChange={(e) =>
+                                          setPromoCardsDraft((d) => {
+                                            const aurora = [...d.aurora];
+                                            aurora[i] = { ...aurora[i]!, quote: e.target.value };
+                                            return { ...d, aurora };
+                                          })
+                                        }
+                                        className={textareaClass}
+                                        rows={3}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                disabled={promoCardsDraft.aurora.length >= PROMO_AURORA_MAX}
+                                onClick={() => {
+                                  setPromoCardsDraft((d) => appendEmptyAuroraCard(d));
+                                  setAuroraAvatarFiles((prev) => [...prev, null]);
+                                }}
+                                className="h-9 px-3 rounded-md text-sm font-medium border border-shopee-orange/60 text-shopee-orange hover:bg-shopee-orange/10 disabled:opacity-40 disabled:pointer-events-none inline-flex items-center gap-2"
+                              >
+                                <Plus className="h-4 w-4" aria-hidden />
+                                Adicionar depoimento
+                              </button>
+                            </>
+                          ) : null}
+
+                          {pageTemplate === "vinho_rose" || pageTemplate === "the_new_chance" ? (
+                            <>
+                              <div>
+                                <label className={labelClass}>Título opcional acima da lista (deixe vazio para não mostrar)</label>
+                                <textarea
+                                  value={promoTitleBenefits}
+                                  onChange={(e) => setPromoTitleBenefits(e.target.value)}
+                                  className={textareaClass}
+                                  rows={2}
+                                  maxLength={120}
+                                />
+                              </div>
+                              {promoCardsDraft.simpleFour.map((line, i) => (
+                                <div
+                                  key={`simple-${i}`}
+                                  className="rounded-lg border border-dark-border/80 bg-dark-bg/30 p-3 space-y-2"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <label className={labelClass}>Linha {i + 1} de {promoCardsDraft.simpleFour.length}</label>
+                                    <button
+                                      type="button"
+                                      disabled={promoCardsDraft.simpleFour.length <= PROMO_SIMPLE_MIN}
+                                      onClick={() => setPromoCardsDraft((d) => removeSimpleLineAt(d, i))}
+                                      className="h-7 px-2 rounded-md text-xs font-medium border border-dark-border text-text-secondary hover:text-red-400 hover:border-red-400/50 disabled:opacity-40 disabled:pointer-events-none shrink-0"
+                                    >
+                                      Remover
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={line}
+                                    maxLength={160}
+                                    onChange={(e) =>
+                                      setPromoCardsDraft((d) => {
+                                        const simpleFour = [...d.simpleFour];
+                                        simpleFour[i] = e.target.value;
+                                        return { ...d, simpleFour };
+                                      })
+                                    }
+                                    className={textareaClass}
+                                    rows={2}
+                                  />
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                disabled={promoCardsDraft.simpleFour.length >= PROMO_SIMPLE_MAX}
+                                onClick={() => setPromoCardsDraft((d) => appendSimpleLine(d))}
+                                className="h-9 px-3 rounded-md text-sm font-medium border border-shopee-orange/60 text-shopee-orange hover:bg-shopee-orange/10 disabled:opacity-40 disabled:pointer-events-none inline-flex items-center gap-2"
+                              >
+                                <Plus className="h-4 w-4" aria-hidden />
+                                Adicionar linha
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               )}
 
@@ -2232,6 +2911,20 @@ export default function CapturaClient() {
                             ofertCarouselEnabled={ofertCarouselEnabled}
                             ofertCarouselPosition={ofertCarouselPosition}
                             ofertCarouselImageUrls={ofertCarouselPreviewUrls}
+                            promoSectionsEnabled={promoSectionsEnabled}
+                            promoTitles={resolvePromoTitlesForPublicPage(
+                              pageTemplate,
+                              promoSectionTitlesToJsonb({
+                                benefits: promoTitleBenefits,
+                                testimonials: promoTitleTestimonials,
+                                inGroup: promoTitleInGroup,
+                              }),
+                            )}
+                            promoCards={resolvePromoCardsForPublicPage(
+                              pageTemplate,
+                              promoSectionCardsToDbValue(pageTemplate, promoCardsDraft),
+                            )}
+                            promoAuroraAvatarUrls={promoAuroraAvatarUrlsPreview}
                           />
                         );
 

@@ -10,6 +10,12 @@ import {
 } from "@/lib/capture-notifications";
 import { normalizeOfertCarouselPosition } from "@/lib/capture-ofert-carousel";
 import { normalizeYoutubePosition } from "@/lib/capture-block-position";
+import {
+  normalizePromoSectionsEnabled,
+  promoSectionTitlesToJsonb,
+} from "@/lib/capture-promo-sections";
+import { mergePromoCardsDraftFromDb, promoSectionCardsToDbValue } from "@/lib/capture-promo-cards";
+import type { PageTemplate } from "@/app/(main)/dashboard/captura/_lib/types";
 
 /** INSERT com service role evita RLS/policies que às vezes ignoram colunas novas (ex.: page_template). */
 function supabaseServiceRole() {
@@ -56,6 +62,32 @@ export async function POST(req: Request) {
   const body = raw as Record<string, unknown>;
 
   const page_template = normalizeCapturePageTemplate(body.page_template ?? body.pageTemplate);
+
+  const promoTitlesPayload = (() => {
+    const raw = body.promo_section_titles ?? body.promoSectionTitles;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const o = raw as Record<string, unknown>;
+      return promoSectionTitlesToJsonb({
+        benefits: typeof o.benefits === "string" ? o.benefits : "",
+        testimonials: typeof o.testimonials === "string" ? o.testimonials : "",
+        inGroup:
+          typeof o.in_group === "string"
+            ? o.in_group
+            : typeof o.inGroup === "string"
+              ? o.inGroup
+              : "",
+      });
+    }
+    return {} as Record<string, string>;
+  })();
+
+  const promoCardsPayload = (() => {
+    const raw = body.promo_section_cards ?? body.promoSectionCards;
+    if (raw === null || raw === undefined) return null;
+    if (!Array.isArray(raw)) return null;
+    const draft = mergePromoCardsDraftFromDb(page_template, raw);
+    return promoSectionCardsToDbValue(page_template as PageTemplate, draft);
+  })();
 
   const trimOrNull = (v: unknown): string | null => {
     if (v == null) return null;
@@ -129,6 +161,11 @@ export async function POST(req: Request) {
       body.ofert_carousel_position ?? body.ofertCarouselPosition,
     ),
     ofert_carousel_image_paths: [] as unknown[],
+    promo_sections_enabled: normalizePromoSectionsEnabled(
+      body.promo_sections_enabled ?? body.promoSectionsEnabled,
+    ),
+    promo_section_titles: promoTitlesPayload,
+    promo_section_cards: promoCardsPayload,
     userid: user.id,
   };
 

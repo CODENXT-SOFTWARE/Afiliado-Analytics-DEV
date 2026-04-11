@@ -237,7 +237,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       <aside
         id="sidebar-nav"
         ref={sidebarRef}
-        className={`fixed lg:static top-0 left-0 h-full lg:h-auto z-40 lg:z-auto w-64 flex-shrink-0 bg-dark-card border-r border-dark-border p-4 overflow-y-auto scrollbar-app
+        className={`fixed lg:static top-0 left-0 h-full lg:h-auto z-40 lg:z-auto w-64 flex-shrink-0 bg-dark-card border-r border-dark-border p-4 overflow-y-auto scrollbar-thin
                     transform transition-transform duration-300 ease-in-out
                     ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
                     lg:translate-x-0`}
@@ -293,7 +293,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      <main className="flex-grow p-6 md:p-8 overflow-auto lg:ml-[-256px] scrollbar-app">
+      <main className="flex-grow p-6 md:p-8 overflow-auto lg:ml-[-256px] scrollbar-thin">
         <div className="lg:ml-64">
           {showTrialBlockedLoading ? (
             <div className="flex items-center justify-center py-20 text-text-secondary text-sm">

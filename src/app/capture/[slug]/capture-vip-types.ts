@@ -27,4 +27,17 @@ export type CaptureVipLandingProps = {
   ofertCarouselPosition?: OfertCarouselPosition;
   /** URLs públicas já resolvidas (Storage). */
   ofertCarouselImageUrls?: string[];
+
+  /** Mostrar secções promocionais (benefícios, depoimentos, logos, etc.). Default true. */
+  promoSectionsEnabled?: boolean;
+  /** Títulos já resolvidos para o template atual (servidor ou preview). */
+  promoTitles?: {
+    benefits: string;
+    testimonials: string;
+    inGroup: string;
+  };
+  /** Conteúdo dos cards (formato depende do modelo). */
+  promoCards?: unknown;
+  /** URLs públicas das fotos dos depoimentos Aurora (alinhadas ao array normalizado). */
+  promoAuroraAvatarUrls?: (string | null)[];
 };

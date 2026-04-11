@@ -66,8 +66,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: resolved.message }, { status: resolved.status });
   }
 
-  if (!path.includes(`/carousel/`)) {
-    return NextResponse.json({ error: "Apenas imagens do carrossel podem ser removidas aqui." }, { status: 400 });
+  if (!path.includes(`/carousel/`) && !path.includes(`/promo-avatars/`)) {
+    return NextResponse.json(
+      { error: "Apenas imagens do carrossel ou fotos de depoimentos (Aurora) podem ser removidas aqui." },
+      { status: 400 },
+    );
   }
 
   const admin = supabaseAdmin();

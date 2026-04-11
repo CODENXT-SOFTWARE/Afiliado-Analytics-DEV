@@ -1,15 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import {
-  Ticket,
-  Home,
-  ShoppingBag,
-  Zap,
-  CheckCircle,
-  Flame,
-} from "lucide-react";
+import { Flame } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
@@ -23,34 +16,25 @@ import {
   CAPTURE_TITLE_HERO,
 } from "./capture-responsive-classes";
 import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
+import { normalizeVipRosaCardsFromDb } from "@/lib/capture-promo-cards";
+import type { VipRosaIconKey } from "@/lib/capture-promo-icons";
+import { vipRosaLucideIcon } from "@/lib/vip-rosa-lucide-map";
 
-const BENEFITS: { Icon: typeof Ticket; title: string; body: string }[] = [
-  {
-    Icon: Ticket,
-    title: "Cupons que funcionam",
-    body: "Cupons testados e atualizados pra você economizar na finalização da compra.",
-  },
-  {
-    Icon: Home,
-    title: "Casa e decoração",
-    body: "Organização, cozinha, utilidades e decoração com preço bom e qualidade.",
-  },
-  {
-    Icon: ShoppingBag,
-    title: "Moda e beleza",
-    body: "Achados de roupas, acessórios e beleza com desconto real pra aproveitar.",
-  },
-  {
-    Icon: Zap,
-    title: "Ofertas relâmpago",
-    body: "Promoções que acabam rápido — você recebe antes e pega as melhores.",
-  },
-  {
-    Icon: CheckCircle,
-    title: "Links verificados",
-    body: "Somente oportunidades de lojas confiáveis, pra comprar com segurança.",
-  },
-];
+function RosaCardLead(props: { emoji: string; iconKey: VipRosaIconKey; themeDeep: string }) {
+  const em = props.emoji.trim();
+  if (em) {
+    return (
+      <span
+        className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center text-lg leading-none"
+        aria-hidden
+      >
+        {em}
+      </span>
+    );
+  }
+  const Icon = vipRosaLucideIcon(props.iconKey);
+  return <Icon className="mt-0.5 h-[18px] w-[18px] shrink-0" style={{ color: props.themeDeep }} aria-hidden />;
+}
 
 function hexToRgbTriplet(hex: string): string {
   const h = hex.replace("#", "");
@@ -114,7 +98,15 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
+    promoSectionsEnabled,
+    promoTitles,
+    promoCards,
   } = props;
+
+  const promoOn = promoSectionsEnabled !== false;
+  const benefitsHeading =
+    (promoTitles?.benefits ?? "").trim() || "O que você vai encontrar:";
+  const rosaBenefitRows = useMemo(() => normalizeVipRosaCardsFromDb(promoCards), [promoCards]);
 
   const notifOn = notificationsEnabled !== false;
   const notifPos = notificationsPosition ?? "top_right";
@@ -345,32 +337,39 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
             </div>
           </div>
 
-          <p className="mb-3 text-left text-[13px] font-black uppercase tracking-wide" style={{ color: theme.textMain }}>
-            O que você vai encontrar:
-          </p>
-
-          <div className="mb-4 space-y-3.5 text-left">
-            {BENEFITS.map(({ Icon, title: bt, body }) => (
-              <div
-                key={bt}
-                className="flex items-start gap-3 rounded-xl p-3 shadow-sm border border-black/5"
-                style={{
-                  borderLeft: `3px solid ${theme.primary}`,
-                  backgroundColor: theme.benefitCardBg,
-                }}
+          {promoOn ? (
+            <>
+              <p
+                className="mb-3 text-left text-[13px] font-black uppercase tracking-wide"
+                style={{ color: theme.textMain }}
               >
-                <Icon className="mt-0.5 h-[18px] w-[18px] shrink-0" style={{ color: theme.deep }} aria-hidden />
-                <div>
-                  <h3 className="mb-1 text-[13px] font-black uppercase" style={{ color: theme.textMain }}>
-                    {bt}
-                  </h3>
-                  <p className="text-[13px] leading-snug" style={{ color: theme.textSoft }}>
-                    {body}
-                  </p>
-                </div>
+                {benefitsHeading}
+              </p>
+
+              <div className="mb-4 space-y-3.5 text-left">
+                {rosaBenefitRows.map((row, i) => (
+                  <div
+                    key={`vip-rosa-benefit-${i}`}
+                    className="flex items-start gap-3 rounded-xl p-3 shadow-sm border border-black/5"
+                    style={{
+                      borderLeft: `3px solid ${theme.primary}`,
+                      backgroundColor: theme.benefitCardBg,
+                    }}
+                  >
+                    <RosaCardLead emoji={row.emoji} iconKey={row.iconKey} themeDeep={theme.deep} />
+                    <div>
+                      <h3 className="mb-1 text-[13px] font-black uppercase" style={{ color: theme.textMain }}>
+                        {row.title}
+                      </h3>
+                      <p className="text-[13px] leading-snug" style={{ color: theme.textSoft }}>
+                        {row.body}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : null}
 
           <CaptureOfertCarouselIf {...props} slot="card_end" variant="light" eyebrow="Destaques" />
 
