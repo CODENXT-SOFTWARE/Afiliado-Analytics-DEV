@@ -11,9 +11,10 @@ export const META_CAMPAIGN_OBJECTIVES = [
   { value: "OUTCOME_APP_PROMOTION", label: "Promoção de app" },
 ] as const;
 
-/** Objetivos exibidos no assistente "Criar campanha Meta" (só Tráfego e Vendas). */
+/** Objetivos exibidos no assistente "Criar campanha Meta" (Tráfego, Leads e Vendas). */
 export const META_CREATE_CAMPAIGN_OBJECTIVES = [
   { value: "OUTCOME_TRAFFIC", label: "Tráfego" },
+  { value: "OUTCOME_LEADS", label: "Leads" },
   { value: "OUTCOME_SALES", label: "Vendas" },
 ] as const;
 
@@ -40,6 +41,7 @@ export const META_OPTIMIZATION_GOALS = [
   { value: "REACH", label: "Alcance" },
   { value: "IMPRESSIONS", label: "Impressões" },
   { value: "LANDING_PAGE_VIEWS", label: "Visualizações da página de destino" },
+  { value: "LEAD_GENERATION", label: "Geração de leads" },
   { value: "VALUE", label: "Valor (ROAS)" },
   { value: "CONVERSIONS", label: "Conversões (evento)" },
 ] as const;
@@ -48,7 +50,15 @@ export const META_OPTIMIZATION_GOALS = [
 export const OBJECTIVE_GOALS: Record<string, string[]> = {
   OUTCOME_TRAFFIC: ["LINK_CLICKS", "LANDING_PAGE_VIEWS", "REACH", "IMPRESSIONS"],
   OUTCOME_SALES: ["REACH", "IMPRESSIONS", "OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"],
-  OUTCOME_LEADS: ["LINK_CLICKS", "REACH", "IMPRESSIONS", "OFFSITE_CONVERSIONS", "LEAD_GENERATION"],
+  OUTCOME_LEADS: [
+    "LINK_CLICKS",
+    "REACH",
+    "IMPRESSIONS",
+    "OFFSITE_CONVERSIONS",
+    "VALUE",
+    "CONVERSIONS",
+    "LEAD_GENERATION",
+  ],
   OUTCOME_ENGAGEMENT: ["LINK_CLICKS", "REACH", "IMPRESSIONS", "ENGAGED_USERS"],
   OUTCOME_AWARENESS: ["REACH", "IMPRESSIONS", "AD_RECALL_LIFT"],
   OUTCOME_APP_PROMOTION: ["APP_INSTALLS", "LINK_CLICKS", "REACH", "IMPRESSIONS"],
@@ -105,6 +115,43 @@ export const META_PIXEL_CONVERSION_EVENTS = [
   { value: "VIEW_CONTENT", label: "Visualizar conteúdo" },
   { value: "PAGE_VIEW", label: "Visualização de página" },
 ] as const;
+
+/**
+ * Eventos no seletor quando a campanha é **Leads** e a meta do conjunto é conversão no site.
+ * Lead em primeiro lugar (comportamento próximo ao Gerenciador de Anúncios).
+ */
+export const META_LEADS_CAMPAIGN_CONVERSION_PICKER_EVENTS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "LEAD", label: "Lead" },
+  { value: "COMPLETE_REGISTRATION", label: "Cadastro completo" },
+  { value: "SUBMIT_APPLICATION", label: "Enviar formulário / candidatura" },
+  { value: "CONTACT", label: "Contato" },
+  { value: "SUBSCRIBE", label: "Assinar" },
+  { value: "PAGE_VIEW", label: "Visualização de página" },
+  { value: "VIEW_CONTENT", label: "Visualizar conteúdo" },
+  { value: "INITIATE_CHECKOUT", label: "Iniciar checkout" },
+  { value: "ADD_TO_CART", label: "Adicionar ao carrinho" },
+  { value: "PURCHASE", label: "Comprar" },
+];
+
+/** Eventos de pixel aceitos para campanha Leads com meta Conversões / Valor no site (alinhado à API do conjunto). */
+export const META_LEADS_WEBSITE_CONVERSION_EVENT_VALUES: readonly string[] = [
+  "LEAD",
+  "COMPLETE_REGISTRATION",
+  "SUBMIT_APPLICATION",
+  "CONTACT",
+  "SUBSCRIBE",
+  "PURCHASE",
+  "ADD_TO_CART",
+  "INITIATE_CHECKOUT",
+  "VIEW_CONTENT",
+  "PAGE_VIEW",
+  "CONTENT_VIEW",
+];
+
+export function isMetaLeadsWebsiteConversionEvent(ev: string): boolean {
+  const u = String(ev).trim().toUpperCase();
+  return META_LEADS_WEBSITE_CONVERSION_EVENT_VALUES.includes(u);
+}
 
 /** Gênero do público (targeting). */
 export const META_GENDER_OPTIONS = [

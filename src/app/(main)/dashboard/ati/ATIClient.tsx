@@ -1638,13 +1638,14 @@ export default function ATIClient() {
                             .then((r) => r.json())
                             .then((json) => {
                               const meta = String(json.objective ?? "OUTCOME_TRAFFIC").toUpperCase();
-                              const isTrafficOrSales = meta === "OUTCOME_TRAFFIC" || meta === "OUTCOME_SALES";
+                              const isTrafficSalesOrLeads =
+                                meta === "OUTCOME_TRAFFIC" || meta === "OUTCOME_SALES" || meta === "OUTCOME_LEADS";
                               setCampaignEditModal((p) =>
                                 p && p.campaignId === camp.campaignId
                                   ? {
                                       ...p,
                                       metaObjective: meta,
-                                      objective: isTrafficOrSales ? meta : "",
+                                      objective: isTrafficSalesOrLeads ? meta : "",
                                       loadingObjective: false,
                                     }
                                   : p
@@ -1976,14 +1977,15 @@ export default function ATIClient() {
                 <>
                   {campaignEditModal.metaObjective &&
                     campaignEditModal.metaObjective !== "OUTCOME_TRAFFIC" &&
-                    campaignEditModal.metaObjective !== "OUTCOME_SALES" && (
+                    campaignEditModal.metaObjective !== "OUTCOME_SALES" &&
+                    campaignEditModal.metaObjective !== "OUTCOME_LEADS" && (
                       <p className="text-xs text-amber-400/90 mb-2">
                         No Meta esta campanha está como{" "}
                         <strong>
                           {META_CAMPAIGN_OBJECTIVES.find((o) => o.value === campaignEditModal.metaObjective)?.label ??
                             campaignEditModal.metaObjective}
                         </strong>
-                        . Escolha <strong>Tráfego</strong> ou <strong>Vendas</strong> abaixo para alterar, ou salve só o nome.
+                        . Escolha <strong>Tráfego</strong>, <strong>Leads</strong> ou <strong>Vendas</strong> abaixo para alterar, ou salve só o nome.
                       </p>
                     )}
                   <select
@@ -1994,7 +1996,8 @@ export default function ATIClient() {
                     className="w-full rounded-md border border-dark-border bg-dark-bg py-2 px-3 text-text-primary text-sm"
                   >
                     {(campaignEditModal.metaObjective !== "OUTCOME_TRAFFIC" &&
-                      campaignEditModal.metaObjective !== "OUTCOME_SALES") && (
+                      campaignEditModal.metaObjective !== "OUTCOME_SALES" &&
+                      campaignEditModal.metaObjective !== "OUTCOME_LEADS") && (
                       <option value="">Manter objetivo atual (só alterar nome)</option>
                     )}
                     {META_CREATE_CAMPAIGN_OBJECTIVES.map((o) => (

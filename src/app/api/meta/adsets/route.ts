@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../../utils/supabase/server";
 import { normalizeAdSetTargeting } from "../../../../lib/meta-adset-targeting";
+import { isMetaLeadsWebsiteConversionEvent } from "../../../../lib/meta-ads-constants";
 
 const GRAPH_BASE = "https://graph.facebook.com/v21.0";
 
@@ -19,7 +20,15 @@ function normalizeAdAccountId(id: string): string {
 const OBJECTIVE_GOALS: Record<string, string[]> = {
   OUTCOME_TRAFFIC: ["LINK_CLICKS", "LANDING_PAGE_VIEWS", "REACH", "IMPRESSIONS"],
   OUTCOME_SALES: ["REACH", "IMPRESSIONS", "OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"],
-  OUTCOME_LEADS: ["LINK_CLICKS", "REACH", "IMPRESSIONS", "OFFSITE_CONVERSIONS", "LEAD_GENERATION"],
+  OUTCOME_LEADS: [
+    "LINK_CLICKS",
+    "REACH",
+    "IMPRESSIONS",
+    "OFFSITE_CONVERSIONS",
+    "VALUE",
+    "CONVERSIONS",
+    "LEAD_GENERATION",
+  ],
   OUTCOME_ENGAGEMENT: ["LINK_CLICKS", "REACH", "IMPRESSIONS", "ENGAGED_USERS"],
   OUTCOME_AWARENESS: ["REACH", "IMPRESSIONS", "AD_RECALL_LIFT"],
   OUTCOME_APP_PROMOTION: ["APP_INSTALLS", "LINK_CLICKS", "REACH", "IMPRESSIONS"],
@@ -43,6 +52,15 @@ function defaultGoalForObjective(objective: string): string {
   const key = objective.toUpperCase().replace(/-/g, "_").replace(/\s/g, "");
   const allowed = OBJECTIVE_GOALS[key] ?? OBJECTIVE_GOALS.REACH ?? ["REACH", "IMPRESSIONS"];
   return allowed[0] ?? "REACH";
+}
+
+/**
+ * A Graph API (v21) não aceita `CONVERSIONS` em optimization_goal na criação/edição de conjuntos;
+ * o equivalente para conversões no site com Pixel é `OFFSITE_CONVERSIONS`.
+ */
+function toGraphOptimizationGoal(goal: string): string {
+  const g = goal.toUpperCase();
+  return g === "CONVERSIONS" ? "OFFSITE_CONVERSIONS" : g;
 }
 
 const VALID_PUBLISHER_PLATFORMS = new Set(["facebook", "instagram", "audience_network", "messenger"]);
@@ -211,7 +229,7 @@ export async function PATCH(req: Request) {
       if (patchCampaignObjective === "OUTCOME_SALES") {
         params.set("optimization_goal", "OFFSITE_CONVERSIONS");
       } else if (patchCampaignId && isValidGoalForObjective(optimization_goal, patchCampaignObjective)) {
-        params.set("optimization_goal", optimization_goal);
+        params.set("optimization_goal", toGraphOptimizationGoal(optimization_goal));
       }
     } else if (patchCampaignObjective === "OUTCOME_SALES" && pixel_id) {
       params.set("optimization_goal", "OFFSITE_CONVERSIONS");
@@ -220,6 +238,27 @@ export async function PATCH(req: Request) {
       if (!["PURCHASE", "ADD_TO_CART"].includes(conversion_event)) {
         return NextResponse.json(
           { error: "Para campanhas de vendas use o evento Comprar ou Adicionar ao carrinho." },
+          { status: 400 }
+        );
+      }
+    }
+    const patchLeadConvGoals = ["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"];
+    if (patchCampaignObjective === "OUTCOME_LEADS" && optimization_goal && patchLeadConvGoals.includes(optimization_goal.toUpperCase())) {
+      if (!pixel_id) {
+        return NextResponse.json(
+          {
+            error:
+              "Campanhas de leads com meta Conversões no site exigem o Pixel e um evento (ex.: Lead ou Cadastro completo).",
+          },
+          { status: 400 }
+        );
+      }
+      if (!isMetaLeadsWebsiteConversionEvent(conversion_event)) {
+        return NextResponse.json(
+          {
+            error:
+              "Para leads com conversões no site, escolha um evento compatível com o Pixel (ex.: LEAD, COMPLETE_REGISTRATION).",
+          },
           { status: 400 }
         );
       }
@@ -350,6 +389,28 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+    } else if (campaignObjective === "OUTCOME_LEADS") {
+      const convGoals = ["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"];
+      if (convGoals.includes(effectiveOptimizationGoal)) {
+        if (!pixel_id) {
+          return NextResponse.json(
+            {
+              error:
+                "Campanhas de leads com meta Conversões no site exigem o Pixel e um evento (ex.: Lead ou Cadastro completo).",
+            },
+            { status: 400 }
+          );
+        }
+        if (!isMetaLeadsWebsiteConversionEvent(conversion_event)) {
+          return NextResponse.json(
+            {
+              error:
+                "Para leads com conversões no site, escolha um evento compatível com o Pixel (ex.: LEAD, COMPLETE_REGISTRATION).",
+            },
+            { status: 400 }
+          );
+        }
+      }
     } else if (!effectiveOptimizationGoal || !isValidGoalForObjective(effectiveOptimizationGoal, campaignObjective)) {
       effectiveOptimizationGoal = defaultGoalForObjective(campaignObjective);
     }
@@ -375,7 +436,7 @@ export async function POST(req: Request) {
     params.set("name", name);
     params.set("daily_budget", String(Math.round(daily_budget)));
     params.set("billing_event", "IMPRESSIONS");
-    params.set("optimization_goal", effectiveOptimizationGoal);
+    params.set("optimization_goal", toGraphOptimizationGoal(effectiveOptimizationGoal));
     params.set("targeting", JSON.stringify(targetingPayload));
     params.set("status", "PAUSED");
     params.set("start_time", new Date().toISOString());

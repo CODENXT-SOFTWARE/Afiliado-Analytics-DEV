@@ -36,9 +36,11 @@ import {
   META_PUBLISHER_PLATFORMS,
   META_SALES_CONVERSION_EVENTS,
   META_PIXEL_CONVERSION_EVENTS,
+  META_LEADS_CAMPAIGN_CONVERSION_PICKER_EVENTS,
   META_GENDER_OPTIONS,
   getOptimizationGoalsForObjective,
   getDefaultGoalForObjective,
+  isMetaLeadsWebsiteConversionEvent,
 } from "@/lib/meta-ads-constants";
 
 type AdAccount = { id: string; name: string; business_id?: string };
@@ -296,6 +298,7 @@ export default function MetaAdsClient() {
   const canStep2 = adAccountId && pageId;
   const canStep3 = campaignId && campaignName;
   const isSalesCampaign = campaignObjective === "OUTCOME_SALES";
+  const isLeadsCampaign = campaignObjective === "OUTCOME_LEADS";
   const allowedGoalsForObjective = getOptimizationGoalsForObjective(campaignObjective);
   const isCurrentGoalAllowed = allowedGoalsForObjective.some((o) => o.value === optimizationGoal);
 
@@ -341,10 +344,10 @@ export default function MetaAdsClient() {
     () => META_SALES_CONVERSION_EVENTS.map((o) => ({ value: o.value, label: o.label })),
     []
   );
-  const pixelConversionPickerOptions = useMemo(
-    () => META_PIXEL_CONVERSION_EVENTS.map((o) => ({ value: o.value, label: o.label })),
-    []
-  );
+  const pixelConversionPickerOptions = useMemo(() => {
+    const src = isLeadsCampaign ? META_LEADS_CAMPAIGN_CONVERSION_PICKER_EVENTS : META_PIXEL_CONVERSION_EVENTS;
+    return src.map((o) => ({ value: o.value, label: o.label }));
+  }, [isLeadsCampaign]);
   const optimizationGoalPickerOptions = useMemo(
     () => allowedGoalsForObjective.map((o) => ({ value: o.value, label: o.label })),
     [allowedGoalsForObjective]
@@ -357,8 +360,15 @@ export default function MetaAdsClient() {
     if (!["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"].includes(v)) {
       setPixelId("");
       setConversionEvent("PURCHASE");
+    } else {
+      setConversionEvent((prev) => {
+        if (campaignObjective === "OUTCOME_LEADS") {
+          return isMetaLeadsWebsiteConversionEvent(prev) ? prev : "LEAD";
+        }
+        return "PURCHASE";
+      });
     }
-  }, []);
+  }, [campaignObjective]);
 
   useEffect(() => {
     if (!canStep3) return;
@@ -367,12 +377,17 @@ export default function MetaAdsClient() {
       setConversionEvent((ev) => (ev === "ADD_TO_CART" ? "ADD_TO_CART" : "PURCHASE"));
       return;
     }
+    const convGoals = ["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"];
+    if (isLeadsCampaign && convGoals.includes(optimizationGoal)) {
+      setConversionEvent((ev) => (isMetaLeadsWebsiteConversionEvent(ev) ? ev : "LEAD"));
+      return;
+    }
     if (!isCurrentGoalAllowed) {
       setOptimizationGoal(getDefaultGoalForObjective(campaignObjective));
       setPixelId("");
       setConversionEvent("PURCHASE");
     }
-  }, [campaignObjective, canStep3, isSalesCampaign, isCurrentGoalAllowed]);
+  }, [campaignObjective, canStep3, isSalesCampaign, isLeadsCampaign, isCurrentGoalAllowed, optimizationGoal]);
 
   const canStep4 = adsetId && adsetName;
 
@@ -398,6 +413,15 @@ export default function MetaAdsClient() {
     if (pubList.length === 0) { setError("Selecione ao menos uma plataforma (Facebook, Instagram, etc.)."); return; }
     if (isSalesCampaign && (!pixelId.trim() || !["PURCHASE", "ADD_TO_CART"].includes(conversionEvent))) {
       setError("Campanha de vendas: escolha o Pixel e o evento Comprar ou Adicionar ao carrinho.");
+      return;
+    }
+    const convGoals = ["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"];
+    if (
+      isLeadsCampaign &&
+      convGoals.includes(optimizationGoal) &&
+      (!pixelId.trim() || !isMetaLeadsWebsiteConversionEvent(conversionEvent))
+    ) {
+      setError("Campanha de leads com meta Conversões no site: escolha o Pixel e um evento adequado (ex.: Lead).");
       return;
     }
     setLoading(true); setError(null);
@@ -878,7 +902,9 @@ export default function MetaAdsClient() {
             ) : (
               <div className="flex-1 space-y-4">
                 <div>
-                  <FieldLabel hint="Opções compatíveis com campanhas de tráfego.">Meta de desempenho</FieldLabel>
+                  <FieldLabel hint="Metas permitidas para o objetivo da campanha (tráfego, leads ou vendas).">
+                    Meta de desempenho
+                  </FieldLabel>
                   <MetaSearchablePicker
                     value={displayOptimizationGoal}
                     onChange={handleOptimizationGoalPick}
@@ -922,7 +948,15 @@ export default function MetaAdsClient() {
                       <h3 className="text-xs font-semibold text-text-primary uppercase tracking-wide">Pixel & conversão</h3>
                     </div>
                     <div>
-                      <FieldLabel hint="Opcional para tráfego com meta de conversão.">Conjunto de dados (Pixel)</FieldLabel>
+                      <FieldLabel
+                        hint={
+                          isLeadsCampaign
+                            ? "Obrigatório para leads com esta meta (conversões no site). Opcional em tráfego puro."
+                            : "Opcional para tráfego com meta de conversão."
+                        }
+                      >
+                        Conjunto de dados (Pixel)
+                      </FieldLabel>
                       <MetaSearchablePicker
                         value={pixelId}
                         onChange={setPixelId}
@@ -939,7 +973,9 @@ export default function MetaAdsClient() {
                     </div>
                     {pixelId ? (
                       <div>
-                        <FieldLabel>Evento de conversão</FieldLabel>
+                        <FieldLabel hint={isLeadsCampaign ? "Ex.: Lead, Cadastro completo — alinhado ao evento disparado no seu site." : undefined}>
+                          Evento de conversão
+                        </FieldLabel>
                         <MetaSearchablePicker
                           value={conversionEvent}
                           onChange={setConversionEvent}

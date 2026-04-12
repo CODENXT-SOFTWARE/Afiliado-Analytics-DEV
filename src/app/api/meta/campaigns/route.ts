@@ -13,7 +13,7 @@ const ALLOWED_OBJECTIVES = [
 ];
 
 /** Apenas estes objetivos na criação de campanha pelo app. */
-const CREATE_CAMPAIGN_OBJECTIVES = ["OUTCOME_TRAFFIC", "OUTCOME_SALES"];
+const CREATE_CAMPAIGN_OBJECTIVES = ["OUTCOME_TRAFFIC", "OUTCOME_LEADS", "OUTCOME_SALES"];
 
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../../utils/supabase/server";

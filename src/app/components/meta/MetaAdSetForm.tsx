@@ -9,9 +9,11 @@ import {
   META_PUBLISHER_PLATFORMS,
   META_SALES_CONVERSION_EVENTS,
   META_PIXEL_CONVERSION_EVENTS,
+  META_LEADS_CAMPAIGN_CONVERSION_PICKER_EVENTS,
   META_GENDER_OPTIONS,
   getOptimizationGoalsForObjective,
   getDefaultGoalForObjective,
+  isMetaLeadsWebsiteConversionEvent,
 } from "@/lib/meta-ads-constants";
 
 type Pixel = { id: string; name: string };
@@ -114,6 +116,7 @@ export default function MetaAdSetForm({
   }, [campaignId]);
 
   const isSales = campaignObjective === "OUTCOME_SALES";
+  const isLeads = campaignObjective === "OUTCOME_LEADS";
   const allowedGoals = getOptimizationGoalsForObjective(campaignObjective ?? "OUTCOME_TRAFFIC");
   const goalOk = isSales || allowedGoals.some((o) => o.value === optimizationGoal);
 
@@ -125,10 +128,10 @@ export default function MetaAdSetForm({
     () => META_SALES_CONVERSION_EVENTS.map((o) => ({ value: o.value, label: o.label })),
     []
   );
-  const pixelConversionPickerOptions = useMemo(
-    () => META_PIXEL_CONVERSION_EVENTS.map((o) => ({ value: o.value, label: o.label })),
-    []
-  );
+  const pixelConversionPickerOptions = useMemo(() => {
+    const src = isLeads ? META_LEADS_CAMPAIGN_CONVERSION_PICKER_EVENTS : META_PIXEL_CONVERSION_EVENTS;
+    return src.map((o) => ({ value: o.value, label: o.label }));
+  }, [isLeads]);
   const optimizationGoalPickerOptions = useMemo(
     () => allowedGoals.map((o) => ({ value: o.value, label: o.label })),
     [allowedGoals]
@@ -145,8 +148,15 @@ export default function MetaAdSetForm({
     if (!["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"].includes(v)) {
       setPixelId("");
       setConversionEvent("PURCHASE");
+    } else {
+      setConversionEvent((prev) => {
+        if (campaignObjective === "OUTCOME_LEADS") {
+          return isMetaLeadsWebsiteConversionEvent(prev) ? prev : "LEAD";
+        }
+        return "PURCHASE";
+      });
     }
-  }, []);
+  }, [campaignObjective]);
 
   useEffect(() => {
     if (campaignObjective == null) return;
@@ -155,13 +165,18 @@ export default function MetaAdSetForm({
       setConversionEvent((e) => (e === "ADD_TO_CART" || e === "PURCHASE" ? e : "PURCHASE"));
       return;
     }
+    const convGoals = ["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"];
+    if (isLeads && convGoals.includes(optimizationGoal)) {
+      setConversionEvent((e) => (isMetaLeadsWebsiteConversionEvent(e) ? e : "LEAD"));
+      return;
+    }
     const allowed = getOptimizationGoalsForObjective(campaignObjective);
     if (!allowed.some((o) => o.value === optimizationGoal)) {
       setOptimizationGoal(getDefaultGoalForObjective(campaignObjective));
       setPixelId("");
       setConversionEvent("PURCHASE");
     }
-  }, [campaignObjective, isSales, optimizationGoal]);
+  }, [campaignObjective, isSales, isLeads, optimizationGoal]);
 
   useEffect(() => {
     if (!adAccountId) return;
@@ -182,6 +197,14 @@ export default function MetaAdSetForm({
     const pubList = META_PUBLISHER_PLATFORMS.map((p) => p.value).filter((p) => publisherPlatforms[p]);
     if (pubList.length === 0) return;
     if (isSales && (!pixelId.trim() || !["PURCHASE", "ADD_TO_CART"].includes(conversionEvent))) return;
+    const convGoals = ["OFFSITE_CONVERSIONS", "VALUE", "CONVERSIONS"];
+    if (
+      isLeads &&
+      convGoals.includes(optimizationGoal) &&
+      (!pixelId.trim() || !isMetaLeadsWebsiteConversionEvent(conversionEvent))
+    ) {
+      return;
+    }
     const codes = countryCodes.length > 0 ? countryCodes : ["BR"];
     onSubmit({
       name: name.trim(),

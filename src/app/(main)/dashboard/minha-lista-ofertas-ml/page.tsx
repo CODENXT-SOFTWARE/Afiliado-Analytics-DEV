@@ -725,7 +725,7 @@ export default function MinhaListaOfertasMlPage() {
 
       const seq = ++mlSearchSeq.current;
       setMlSearchLoading(true);
-      setError(null);
+    setError(null);
       setSelectedMlProduct(null);
       setMlSearchFocusMode(false);
       setMlSimilarProducts([]);
@@ -1539,7 +1539,7 @@ export default function MinhaListaOfertasMlPage() {
             <span className="text-[13px] sm:text-sm font-bold tracking-tight text-[#f0f0f2] truncate block">
               Lista de Ofertas ML
             </span>
-          </div>
+        </div>
         </div>
         <div
           className={cn(
@@ -1588,7 +1588,7 @@ export default function MinhaListaOfertasMlPage() {
         </div>
       )}
 
-      {error && (
+        {error && (
         <div className="px-3 sm:px-4 py-2.5 border-b border-[#2c2c32] bg-red-500/5 flex items-center gap-2">
           <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
           <p className="text-[11px] text-red-400 flex-1">{error}</p>
@@ -1600,8 +1600,8 @@ export default function MinhaListaOfertasMlPage() {
           >
             <X className="w-3 h-3" />
           </button>
-        </div>
-      )}
+          </div>
+        )}
 
       <nav
         className="lg:hidden sticky top-12 z-20 border-b border-[#2c2c32] px-3 py-3 bg-[#1c1c1f] shadow-[0_4px_20px_rgba(0,0,0,0.25)]"
@@ -1774,7 +1774,7 @@ export default function MinhaListaOfertasMlPage() {
                 Abrir linkbuilder oficial
               </a>
             </FieldGroup>
-
+           
             <button
               type="button"
               onClick={() => setListasMenuModalOpen(true)}
@@ -1869,13 +1869,13 @@ export default function MinhaListaOfertasMlPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[10px] text-[#9a9aa2]">Produto em destaque</p>
                 {mlSearchResultsVisible.length > 0 ? (
-                  <button
-                    type="button"
+              <button
+                type="button"
                     onClick={() => setMlSearchFocusMode(false)}
                     className="text-[10px] font-semibold text-[#e24c30] hover:underline"
-                  >
+              >
                     Voltar aos {mlSearchResultsVisible.length} resultado(s)
-                  </button>
+              </button>
                 ) : null}
               </div>
               <div className="bg-[#1c1c1f] border border-[#2c2c32] rounded-xl p-3 sm:p-4 flex gap-3 items-start w-full min-w-0">
@@ -1888,8 +1888,8 @@ export default function MinhaListaOfertasMlPage() {
                     />
                   ) : (
                     <ImageIcon className="w-7 h-7 text-[#686868]" />
-                  )}
-                </div>
+            )}
+          </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-bold text-[#f0f0f2] leading-snug line-clamp-2">{selectedMlProduct.productName}</p>
                   <p className="text-[10px] text-[#a0a0a0] mt-1">Mercado Livre · {selectedMlProduct.itemId}</p>
@@ -2117,76 +2117,76 @@ export default function MinhaListaOfertasMlPage() {
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                <label className={mlFieldLabelInlineClass} htmlFor="ml-product-url">
-                  URL do anúncio (recomendado)
-                </label>
-                <Toolist
-                  variant="floating"
-                  wide
+              <div className="sm:col-span-2">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <label className={mlFieldLabelInlineClass} htmlFor="ml-product-url">
+                    URL do anúncio (recomendado)
+                  </label>
+                  <Toolist
+                    variant="floating"
+                    wide
                   text="Se não colar aqui, use um link meli.la no campo abaixo."
+                  />
+                </div>
+                <input
+                  id="ml-product-url"
+                  value={productUrl}
+                  onChange={(e) => setProductUrl(e.target.value)}
+                  placeholder="Página do produto com MLB na URL"
+                className={gInp}
                 />
               </div>
-              <input
-                id="ml-product-url"
-                value={productUrl}
-                onChange={(e) => setProductUrl(e.target.value)}
-                placeholder="Página do produto com MLB na URL"
-                className={gInp}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={mlFieldLabelClass} htmlFor="ml-affiliate-link">
-                Link de afiliado (obrigatório)
-              </label>
-              <input
-                id="ml-affiliate-link"
-                value={affiliateLink}
-                onChange={(e) => setAffiliateLink(e.target.value)}
+              <div className="sm:col-span-2">
+                <label className={mlFieldLabelClass} htmlFor="ml-affiliate-link">
+                  Link de afiliado (obrigatório)
+                </label>
+                <input
+                  id="ml-affiliate-link"
+                  value={affiliateLink}
+                  onChange={(e) => setAffiliateLink(e.target.value)}
                 placeholder="https://meli.la/…"
                 className={gInp}
-              />
-            </div>
-            <div className="sm:col-span-2 sm:max-w-xs">
-              <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                <label className={mlFieldLabelInlineClass} htmlFor="ml-discount">
-                  Desconto % (opcional)
-                </label>
-                <Toolist
-                  variant="floating"
-                  text="Se preencher, recalcula o preço em destaque a partir do original."
                 />
               </div>
-              <input
-                id="ml-discount"
-                value={discountRate}
-                onChange={(e) => setDiscountRate(e.target.value)}
-                placeholder="Ex.: 10"
+              <div className="sm:col-span-2 sm:max-w-xs">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <label className={mlFieldLabelInlineClass} htmlFor="ml-discount">
+                    Desconto % (opcional)
+                  </label>
+                  <Toolist
+                    variant="floating"
+                  text="Se preencher, recalcula o preço em destaque a partir do original."
+                  />
+                </div>
+                <input
+                  id="ml-discount"
+                  value={discountRate}
+                  onChange={(e) => setDiscountRate(e.target.value)}
+                  placeholder="Ex.: 10"
                 className={gInp}
-              />
-            </div>
+                />
+              </div>
             <div className="sm:col-span-2 pt-2 border-t border-[#2c2c32]">
-              <button
-                type="button"
-                onClick={() => void handleAdicionarItem()}
-                disabled={salvandoItem || !addListaId}
+                <button
+                  type="button"
+                  onClick={() => void handleAdicionarItem()}
+                  disabled={salvandoItem || !addListaId}
                 title={
                   !addListaId
                     ? "Crie uma lista pelo histórico ou importe em lote com nova lista."
                     : undefined
                 }
                 className={`${gBtnPrimary} h-11 px-6 w-full sm:w-auto`}
-              >
-                {salvandoItem ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Salvar na lista
-              </button>
+                >
+                  {salvandoItem ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Salvar na lista
+                </button>
+              </div>
             </div>
-          </div>
         </section>
         </div>
         </main>
-      </div>
+          </div>
 
       <section
         className={cn(
@@ -2198,7 +2198,7 @@ export default function MinhaListaOfertasMlPage() {
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-6 h-6 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
               <Link2 className="w-3 h-3 text-[#e24c30]" />
-            </div>
+          </div>
             <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Histórico de links ML</h2>
             {mlHistoryTotal > 0 ? (
               <span className="text-[9px] text-[#bebebe] bg-[#232328] px-1.5 py-px rounded-full border border-[#3e3e3e] shrink-0">
@@ -2254,7 +2254,7 @@ export default function MinhaListaOfertasMlPage() {
               {someMlHistorySelected
                 ? `${selectedMlHistoryIds.size} selecionado${selectedMlHistoryIds.size > 1 ? "s" : ""}`
                 : "Selecionar todos"}
-            </span>
+                      </span>
           </label>
           <div
             className={cn(
@@ -2262,24 +2262,24 @@ export default function MinhaListaOfertasMlPage() {
               someMlHistorySelected ? "flex opacity-100" : "hidden",
             )}
           >
-            <button
-              type="button"
+                          <button
+                            type="button"
               onClick={() => setSelectedMlHistoryIds(new Set())}
               className="flex items-center justify-center gap-1.5 text-[11px] text-[#a0a0a0] hover:text-[#f0f0f2] font-medium transition bg-[#222228] border border-[#2c2c32] rounded-lg p-2.5 lg:p-0 lg:bg-transparent lg:border-0"
             >
               <X className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
               <span className="hidden lg:inline">Limpar</span>
-            </button>
-            <button
-              type="button"
+                          </button>
+                        <button
+                          type="button"
               onClick={() => openMlAddToListModal(mlHistory.filter((h) => selectedMlHistoryIds.has(h.id)))}
               className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/20 rounded-lg p-2.5 lg:px-2.5 lg:py-1 transition"
             >
               <ListPlus className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
               <span className="hidden lg:inline whitespace-nowrap">Adicionar à lista ({selectedMlHistoryIds.size})</span>
-            </button>
-            <button
-              type="button"
+                        </button>
+                        <button
+                          type="button"
               onClick={async () => {
                 const ids = Array.from(selectedMlHistoryIds);
                 for (const id of ids) await handleDeleteMlHistory(id);
@@ -2289,8 +2289,8 @@ export default function MinhaListaOfertasMlPage() {
             >
               <Trash2 className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
               <span className="hidden lg:inline whitespace-nowrap">Excluir {selectedMlHistoryIds.size}</span>
-            </button>
-          </div>
+                        </button>
+                          </div>
         </div>
 
         {mlAddToListFeedback ? (
@@ -2363,7 +2363,7 @@ export default function MinhaListaOfertasMlPage() {
                           <ImageIcon className="w-4 h-4 text-[#686868]" />
                         </div>
                       )}
-                    </div>
+                            </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[#f0f0f2] line-clamp-2">{h.productName || "Link"}</p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -2394,7 +2394,7 @@ export default function MinhaListaOfertasMlPage() {
                           onAddToList={() => openMlAddToListModal([h])}
                           onDelete={() => void handleDeleteMlHistory(h.id)}
                         />
-                      </div>
+                                    </div>
                     </div>
                     <div
                       className="hidden min-[560px]:flex items-center gap-1 shrink-0"
@@ -2455,7 +2455,7 @@ export default function MinhaListaOfertasMlPage() {
                       >
                         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-shopee-orange/15 border border-shopee-orange/25 shrink-0">
                           <Search className="h-4 w-4 text-shopee-orange" />
-                        </span>
+                                      </span>
                         Categorias
                       </h2>
                       <p className="text-[11px] text-text-secondary/75 mt-1.5 leading-relaxed">
@@ -2474,15 +2474,15 @@ export default function MinhaListaOfertasMlPage() {
                         />
                       </div>
                     </div>
-                    <button
-                      type="button"
+                                    <button
+                                      type="button"
                       aria-label="Fechar"
                       onClick={closeCategoryPicker}
                       disabled={mlSearchLoading}
                       className="p-1.5 rounded-xl text-text-secondary hover:text-text-primary hover:bg-dark-bg shrink-0 disabled:opacity-40"
                     >
                       <X className="h-5 w-5" />
-                    </button>
+                                    </button>
                   </div>
                   <div className={mlModalListScrollClass}>
                     {categoriasFiltradasPicker.length === 0 ? (
@@ -2491,9 +2491,9 @@ export default function MinhaListaOfertasMlPage() {
                       categoriasFiltradasPicker.map((c) => {
                         const selected = categoryDraftSlug === c.slug;
                         return (
-                          <button
+                                      <button
                             key={c.slug}
-                            type="button"
+                                        type="button"
                             disabled={mlSearchLoading}
                             onClick={() => setCategoryDraftSlug(c.slug)}
                             className={mlPickerRowClass(selected)}
@@ -2501,31 +2501,31 @@ export default function MinhaListaOfertasMlPage() {
                             <span className="block truncate font-medium">{c.label}</span>
                             <span className="block text-[11px] text-text-secondary/55 font-normal truncate mt-0.5">
                               {c.slug}
-                            </span>
-                          </button>
+                                        </span>
+                                      </button>
                         );
                       })
                     )}
                   </div>
                   <div className={mlModalFooterClass}>
-                    <button
-                      type="button"
+                                        <button
+                                          type="button"
                       onClick={closeCategoryPicker}
                       disabled={mlSearchLoading}
                       className="rounded-xl border border-dark-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-dark-bg transition-colors disabled:opacity-50"
                     >
                       Cancelar
-                    </button>
-                    <button
-                      type="button"
+                                        </button>
+                                        <button
+                                          type="button"
                       onClick={confirmCategoryPicker}
                       disabled={!categoryDraftSlug || mlSearchLoading}
                       className="rounded-xl bg-shopee-orange px-4 py-2 text-sm font-semibold text-white hover:opacity-90 shadow-[0_2px_12px_rgba(238,77,45,0.25)] disabled:opacity-50"
                     >
                       Confirmar
-                    </button>
-                  </div>
-                </div>
+                                        </button>
+                                    </div>
+                                  </div>
               </div>,
               document.body,
             )
