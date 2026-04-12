@@ -17,24 +17,8 @@ import {
 } from "./capture-responsive-classes";
 import { CaptureOfertCarouselIf } from "./CaptureOfertCarouselIf";
 import { normalizeVipRosaCardsFromDb } from "@/lib/capture-promo-cards";
-import type { VipRosaIconKey } from "@/lib/capture-promo-icons";
-import { vipRosaLucideIcon } from "@/lib/vip-rosa-lucide-map";
-
-function RosaCardLead(props: { emoji: string; iconKey: VipRosaIconKey; themeDeep: string }) {
-  const em = props.emoji.trim();
-  if (em) {
-    return (
-      <span
-        className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center text-lg leading-none"
-        aria-hidden
-      >
-        {em}
-      </span>
-    );
-  }
-  const Icon = vipRosaLucideIcon(props.iconKey);
-  return <Icon className="mt-0.5 h-[18px] w-[18px] shrink-0" style={{ color: props.themeDeep }} aria-hidden />;
-}
+import { promoRosaGoogleFontHref, resolvePromoRosaUi } from "@/lib/capture-promo-rosa-ui";
+import { CaptureRosaPromoLead } from "./CaptureRosaPromoLead";
 
 function hexToRgbTriplet(hex: string): string {
   const h = hex.replace("#", "");
@@ -101,6 +85,8 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
     promoSectionsEnabled,
     promoTitles,
     promoCards,
+    promoRosaUi,
+    promoRosaCardImageUrls,
   } = props;
 
   const promoOn = promoSectionsEnabled !== false;
@@ -138,6 +124,30 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
   const theme = VIP_ROSA_THEME;
   const rosaPct = eleganteFilledPct;
   const rosaSpotsRemaining = Math.max(0, Math.round((TOTAL_SPOTS * (100 - rosaPct)) / 100));
+
+  const promoRosaResolved = useMemo(
+    () =>
+      resolvePromoRosaUi("vip_rosa", promoRosaUi, color, {
+        primary: theme.primary,
+        textMain: theme.textMain,
+        textSoft: theme.textSoft,
+        benefitCardBg: theme.benefitCardBg,
+        bg: theme.bg,
+      }),
+    [promoRosaUi, color, theme.primary, theme.textMain, theme.textSoft, theme.benefitCardBg, theme.bg],
+  );
+
+  useEffect(() => {
+    const href = promoRosaGoogleFontHref(promoRosaResolved.fontPreset);
+    if (!href || typeof document === "undefined") return;
+    const id = "capture-promo-rosa-font-vip";
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+  }, [promoRosaResolved.fontPreset]);
 
   return (
     <>
@@ -338,10 +348,10 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
           </div>
 
           {promoOn ? (
-            <>
+            <div style={{ fontFamily: promoRosaResolved.fontFamilyCss }}>
               <p
-                className="mb-3 text-left text-[13px] font-black uppercase tracking-wide"
-                style={{ color: theme.textMain }}
+                className="mb-3 text-left font-black uppercase tracking-wide"
+                style={{ color: promoRosaResolved.headingColor, fontSize: promoRosaResolved.headingFontPx }}
               >
                 {benefitsHeading}
               </p>
@@ -350,25 +360,35 @@ export default function CaptureVipRosa(props: CaptureVipLandingProps) {
                 {rosaBenefitRows.map((row, i) => (
                   <div
                     key={`vip-rosa-benefit-${i}`}
-                    className="flex items-start gap-3 rounded-xl p-3 shadow-sm border border-black/5"
+                    className="flex items-start gap-3 rounded-xl p-3 shadow-sm border"
                     style={{
-                      borderLeft: `3px solid ${theme.primary}`,
-                      backgroundColor: theme.benefitCardBg,
+                      borderColor: promoRosaResolved.cardBorder,
+                      backgroundColor: promoRosaResolved.cardBg,
+                      borderLeftWidth: 3,
+                      borderLeftStyle: "solid",
+                      borderLeftColor: promoRosaResolved.leftAccent,
                     }}
                   >
-                    <RosaCardLead emoji={row.emoji} iconKey={row.iconKey} themeDeep={theme.deep} />
+                    <CaptureRosaPromoLead
+                      row={row}
+                      iconTint={theme.deep}
+                      imagePublicUrl={promoRosaCardImageUrls?.[i] ?? null}
+                    />
                     <div>
-                      <h3 className="mb-1 text-[13px] font-black uppercase" style={{ color: theme.textMain }}>
+                      <h3
+                        className="mb-1 font-black uppercase"
+                        style={{ color: promoRosaResolved.titleColor, fontSize: promoRosaResolved.titleFontPx }}
+                      >
                         {row.title}
                       </h3>
-                      <p className="text-[13px] leading-snug" style={{ color: theme.textSoft }}>
+                      <p className="leading-snug" style={{ color: promoRosaResolved.bodyColor, fontSize: promoRosaResolved.bodyFontPx }}>
                         {row.body}
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           ) : null}
 
           <CaptureOfertCarouselIf {...props} slot="card_end" variant="light" eyebrow="Destaques" />

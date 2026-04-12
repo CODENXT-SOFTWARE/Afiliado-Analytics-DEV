@@ -8,7 +8,8 @@ export type PageTemplate =
   | "vinho_rose"
   | "the_new_chance"
   | "aurora_ledger"
-  | "jardim_floral";
+  | "jardim_floral"
+  | "em_branco";
 
 export type CaptureSiteRow = {
   id: string;
@@ -61,4 +62,9 @@ export type CaptureSiteRow = {
   /** Array de cards conforme `page_template` (benefícios, depoimentos, linhas simples). */
   promo_section_cards?: unknown;
 
+  /** Overrides visuais opcionais da secção promocional (modelos com cards estilo VIP Rosa / Em branco). */
+  promo_rosa_ui?: unknown;
+
+  /** Tema visual exclusivo do modelo `em_branco`. */
+  blank_canvas_json?: unknown;
 };

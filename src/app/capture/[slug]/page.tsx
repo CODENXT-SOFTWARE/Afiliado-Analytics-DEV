@@ -10,6 +10,8 @@ import { detectBot } from "../../../lib/bot-detection";
 import CTAButton from "./CTAButton";
 import { CAPTURE_BODY, CAPTURE_TITLE_HERO } from "./capture-responsive-classes";
 import CaptureVipLanding from "./CaptureVipLanding";
+import CaptureBlankCanvas from "./CaptureBlankCanvas";
+import { CaptureEmBrancoToastsOnly } from "./CaptureEmBrancoExtraBlocks";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import type { PageTemplate } from "@/app/(main)/dashboard/captura/_lib/types";
 import { normalizeCapturePageTemplate } from "@/lib/capture-page-template";
@@ -28,7 +30,8 @@ import {
   normalizePromoSectionsEnabled,
   resolvePromoTitlesForPublicPage,
 } from "@/lib/capture-promo-sections";
-import { resolvePromoCardsForPublicPage } from "@/lib/capture-promo-cards";
+import { normalizeVipRosaCardsFromDb, resolvePromoCardsForPublicPage } from "@/lib/capture-promo-cards";
+import { mergeBlankCanvasFromDb } from "@/lib/capture-blank-canvas";
 import { OfertCarouselAtSlot } from "./CaptureOfertCarouselIf";
 
 export const dynamic = "force-dynamic";
@@ -259,6 +262,7 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
   const metaPixelId = site.meta_pixel_id;
 
   const pageTemplate = normalizeCapturePageTemplate(site.page_template);
+  const isEmBranco = pageTemplate === "em_branco";
   const isVipTemplate =
     pageTemplate === "vip_rosa" ||
     pageTemplate === "vip_terroso" ||
@@ -266,6 +270,22 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
     pageTemplate === "the_new_chance" ||
     pageTemplate === "aurora_ledger" ||
     pageTemplate === "jardim_floral";
+
+  const blankCanvasConfig = isEmBranco
+    ? mergeBlankCanvasFromDb((site as { blank_canvas_json?: unknown }).blank_canvas_json)
+    : null;
+  const blankHeroPublicUrl = (() => {
+    const p = blankCanvasConfig?.heroPath?.trim();
+    if (!p) return null;
+    const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
+    return data.publicUrl ?? null;
+  })();
+  const blankBgPublicUrl = (() => {
+    const p = blankCanvasConfig?.bgImagePath?.trim();
+    if (!p || !blankCanvasConfig?.bgImageEnabled) return null;
+    const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
+    return data.publicUrl ?? null;
+  })();
   const youtubeUrl = (site.youtube_url ?? "").trim();
   const youtubePosition = normalizeYoutubePosition(
     (site as { youtube_position?: unknown }).youtube_position,
@@ -307,6 +327,17 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
         })
       : undefined;
 
+  const promoRosaUi = (site as { promo_rosa_ui?: unknown }).promo_rosa_ui;
+  const promoRosaCardImageUrls =
+    pageTemplate === "vip_rosa" || pageTemplate === "em_branco"
+      ? normalizeVipRosaCardsFromDb(site.promo_section_cards).map((row) => {
+          const p = row.image_path?.trim();
+          if (!p) return null;
+          const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
+          return data.publicUrl ?? null;
+        })
+      : undefined;
+
   return (
     <>
       {/* Injeção do Meta Pixel (se existir) */}
@@ -341,9 +372,42 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
         </>
       )}
 
+      {isEmBranco && blankCanvasConfig ? (
+        <>
+          <CaptureEmBrancoToastsOnly
+            notificationsEnabled={notificationsEnabled}
+            notificationsPosition={notificationsPosition}
+          />
+          <CaptureBlankCanvas
+            config={blankCanvasConfig}
+            title={title}
+            description={desc}
+            buttonText={buttonText}
+            ctaHref={`/${slug}/go`}
+            logoUrl={logoUrl}
+            heroPublicUrl={blankHeroPublicUrl}
+            siteButtonColor={buttonColor}
+            bgImagePublicUrl={blankBgPublicUrl}
+            emBrancoCardMedia={{
+              youtubeUrl: youtubeUrl || null,
+              youtubePosition,
+              ofertCarouselEnabled,
+              ofertCarouselPosition,
+              ofertCarouselImageUrls,
+              promoSectionsEnabled,
+              promoTitles,
+              promoCards,
+              accentColor: buttonColor,
+              promoRosaUi,
+              promoRosaCardImageUrls,
+            }}
+          />
+        </>
+      ) : null}
+
       {isVipTemplate ? (
         <CaptureVipLanding
-          variant={pageTemplate as Exclude<PageTemplate, "classic">}
+          variant={pageTemplate as Exclude<PageTemplate, "classic" | "em_branco">}
           title={title}
           description={desc}
           buttonText={buttonText}
@@ -360,11 +424,13 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
           promoSectionsEnabled={promoSectionsEnabled}
           promoTitles={promoTitles}
           promoCards={promoCards}
+          promoRosaUi={promoRosaUi}
+          promoRosaCardImageUrls={promoRosaCardImageUrls}
           promoAuroraAvatarUrls={promoAuroraAvatarUrls}
         />
       ) : null}
 
-      {!isVipTemplate ? (
+      {!isVipTemplate && !isEmBranco ? (
       <main
         className="min-h-screen flex flex-col px-4 pt-10 pb-6 sm:pt-8 sm:pb-12"
         style={{

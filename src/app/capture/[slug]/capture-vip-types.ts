@@ -38,6 +38,10 @@ export type CaptureVipLandingProps = {
   };
   /** Conteúdo dos cards (formato depende do modelo). */
   promoCards?: unknown;
+  /** Overrides de cores / fontes da secção promocional (VIP Rosa / Em branco). */
+  promoRosaUi?: unknown;
+  /** URLs públicas da miniatura por card (Rosa / Em branco), alinhadas ao array normalizado. */
+  promoRosaCardImageUrls?: (string | null)[];
   /** URLs públicas das fotos dos depoimentos Aurora (alinhadas ao array normalizado). */
   promoAuroraAvatarUrls?: (string | null)[];
 };

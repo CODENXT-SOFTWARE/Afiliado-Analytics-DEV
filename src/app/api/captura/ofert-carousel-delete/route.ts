@@ -66,9 +66,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: resolved.message }, { status: resolved.status });
   }
 
-  if (!path.includes(`/carousel/`) && !path.includes(`/promo-avatars/`)) {
+  if (
+    !path.includes(`/carousel/`) &&
+    !path.includes(`/promo-avatars/`) &&
+    !path.includes(`/promo-rosa-cards/`) &&
+    !path.includes(`/blank-hero/`) &&
+    !path.includes(`/blank-bg/`)
+  ) {
     return NextResponse.json(
-      { error: "Apenas imagens do carrossel ou fotos de depoimentos (Aurora) podem ser removidas aqui." },
+      {
+        error:
+          "Apenas imagens do carrossel, depoimentos (Aurora), cards promocionais (Rosa), hero ou fundo (Em branco) podem ser removidas aqui.",
+      },
       { status: 400 },
     );
   }

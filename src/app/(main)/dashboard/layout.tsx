@@ -293,7 +293,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      <main className="flex-grow p-6 md:p-8 overflow-auto lg:ml-[-256px] scrollbar-thin">
+      <main className="min-h-0 flex-grow p-6 md:p-8 overflow-auto lg:ml-[-256px] scrollbar-thin">
         <div className="lg:ml-64">
           {showTrialBlockedLoading ? (
             <div className="flex items-center justify-center py-20 text-text-secondary text-sm">

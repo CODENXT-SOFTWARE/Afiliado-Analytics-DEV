@@ -12,7 +12,7 @@ import CaptureJardimFloral from "./CaptureJardimFloral";
 export type { CaptureVipLandingProps } from "./capture-vip-types";
 
 type Props = CaptureVipLandingProps & {
-  variant: Exclude<PageTemplate, "classic">;
+  variant: Exclude<PageTemplate, "classic" | "em_branco">;
 };
 
 /**

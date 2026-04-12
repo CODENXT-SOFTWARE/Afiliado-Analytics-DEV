@@ -22,12 +22,18 @@ export const PROMO_AURORA_MAX = 8;
 export const PROMO_SIMPLE_MIN = 1;
 export const PROMO_SIMPLE_MAX = 12;
 
+export type RosaLeadMode = "icon" | "emoji" | "image";
+
 export type VipRosaCardRow = {
   title: string;
   body: string;
   iconKey: VipRosaIconKey;
   /** Se não vazio, substitui o ícone na página. */
   emoji: string;
+  /** `image` — mostrar `image_path`; senão ícone ou emoji consoante `lead_mode`. */
+  lead_mode: RosaLeadMode;
+  /** Path no bucket `capture-logos` (pasta `promo-rosa-cards/`). */
+  image_path: string | null;
 };
 
 export type VipTerrosoCardRow = { emoji: string; title: string; body: string };
@@ -158,6 +164,8 @@ function rosaPadRow(i: number): VipRosaCardRow {
     body: def.body,
     iconKey: defaultRosaIconKeyForIndex(i),
     emoji: "",
+    lead_mode: "icon",
+    image_path: null,
   };
 }
 
@@ -208,11 +216,15 @@ export function normalizeVipRosaCardsFromDb(raw: unknown): VipRosaCardRow[] {
     const body = clip(String(row.body ?? ""), L.rosaBody);
     const iconKey = normalizeRosaIconKey(String(row.iconKey ?? pad.iconKey));
     const emoji = clipEmoji(String(row.emoji ?? ""));
+    const image_path = normalizeRosaImagePath(row.image_path ?? row.imagePath);
+    const lead_mode = normalizeRosaLeadMode(row.lead_mode ?? row.leadMode, image_path, emoji);
     out.push({
       title: title || pad.title,
       body: body || pad.body,
       iconKey,
       emoji,
+      lead_mode,
+      image_path,
     });
   }
   return out;
@@ -249,6 +261,21 @@ function normalizeAvatarPath(v: unknown): string | null {
   if (!s) return null;
   if (s.includes("..") || s.startsWith("/")) return null;
   return s.slice(0, 512);
+}
+
+function normalizeRosaImagePath(v: unknown): string | null {
+  const p = normalizeAvatarPath(v);
+  if (!p) return null;
+  if (!p.includes("/promo-rosa-cards/")) return null;
+  return p;
+}
+
+function normalizeRosaLeadMode(v: unknown, imagePath: string | null, emoji: string): RosaLeadMode {
+  const s = String(v ?? "").toLowerCase();
+  if (s === "image" || s === "emoji" || s === "icon") return s;
+  if (imagePath) return "image";
+  if (emoji.trim()) return "emoji";
+  return "icon";
 }
 
 export function normalizeAuroraCardsFromDb(raw: unknown): AuroraCardRow[] {
@@ -309,7 +336,7 @@ export function mergePromoCardsDraftFromDb(
   const draft = createDefaultPromoCardsDraft();
   if (!Array.isArray(raw)) return draft;
 
-  if (tpl === "vip_rosa") draft.rosa = normalizeVipRosaCardsFromDb(raw);
+  if (tpl === "vip_rosa" || tpl === "em_branco") draft.rosa = normalizeVipRosaCardsFromDb(raw);
   else if (tpl === "vip_terroso") draft.terroso = normalizeVipTerrosoCardsFromDb(raw);
   else if (tpl === "aurora_ledger") draft.aurora = normalizeAuroraCardsFromDb(raw);
   else if (tpl === "vinho_rose" || tpl === "the_new_chance") draft.simpleFour = normalizeSimpleFourLinesFromDb(raw);
@@ -320,11 +347,14 @@ export function mergePromoCardsDraftFromDb(
 export function promoSectionCardsToDbValue(pageTemplate: PageTemplate, draft: PromoCardsDraft): unknown {
   switch (pageTemplate) {
     case "vip_rosa":
+    case "em_branco":
       return draft.rosa.map((r) => ({
         title: clip(r.title, L.rosaTitle),
         body: clip(r.body, L.rosaBody),
         iconKey: normalizeRosaIconKey(r.iconKey),
         emoji: clipEmoji(r.emoji),
+        lead_mode: r.lead_mode,
+        image_path: normalizeRosaImagePath(r.image_path),
       }));
     case "vip_terroso":
       return draft.terroso.map((r) => ({
@@ -350,6 +380,7 @@ export function promoSectionCardsToDbValue(pageTemplate: PageTemplate, draft: Pr
 export function resolvePromoCardsForPublicPage(pageTemplate: PageTemplate, raw: unknown): unknown {
   switch (pageTemplate) {
     case "vip_rosa":
+    case "em_branco":
       return normalizeVipRosaCardsFromDb(raw);
     case "vip_terroso":
       return normalizeVipTerrosoCardsFromDb(raw);

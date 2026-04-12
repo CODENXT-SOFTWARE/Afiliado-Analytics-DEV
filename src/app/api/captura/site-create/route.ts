@@ -15,6 +15,8 @@ import {
   promoSectionTitlesToJsonb,
 } from "@/lib/capture-promo-sections";
 import { mergePromoCardsDraftFromDb, promoSectionCardsToDbValue } from "@/lib/capture-promo-cards";
+import { promoRosaUiOverridesFromUnknown, promoRosaUiToJsonb } from "@/lib/capture-promo-rosa-ui";
+import { blankCanvasToDbValue, mergeBlankCanvasFromDb } from "@/lib/capture-blank-canvas";
 import type { PageTemplate } from "@/app/(main)/dashboard/captura/_lib/types";
 
 /** INSERT com service role evita RLS/policies que às vezes ignoram colunas novas (ex.: page_template). */
@@ -87,6 +89,17 @@ export async function POST(req: Request) {
     if (!Array.isArray(raw)) return null;
     const draft = mergePromoCardsDraftFromDb(page_template, raw);
     return promoSectionCardsToDbValue(page_template as PageTemplate, draft);
+  })();
+
+  const blankCanvasPayload =
+    page_template === "em_branco"
+      ? blankCanvasToDbValue(mergeBlankCanvasFromDb(body.blank_canvas_json ?? body.blankCanvasJson))
+      : null;
+
+  const promoRosaUiInsert = (() => {
+    const raw = body.promo_rosa_ui ?? body.promoRosaUi;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    return promoRosaUiToJsonb(promoRosaUiOverridesFromUnknown(raw));
   })();
 
   const trimOrNull = (v: unknown): string | null => {
@@ -166,6 +179,8 @@ export async function POST(req: Request) {
     ),
     promo_section_titles: promoTitlesPayload,
     promo_section_cards: promoCardsPayload,
+    promo_rosa_ui: promoRosaUiInsert,
+    blank_canvas_json: blankCanvasPayload,
     userid: user.id,
   };
 

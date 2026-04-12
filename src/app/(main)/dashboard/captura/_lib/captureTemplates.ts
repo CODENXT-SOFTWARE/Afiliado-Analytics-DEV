@@ -63,6 +63,14 @@ export const PAGE_TEMPLATE_OPTIONS: {
     badge: "Novo",
     previewSrc: "/capture-templates/jardim_floral.svg",
   },
+  {
+    id: "em_branco",
+    title: "Em branco",
+    description:
+      "Assistente em 5 passos: identidade e textos (1–3), visual do cartão no passo 4, e no passo 5 YouTube, carrossel, notificações e secção promocional. Na página pública os extras ficam na mesma coluna, dentro do cartão (zonas como nos VIP).",
+    badge: "Novo",
+    previewSrc: "/capture-templates/em_branco.svg",
+  },
 ];
 
 export function pageTemplateLabel(t: PageTemplate | null | undefined): string {

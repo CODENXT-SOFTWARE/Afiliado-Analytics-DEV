@@ -35,7 +35,7 @@ export function promoTitlesForForm(
   const o = readTitlesObject(raw);
   const tpl = pageTemplate ?? "classic";
   const benefitsDefault =
-    tpl === "vip_rosa" ? DEFAULT_PROMO_TITLE_BENEFITS_ROSA : "";
+    tpl === "vip_rosa" || tpl === "em_branco" ? DEFAULT_PROMO_TITLE_BENEFITS_ROSA : "";
   const b = typeof o.benefits === "string" ? clip(o.benefits) : "";
   const t = typeof o.testimonials === "string" ? clip(o.testimonials) : "";
   const ig = typeof o.in_group === "string" ? clip(o.in_group) : "";
@@ -52,7 +52,7 @@ export function resolvePromoTitlesForPublicPage(
   raw: unknown,
 ): PromoSectionTitlesResolved {
   const form = promoTitlesForForm(pageTemplate, raw);
-  if (pageTemplate === "vip_rosa") {
+  if (pageTemplate === "vip_rosa" || pageTemplate === "em_branco") {
     return {
       benefits: form.benefits.trim() || DEFAULT_PROMO_TITLE_BENEFITS_ROSA,
       testimonials: form.testimonials.trim() || DEFAULT_PROMO_TITLE_TESTIMONIALS,
@@ -77,5 +77,5 @@ export function promoSectionTitlesToJsonb(titles: PromoSectionTitlesInput): Reco
 
 /** Valor inicial do campo «benefícios» no wizard conforme o modelo escolhido. */
 export function defaultBenefitsTitleForTemplate(t: PageTemplate): string {
-  return t === "vip_rosa" ? DEFAULT_PROMO_TITLE_BENEFITS_ROSA : "";
+  return t === "vip_rosa" || t === "em_branco" ? DEFAULT_PROMO_TITLE_BENEFITS_ROSA : "";
 }

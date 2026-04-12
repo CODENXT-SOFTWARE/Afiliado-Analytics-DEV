@@ -8,6 +8,7 @@ const ALLOWED = new Set<PageTemplate>([
   "the_new_chance",
   "aurora_ledger",
   "jardim_floral",
+  "em_branco",
 ]);
 
 /**
@@ -36,6 +37,9 @@ export function normalizeCapturePageTemplate(raw: unknown): PageTemplate {
   }
   if (s === "jardim_floral" || s === "jardimfloral" || s === "petala" || s === "jardim_rosa") {
     return "jardim_floral";
+  }
+  if (s === "em_branco" || s === "embranco" || s === "blank" || s === "canvas_livre") {
+    return "em_branco";
   }
   if (ALLOWED.has(s as PageTemplate)) return s as PageTemplate;
   return "classic";
