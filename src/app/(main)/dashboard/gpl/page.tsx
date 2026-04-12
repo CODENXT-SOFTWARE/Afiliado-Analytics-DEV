@@ -107,7 +107,17 @@ type ApiCheckState = "checking" | "hasKeys" | "noKeys";
 type GplApiRangeCache = { fromDraft: string; toDraft: string; fromApplied: string; toApplied: string };
 type EvolutionInstanceItem = { id: string; nome_instancia: string; numero_whatsapp: string | null };
 type WhatsAppGroup = { id: string; nome: string; qtdMembros: number };
-type TraficoGruposAd = { id: string; name: string; status: string; spend: number; clicks: number; impressions: number; ctr: number; cpc: number };
+type TraficoGruposAd = {
+  id: string;
+  name: string;
+  status: string;
+  spend: number;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  cpc: number;
+  leads?: number;
+};
 type TraficoGruposAdSet = { id: string; name: string; status: string; spend: number; ads: TraficoGruposAd[] };
 type TraficoGruposCampaignDetail = { id: string; name: string; ad_account_id: string; status: string; spend: number; adSets: TraficoGruposAdSet[] };
 
@@ -663,13 +673,25 @@ export default function GplCalculatorPage() {
   };
 
   const custoTráfegoGrupos = useMemo(() => traficoGruposCampaigns.filter((c) => selectedTraficoCampaignIds.has(c.id)).reduce((acc, c) => acc + c.spend, 0), [traficoGruposCampaigns, selectedTraficoCampaignIds]);
-  const totalCliquesMeta = useMemo(() => traficoGruposCampaigns.filter((c) => selectedTraficoCampaignIds.has(c.id)).reduce((acc, c) => acc + c.adSets.reduce((s, aset) => s + aset.ads.reduce((a, ad) => a + (ad.clicks ?? 0), 0), 0), 0), [traficoGruposCampaigns, selectedTraficoCampaignIds]);
+  const totalLeadsMeta = useMemo(
+    () =>
+      traficoGruposCampaigns
+        .filter((c) => selectedTraficoCampaignIds.has(c.id))
+        .reduce(
+          (acc, c) => acc + c.adSets.reduce((s, aset) => s + aset.ads.reduce((a, ad) => a + (ad.leads ?? 0), 0), 0),
+          0
+        ),
+    [traficoGruposCampaigns, selectedTraficoCampaignIds]
+  );
   const totalNovos = useMemo(() => groups.filter((g) => selectedGroupIds.has(g.id)).reduce((acc, g) => acc + (groupCumulative[g.id]?.total_novos ?? 0), 0), [groups, selectedGroupIds, groupCumulative]);
   const pessoasNoGrupo = useMemo(() => { const n = parseInt(String(groupSize).replace(/\D/g, ""), 10); return Number.isFinite(n) && n > 0 ? n : totalMembersSelected; }, [groupSize, totalMembersSelected]);
   const totalSaidas = useMemo(() => groups.filter((g) => selectedGroupIds.has(g.id)).reduce((acc, g) => acc + (groupCumulative[g.id]?.total_saidas ?? 0), 0), [groups, selectedGroupIds, groupCumulative]);
   const cplInicial = useMemo(() => { if (custoTráfegoGrupos <= 0 || totalNovos <= 0) return 0; return custoTráfegoGrupos / totalNovos; }, [custoTráfegoGrupos, totalNovos]);
   const prejuizoSaidas = useMemo(() => { if (totalSaidas <= 0 || cplInicial <= 0) return 0; return totalSaidas * cplInicial; }, [totalSaidas, cplInicial]);
-  const cplMeta = useMemo(() => { if (custoTráfegoGrupos <= 0 || totalCliquesMeta <= 0) return 0; return custoTráfegoGrupos / totalCliquesMeta; }, [custoTráfegoGrupos, totalCliquesMeta]);
+  const cplMeta = useMemo(() => {
+    if (custoTráfegoGrupos <= 0 || totalLeadsMeta <= 0) return 0;
+    return custoTráfegoGrupos / totalLeadsMeta;
+  }, [custoTráfegoGrupos, totalLeadsMeta]);
   const cplReal = useMemo(() => { if (custoTráfegoGrupos <= 0) return 0; const liquido = totalNovos - totalSaidas; if (liquido <= 0) return 0; return custoTráfegoGrupos / liquido; }, [custoTráfegoGrupos, totalNovos, totalSaidas]);
 
   const fetchTraficoGrupos = async (opts?: { start: string; end: string }) => {
@@ -717,7 +739,20 @@ export default function GplCalculatorPage() {
   const summaryCards = [
     { label: "Custo Tráfego", value: formatCurrency(custoTráfegoGrupos), tone: "text-red-400", tooltip: "Soma de todos os investimentos em campanhas de tráfego no período." },
     { label: "CPL Inicial", value: custoTráfegoGrupos > 0 && totalNovos > 0 ? formatCurrency(cplInicial) : "—", tone: "text-amber-300", tooltip: "Custo bruto por lead, sem considerar as saídas." },
-    { label: "CPL Meta", value: custoTráfegoGrupos > 0 && totalCliquesMeta > 0 ? formatCurrency(cplMeta) : "—", tone: "text-sky-300", tooltip: "Seu teto de gastos ideal por lead para manter a lucratividade." },
+    {
+      label: "Leads total",
+      value: totalLeadsMeta > 0 ? String(totalLeadsMeta.toLocaleString("pt-BR")) : "—",
+      tone: "text-violet-300",
+      tooltip:
+        "É a quantidade de pessoas que clicaram no botão de entrar no grupo na sua página de captura ou que clicaram no seu botão de comprar no seu tráfego direto — conforme os leads que a API do Meta devolve para os anúncios no período.",
+    },
+    {
+      label: "CPL Meta",
+      value: custoTráfegoGrupos > 0 && totalLeadsMeta > 0 ? formatCurrency(cplMeta) : "—",
+      tone: "text-sky-300",
+      tooltip:
+        "Custo por lead no Meta: valor total usado nas campanhas selecionadas dividido pelo total de leads reportado pela API do Meta no mesmo período (só aparece quando há gasto e contagem de leads).",
+    },
     { label: "CPL Real", value: cplReal > 0 ? formatCurrency(cplReal) : "—", tone: "text-emerald-400", tooltip: "Custo líquido por lead, dividindo o investimento apenas pelos leads que ficaram." },
     { label: "Membros", value: pessoasNoGrupo > 0 ? String(pessoasNoGrupo) : "—", tone: "text-sky-400", tooltip: "Pessoas ativas retidas no momento atual." },
     { label: "Entradas", value: totalNovos > 0 ? String(totalNovos) : "—", tone: "text-emerald-400", tooltip: "Volume de novos membros que ingressaram via tráfego." },
@@ -1219,10 +1254,15 @@ export default function GplCalculatorPage() {
                                       <span className="text-xs text-shopee-orange shrink-0">{formatCurrency(aset.spend)}</span>
                                     </button>
                                     {adSetOpen && aset.ads.map((ad) => (
-                                      <div key={ad.id} className="flex items-center gap-2 py-1 pl-4 text-[11px] text-text-secondary">
-                                        <span className="truncate flex-1">{ad.name}</span>
+                                      <div key={ad.id} className="flex items-center gap-2 py-1 pl-4 text-[11px] text-text-secondary flex-wrap">
+                                        <span className="truncate flex-1 min-w-0">{ad.name}</span>
                                         <span>{formatCurrency(ad.spend)}</span>
                                         <span className="flex items-center gap-0.5 shrink-0"><MousePointerClick className="h-3 w-3" /> {ad.clicks}</span>
+                                        {(ad.leads ?? 0) > 0 ? (
+                                          <span className="flex items-center gap-0.5 shrink-0 text-violet-300/95" title="Leads (Meta)">
+                                            <Target className="h-3 w-3" /> {ad.leads}
+                                          </span>
+                                        ) : null}
                                       </div>
                                     ))}
                                   </div>

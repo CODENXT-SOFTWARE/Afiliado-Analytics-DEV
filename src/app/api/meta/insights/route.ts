@@ -24,7 +24,34 @@ export type MetaAdInsight = {
   impressions: number;
   ctr: number;
   cpc: number;
+  /** Leads agregados a partir de `actions` (API Meta), ex.: lead, offsite_conversion.fb_pixel_lead. */
+  leads: number;
 };
+
+/**
+ * Contagem de leads a partir de `actions` (insights).
+ * A Meta costuma devolver **vários** action_type para o mesmo resultado (ex.: `lead` e
+ * `offsite_conversion.fb_pixel_lead` com o mesmo valor) — somar duplica o total do Gerenciador.
+ * Usamos o **máximo** entre os tipos listados para alinhar ao que você vê em “Leads”.
+ */
+function extractLeadsFromActions(actions: unknown): number {
+  if (!Array.isArray(actions)) return 0;
+  const types = new Set([
+    "lead",
+    "offsite_conversion.fb_pixel_lead",
+    "onsite_conversion.lead_grouped",
+  ]);
+  let max = 0;
+  for (const item of actions) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as { action_type?: string; value?: string };
+    const at = String(rec.action_type ?? "").toLowerCase();
+    if (!types.has(at)) continue;
+    const v = parseFloat(String(rec.value ?? "0").replace(",", ".")) || 0;
+    if (v > max) max = v;
+  }
+  return Math.round(max);
+}
 
 type AdFromApi = {
   id: string;
@@ -51,7 +78,8 @@ async function getInsights(
   since: string,
   until: string
 ): Promise<MetaAdInsight[]> {
-  const fields = "ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,clicks,impressions,ctr,cpc";
+  const fields =
+    "ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,clicks,impressions,ctr,cpc,actions";
   const params = new URLSearchParams({
     access_token: accessToken,
     fields,
@@ -62,7 +90,7 @@ async function getInsights(
   const url = `${GRAPH_BASE}/${adAccountId}/insights?${params.toString()}`;
   const res = await fetch(url);
   const json = (await res.json()) as {
-    data?: Array<Record<string, string | undefined>>;
+    data?: Array<Record<string, unknown>>;
     paging?: { next?: string };
     error?: { message: string };
   };
@@ -73,11 +101,12 @@ async function getInsights(
   let nextUrl: string | null = json.paging?.next ?? null;
   while (data.length > 0 || nextUrl) {
     for (const row of data) {
-      const spend = parseFloat(row.spend ?? "0") || 0;
-      const clicks = parseInt(row.clicks ?? "0", 10) || 0;
-      const impressions = parseInt(row.impressions ?? "0", 10) || 0;
-      const ctr = parseFloat(row.ctr ?? "0") || 0;
-      const cpc = parseFloat(row.cpc ?? "0") || (clicks > 0 ? spend / clicks : 0);
+      const spend = parseFloat(String(row.spend ?? "0")) || 0;
+      const clicks = parseInt(String(row.clicks ?? "0"), 10) || 0;
+      const impressions = parseInt(String(row.impressions ?? "0"), 10) || 0;
+      const ctr = parseFloat(String(row.ctr ?? "0")) || 0;
+      const cpc = parseFloat(String(row.cpc ?? "0")) || (clicks > 0 ? spend / clicks : 0);
+      const leads = extractLeadsFromActions(row.actions);
       out.push({
         ad_id: String(row.ad_id ?? ""),
         ad_name: String(row.ad_name ?? row.ad_id ?? "Sem nome"),
@@ -91,12 +120,13 @@ async function getInsights(
         impressions,
         ctr,
         cpc,
+        leads,
       });
     }
     if (!nextUrl) break;
     const nextRes = await fetch(nextUrl);
     const nextJson = (await nextRes.json()) as {
-      data?: Array<Record<string, string | undefined>>;
+      data?: Array<Record<string, unknown>>;
       paging?: { next?: string };
     };
     data = nextJson.data ?? [];
@@ -111,7 +141,8 @@ async function getInsightsByPreset(
   adAccountId: string,
   datePreset: string
 ): Promise<MetaAdInsight[]> {
-  const fields = "ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,clicks,impressions,ctr,cpc";
+  const fields =
+    "ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,clicks,impressions,ctr,cpc,actions";
   const params = new URLSearchParams({
     access_token: accessToken,
     fields,
@@ -121,7 +152,7 @@ async function getInsightsByPreset(
   const url = `${GRAPH_BASE}/${adAccountId}/insights?${params.toString()}`;
   const res = await fetch(url);
   const json = (await res.json()) as {
-    data?: Array<Record<string, string | undefined>>;
+    data?: Array<Record<string, unknown>>;
     paging?: { next?: string };
     error?: { message: string };
   };
@@ -132,11 +163,12 @@ async function getInsightsByPreset(
   let nextUrl: string | null = json.paging?.next ?? null;
   while (data.length > 0 || nextUrl) {
     for (const row of data) {
-      const spend = parseFloat(row.spend ?? "0") || 0;
-      const clicks = parseInt(row.clicks ?? "0", 10) || 0;
-      const impressions = parseInt(row.impressions ?? "0", 10) || 0;
-      const ctr = parseFloat(row.ctr ?? "0") || 0;
-      const cpc = parseFloat(row.cpc ?? "0") || (clicks > 0 ? spend / clicks : 0);
+      const spend = parseFloat(String(row.spend ?? "0")) || 0;
+      const clicks = parseInt(String(row.clicks ?? "0"), 10) || 0;
+      const impressions = parseInt(String(row.impressions ?? "0"), 10) || 0;
+      const ctr = parseFloat(String(row.ctr ?? "0")) || 0;
+      const cpc = parseFloat(String(row.cpc ?? "0")) || (clicks > 0 ? spend / clicks : 0);
+      const leads = extractLeadsFromActions(row.actions);
       out.push({
         ad_id: String(row.ad_id ?? ""),
         ad_name: String(row.ad_name ?? row.ad_id ?? "Sem nome"),
@@ -150,12 +182,13 @@ async function getInsightsByPreset(
         impressions,
         ctr,
         cpc,
+        leads,
       });
     }
     if (!nextUrl) break;
     const nextRes = await fetch(nextUrl);
     const nextJson = (await nextRes.json()) as {
-      data?: Array<Record<string, string | undefined>>;
+      data?: Array<Record<string, unknown>>;
       paging?: { next?: string };
     };
     data = nextJson.data ?? [];
@@ -318,6 +351,7 @@ function toInsightFromAd(ad: AdFromApi, adAccountId: string): MetaAdInsight {
     impressions: 0,
     ctr: 0,
     cpc: 0,
+    leads: 0,
   };
 }
 
@@ -351,6 +385,7 @@ function applyMappingAndMerge(rows: MetaAdInsight[], mapping: Map<string, string
       existing.spend += row.spend;
       existing.clicks += row.clicks;
       existing.impressions += row.impressions;
+      existing.leads = (existing.leads ?? 0) + (row.leads ?? 0);
       existing.ctr = existing.impressions > 0 ? (existing.clicks / existing.impressions) * 100 : 0;
       existing.cpc = existing.clicks > 0 ? existing.spend / existing.clicks : 0;
     } else {

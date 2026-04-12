@@ -28,6 +28,8 @@ export type TraficoGruposAd = {
   impressions: number;
   ctr: number;
   cpc: number;
+  /** Contagem de leads (actions na API Meta), quando disponível. */
+  leads: number;
 };
 
 export type TraficoGruposAdSet = {
@@ -113,6 +115,7 @@ export async function GET(req: Request) {
         impressions: number;
         ctr: number;
         cpc: number;
+        leads?: number;
       }>;
       campaignsList?: Array<{ id: string; name: string; ad_account_id: string }>;
       adSetList?: Array<{ id: string; name: string; campaign_id: string; ad_account_id: string }>;
@@ -145,6 +148,7 @@ export async function GET(req: Request) {
           impressions: i.impressions,
           ctr: i.ctr,
           cpc: i.cpc,
+          leads: typeof i.leads === "number" ? i.leads : 0,
         });
         byAdSet.set(i.adset_id, list);
       }
