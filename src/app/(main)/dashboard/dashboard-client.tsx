@@ -727,11 +727,13 @@ export default function CommissionsPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold text-text-primary font-heading">Análise de Comissões</h1>
+      {/* Header — em mobile: título e filtros em coluna com largura total */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <h1 className="text-2xl font-bold text-text-primary font-heading sm:text-3xl shrink-0">
+          Análise de Comissões
+        </h1>
 
-        <div className="flex items-center gap-4 sm:gap-6 flex-wrap justify-end">
+        <div className="flex w-full min-w-0 flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4 lg:gap-6">
           {showDateControls && (
             <DateRangeControls
               from={dateFromDraft}
@@ -743,9 +745,10 @@ export default function CommissionsPage() {
               actions={
                 isApiMode ? (
                   <button
+                    type="button"
                     onClick={() => triggerRefetch(dateFromDraft, dateToDraft)}
                     disabled={loadingShopee || !dateFromDraft || !dateToDraft}
-                    className="rounded-md bg-shopee-orange px-4 py-2 text-white font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
+                    className="rounded-lg bg-shopee-orange px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(238,77,45,0.35)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:py-2 sm:shadow-none"
                   >
                     Atualizar
                   </button>
