@@ -7,11 +7,12 @@ import {
   MessageCircle, Loader2, Trash2, AlertCircle, Search,
   Clock, PlusCircle, Info, Zap, Tag, RefreshCw,
   Play, Pause, Hash, Layers, X, ChevronLeft, ChevronRight, ChevronDown,
-  List as ListIcon, User, Settings2, Smartphone, CheckCheck, Send,
+  List as ListIcon, User, Settings2, Smartphone, CheckCheck, Send, Pencil,
 } from "lucide-react";
 import BuscarGruposModal, {
   type BuscarGruposPayload,
   type EvolutionInstanceItem,
+  type WhatsAppGroupItem,
 } from "../gpl/BuscarGruposModal";
 import MetaSearchablePicker from "@/app/components/meta/MetaSearchablePicker";
 import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationBar";
@@ -337,6 +338,15 @@ export default function GruposVendaPage() {
   const [wizardListaAlvoAlertOpen, setWizardListaAlvoAlertOpen] = useState(false);
   /** Passo 3: modo keywords sem nenhuma keyword — modal de aviso */
   const [wizardKeywordsAlertOpen, setWizardKeywordsAlertOpen] = useState(false);
+  /** Modal lista: edição (id + prefill carregado da API) */
+  const [listaModalEdicaoId, setListaModalEdicaoId] = useState<string | null>(null);
+  const [listaEditPrefill, setListaEditPrefill] = useState<{
+    nomeLista: string;
+    grupos: WhatsAppGroupItem[];
+  } | null>(null);
+  const [listaEditLoading, setListaEditLoading] = useState(false);
+  /** Confirmar exclusão de lista alvo */
+  const [listaDeleteConfirm, setListaDeleteConfirm] = useState<{ id: string; nome: string } | null>(null);
   /** Painel: 2 cards/página abaixo de lg; 6 no desktop (lg+, 1024px) */
   const [panelPerPage, setPanelPerPage] = useState(2);
   /** Painel: filtrar cards por status (evita confusão “Ativos” vs cards Parado) */
@@ -407,32 +417,90 @@ export default function GruposVendaPage() {
     if (!instance) { setError("Instância não encontrada."); return; }
     const nomeLista = payload.nomeLista?.trim();
     if (!nomeLista) { setError("Informe o nome da lista."); return; }
+    const listaId = payload.listaId?.trim();
+    const groupsBody = payload.grupos.map((g) => ({ id: g.id, nome: g.nome }));
     setSaving(true); setError(null);
     try {
       const res = await fetch("/api/grupos-venda/listas", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instanceId: instance.id, nomeLista, groups: payload.grupos.map((g) => ({ id: g.id, nome: g.nome })) }),
+        method: listaId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          listaId
+            ? { id: listaId, nomeLista, groups: groupsBody }
+            : { instanceId: instance.id, nomeLista, groups: groupsBody },
+        ),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Erro ao criar lista");
-      setFeedback(`Lista "${data.data?.nomeLista ?? nomeLista}" criada com ${data.data?.groupsCount ?? payload.grupos.length} grupo(s).`);
+      if (!res.ok) throw new Error(data?.error ?? (listaId ? "Erro ao atualizar lista" : "Erro ao criar lista"));
+      const n = data.data?.groupsCount ?? payload.grupos.length;
+      setFeedback(
+        listaId
+          ? `Lista "${data.data?.nomeLista ?? nomeLista}" atualizada (${n} grupo(s)).`
+          : `Lista "${data.data?.nomeLista ?? nomeLista}" criada com ${n} grupo(s).`,
+      );
       setTimeout(() => setFeedback(""), 5000);
       loadListas();
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro ao criar lista"); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : listaId ? "Erro ao atualizar lista" : "Erro ao criar lista");
+    }
     finally { setSaving(false); }
     setModalOpen(false);
+    setListaModalEdicaoId(null);
+    setListaEditPrefill(null);
   }, [instances, loadListas]);
+
+  const openModalCriarLista = useCallback(() => {
+    setListaModalEdicaoId(null);
+    setListaEditPrefill(null);
+    setModalOpen(true);
+  }, []);
+
+  const openModalEditarLista = useCallback(async (list: ListaGrupos) => {
+    setError(null);
+    setListaEditLoading(true);
+    setListaModalEdicaoId(null);
+    setListaEditPrefill(null);
+    try {
+      const res = await fetch(`/api/grupos-venda/listas?id=${encodeURIComponent(list.id)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Erro ao carregar lista");
+      const row = data.data as {
+        nomeLista?: string;
+        groups?: { id: string; nome: string; qtdMembros?: number }[];
+      };
+      const grupos: WhatsAppGroupItem[] = (row.groups ?? []).map((g) => ({
+        id: g.id,
+        nome: g.nome || "Grupo",
+        qtdMembros: typeof g.qtdMembros === "number" ? g.qtdMembros : 0,
+      }));
+      setListaModalEdicaoId(list.id);
+      setListaEditPrefill({ nomeLista: row.nomeLista ?? list.nomeLista, grupos });
+      setModalOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao carregar lista");
+    } finally {
+      setListaEditLoading(false);
+    }
+  }, []);
 
   const handleDeleteLista = useCallback(async (id: string) => {
     setDeletingListaId(id);
     try {
       const res = await fetch(`/api/grupos-venda/listas?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erro ao remover");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "Erro ao remover");
+      if (selectedListaId === id) setSelectedListaId("");
       loadListas();
       setContinuoList((prev) => prev.filter((c) => c.listaId !== id));
-    } catch { setError("Erro ao remover lista"); }
-    finally { setDeletingListaId(null); }
-  }, [loadListas]);
+      setFeedback("Lista removida.");
+      setTimeout(() => setFeedback(""), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao remover lista");
+    } finally {
+      setDeletingListaId(null);
+      setListaDeleteConfirm(null);
+    }
+  }, [loadListas, selectedListaId]);
 
   const handleDisparar = useCallback(async () => {
     if (!selectedListaId) { setError("Selecione uma lista de grupos."); return; }
@@ -835,6 +903,9 @@ export default function GruposVendaPage() {
     setShowStepInfo(false);
     setWizardListaAlvoAlertOpen(false);
     setWizardKeywordsAlertOpen(false);
+    setModalOpen(false);
+    setListaModalEdicaoId(null);
+    setListaEditPrefill(null);
     setView("panel");
   }
   function handleNext() {
@@ -1150,7 +1221,7 @@ export default function GruposVendaPage() {
                       className="w-full bg-[#222228] border border-[#3e3e3e] rounded-lg pl-8 pr-8 py-2.5 sm:py-2 text-[10px] text-white placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition" />
                     {listSearch && <button onClick={() => setListSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a0a0a0] hover:text-white transition"><X className="w-3 h-3" /></button>}
                   </div>
-                  <button onClick={() => setModalOpen(true)}
+                  <button type="button" onClick={openModalCriarLista}
                     className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0 bg-[#e24c30]/5 border border-[#e24c30]/25 hover:bg-[#e24c30]/10 hover:border-[#e24c30]/45 rounded-lg px-3.5 py-2.5 sm:py-2 transition-all group">
                     <div className="w-5 h-5 rounded-md bg-[#e24c30]/10 border border-[#e24c30]/20 flex items-center justify-center shrink-0 group-hover:bg-[#e24c30]/20 transition-all">
                       <PlusCircle className="w-3 h-3 text-[#e24c30]" />
@@ -1161,24 +1232,74 @@ export default function GruposVendaPage() {
 
                 {loadingListas ? (
                   <div className="flex items-center gap-2 py-4 text-[#a0a0a0] text-xs"><Loader2 className="w-4 h-4 animate-spin" /> Carregando listas...</div>
+                ) : listaEditLoading ? (
+                  <div className="flex items-center gap-2 py-4 text-[#a0a0a0] text-xs"><Loader2 className="w-4 h-4 animate-spin" /> Abrindo lista para edição…</div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5 max-h-[192px] overflow-y-auto scrollbar-thin pr-1">
                     {filteredLists.length > 0 ? filteredLists.map((list) => {
                       const isSelected = selectedListaId === list.id;
                       return (
-                        <button key={list.id} onClick={() => setSelectedListaId(isSelected ? "" : list.id)}
-                          className={cn("flex items-center gap-3 p-2.5 rounded-xl border-2 text-left transition-all min-w-0",
-                            isSelected ? "border-[#e24c30] bg-[#e24c30]/5" : "border-[#2c2c32] bg-[#1c1c1f] hover:border-[#3e3e3e]")}>
-                          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border",
-                            isSelected ? "bg-[#e24c30]/10 border-[#e24c30]/30" : "bg-[#1c1c1f] border-[#2c2c32]")}>
-                            <ListIcon className={cn("w-3.5 h-3.5", isSelected ? "text-[#e24c30]" : "text-[#a0a0a0]")} />
+                        <div
+                          key={list.id}
+                          className={cn(
+                            "flex min-w-0 items-stretch gap-0 rounded-xl border-2 transition-all",
+                            isSelected ? "border-[#e24c30] bg-[#e24c30]/5" : "border-[#2c2c32] bg-[#1c1c1f] hover:border-[#3e3e3e]",
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setSelectedListaId(isSelected ? "" : list.id)}
+                            className="flex min-w-0 flex-1 items-center gap-3 p-2.5 text-left"
+                          >
+                            <div
+                              className={cn(
+                                "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
+                                isSelected ? "border-[#e24c30]/30 bg-[#e24c30]/10" : "border-[#2c2c32] bg-[#1c1c1f]",
+                              )}
+                            >
+                              <ListIcon className={cn("h-3.5 w-3.5", isSelected ? "text-[#e24c30]" : "text-[#a0a0a0]")} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className={cn("truncate text-[11px] font-bold", isSelected ? "text-white" : "text-[#d8d8d8]")}>
+                                {list.nomeLista}
+                              </p>
+                              <p className="mt-0.5 truncate text-[9px] text-[#a0a0a0]">
+                                {instances.find((i) => i.id === list.instanceId)?.nome_instancia ?? list.instanceId.slice(0, 8)}
+                              </p>
+                            </div>
+                            {isSelected ? <CheckCheck className="h-3.5 w-3.5 shrink-0 text-[#e24c30]" /> : null}
+                          </button>
+                          <div className="flex shrink-0 flex-col justify-center gap-0.5 border-l border-[#2c2c32]/80 py-1 pl-0.5 pr-1">
+                            <button
+                              type="button"
+                              title="Editar grupos da lista"
+                              disabled={listaEditLoading || saving}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void openModalEditarLista(list);
+                              }}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-[#a0a0a0] transition hover:bg-[#e24c30]/15 hover:text-[#e24c30] disabled:opacity-40"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Apagar lista inteira"
+                              disabled={deletingListaId === list.id || saving}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setListaDeleteConfirm({ id: list.id, nome: list.nomeLista });
+                              }}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-[#a0a0a0] transition hover:bg-red-500/15 hover:text-red-400 disabled:opacity-40"
+                            >
+                              {deletingListaId === list.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3" />
+                              )}
+                            </button>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn("text-[11px] font-bold truncate", isSelected ? "text-white" : "text-[#d8d8d8]")}>{list.nomeLista}</p>
-                            <p className="text-[9px] text-[#a0a0a0] mt-0.5 truncate">{instances.find((i) => i.id === list.instanceId)?.nome_instancia ?? list.instanceId.slice(0, 8)}</p>
-                          </div>
-                          {isSelected && <CheckCheck className="w-3.5 h-3.5 text-[#e24c30] shrink-0" />}
-                        </button>
+                        </div>
                       );
                     }) : (
                       <div className="col-span-full flex flex-col items-center justify-center gap-2 py-8 text-center">
@@ -1588,11 +1709,61 @@ export default function GruposVendaPage() {
       {/* Modal buscar grupos */}
       <BuscarGruposModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setListaModalEdicaoId(null);
+          setListaEditPrefill(null);
+        }}
         onConfirm={handleConfirmGroups}
         criarListaMode
         initialInstanceId={selectedInstanceId || undefined}
+        listaIdEdicao={listaModalEdicaoId}
+        listaNomeInicial={listaEditPrefill?.nomeLista}
+        gruposListaInicial={listaEditPrefill?.grupos ?? null}
       />
+
+      {listaDeleteConfirm &&
+        createPortal(
+          <div className="fixed inset-0 z-[240] flex items-center justify-center p-4 sm:p-6" role="presentation">
+            <button
+              type="button"
+              aria-label="Fechar"
+              className="absolute inset-0 z-0 bg-black/65 backdrop-blur-[2px] transition-opacity"
+              onClick={() => setListaDeleteConfirm(null)}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="lista-delete-title"
+              className="relative z-10 w-full max-w-[400px] rounded-2xl border border-[#2c2c32] bg-[#1c1c1f] p-5 shadow-2xl shadow-black/50"
+            >
+              <h2 id="lista-delete-title" className="text-sm font-bold text-white">
+                Apagar lista?
+              </h2>
+              <p className="mt-2 text-[12px] leading-relaxed text-[#b8b8bc]">
+                A lista <span className="font-semibold text-white">«{listaDeleteConfirm.nome}»</span> será removida
+                permanentemente. Automações que a usem deixarão de ter esta lista.
+              </p>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setListaDeleteConfirm(null)}
+                  className="rounded-xl border border-[#3e3e3e] px-4 py-2.5 text-[12px] font-semibold text-[#d8d8d8] transition hover:bg-[#222228]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteLista(listaDeleteConfirm.id)}
+                  className="rounded-xl bg-red-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-lg transition hover:bg-red-500"
+                >
+                  Apagar lista
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {wizardListaAlvoAlertOpen &&
         createPortal(

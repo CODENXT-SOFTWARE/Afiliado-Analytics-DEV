@@ -30,7 +30,22 @@ export type BuscarGruposPayload = {
   hash: string | null;
   /** Nome da lista ao criar lista de grupo (Grupos de Venda) */
   nomeLista?: string;
+  /** Quando definido, o painel Grupos de Venda faz PATCH em vez de POST */
+  listaId?: string;
 };
+
+/** Grupos da API + grupos só na lista guardada (ainda não na resposta da Evolution). */
+function mergeListaSeedWithCache(apiList: WhatsAppGroupItem[], seed: WhatsAppGroupItem[]): WhatsAppGroupItem[] {
+  const seen = new Set(apiList.map((g) => g.id));
+  const out = [...apiList];
+  for (const s of seed) {
+    if (!seen.has(s.id)) {
+      out.push({ id: s.id, nome: s.nome, qtdMembros: s.qtdMembros || 0 });
+      seen.add(s.id);
+    }
+  }
+  return out;
+}
 
 function normalizeStr(input?: unknown): string {
   return String(input ?? "")
@@ -65,9 +80,23 @@ type Props = {
   criarListaMode?: boolean;
   /** Instância já selecionada na página (evita selecionar de novo no modal) */
   initialInstanceId?: string;
+  /** Editar lista existente (Grupos de Venda): bloqueia troca de instância e envia `listaId` no payload */
+  listaIdEdicao?: string | null;
+  /** Preenchimento ao abrir em modo edição */
+  listaNomeInicial?: string;
+  gruposListaInicial?: WhatsAppGroupItem[] | null;
 };
 
-export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarListaMode, initialInstanceId }: Props) {
+export default function BuscarGruposModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  criarListaMode,
+  initialInstanceId,
+  listaIdEdicao,
+  listaNomeInicial,
+  gruposListaInicial,
+}: Props) {
   const titleId = useId();
   const [instances, setInstances] = useState<EvolutionInstanceItem[]>([]);
   const [instanceStatusMap, setInstanceStatusMap] = useState<Record<string, "open" | "close" | null>>({});
@@ -82,6 +111,9 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
   const [lastFetchedInstanceId, setLastFetchedInstanceId] = useState("");
   const selectedInstanceIdRef = useRef(selectedInstanceId);
   selectedInstanceIdRef.current = selectedInstanceId;
+  const seedMergeRef = useRef<WhatsAppGroupItem[]>([]);
+
+  const isEditLista = Boolean(listaIdEdicao?.trim());
 
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
   const nomeInstancia = selectedInstance?.nome_instancia ?? "";
@@ -91,16 +123,27 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
     if (!isOpen) return;
     setGroupsError(null);
     setGroupFilter("");
-    setSelectedGroupIds(new Set());
-    setNomeLista("");
     const presetId = (initialInstanceId ?? "").trim();
     setSelectedInstanceId(presetId);
-    if (presetId && gruposPorInstanciaCache.has(presetId)) {
-      setGroups(gruposPorInstanciaCache.get(presetId)!);
-      setLastFetchedInstanceId(presetId);
+
+    if (isEditLista && gruposListaInicial && gruposListaInicial.length > 0) {
+      seedMergeRef.current = gruposListaInicial;
+      setNomeLista((listaNomeInicial ?? "").trim());
+      setSelectedGroupIds(new Set(gruposListaInicial.map((g) => g.id)));
+      const cached = presetId && gruposPorInstanciaCache.has(presetId) ? gruposPorInstanciaCache.get(presetId)! : [];
+      setGroups(mergeListaSeedWithCache(cached, gruposListaInicial));
+      setLastFetchedInstanceId(cached.length > 0 ? presetId : "");
     } else {
-      setGroups([]);
-      setLastFetchedInstanceId("");
+      seedMergeRef.current = [];
+      setSelectedGroupIds(new Set());
+      setNomeLista("");
+      if (presetId && gruposPorInstanciaCache.has(presetId)) {
+        setGroups(gruposPorInstanciaCache.get(presetId)!);
+        setLastFetchedInstanceId(presetId);
+      } else {
+        setGroups([]);
+        setLastFetchedInstanceId("");
+      }
     }
     fetch("/api/evolution/instances")
       .then((r) => r.json())
@@ -117,7 +160,7 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
         }
       })
       .catch(() => setInstances([]));
-  }, [isOpen, initialInstanceId]);
+  }, [isOpen, initialInstanceId, isEditLista, listaNomeInicial, gruposListaInicial]);
 
   useEffect(() => {
     if (!isOpen || instances.length === 0) return;
@@ -163,9 +206,11 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
   }, [isOpen, onClose]);
 
   const handleInstanceChange = (id: string) => {
+    if (isEditLista) return;
     setSelectedInstanceId(id);
     setGroupsError(null);
     setSelectedGroupIds(new Set());
+    seedMergeRef.current = [];
     if (id && gruposPorInstanciaCache.has(id)) {
       setGroups(gruposPorInstanciaCache.get(id)!);
       setLastFetchedInstanceId(id);
@@ -211,8 +256,10 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
         })
       );
       if (selectedInstanceIdRef.current !== instanceIdWhenFetching) return;
-      gruposPorInstanciaCache.set(instanceIdWhenFetching, normalized);
-      setGroups(normalized);
+      const seed = seedMergeRef.current;
+      const merged = seed.length > 0 ? mergeListaSeedWithCache(normalized, seed) : normalized;
+      gruposPorInstanciaCache.set(instanceIdWhenFetching, merged);
+      setGroups(merged);
       setGroupFilter("");
       setLastFetchedInstanceId(instanceIdWhenFetching);
     } catch (e) {
@@ -261,6 +308,7 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
       hash: instanceHash,
     };
     if (criarListaMode) payload.nomeLista = nomeLista.trim() || undefined;
+    if (listaIdEdicao?.trim()) payload.listaId = listaIdEdicao.trim();
     onConfirm(payload);
     onClose();
   }, [
@@ -270,11 +318,12 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
     instanceHash,
     criarListaMode,
     nomeLista,
+    listaIdEdicao,
     onConfirm,
     onClose,
   ]);
 
-  const canConfirm = criarListaMode
+  const canConfirm = criarListaMode || isEditLista
     ? selectedGroupIds.size > 0 && nomeLista.trim().length > 0
     : selectedGroupIds.size > 0;
 
@@ -322,7 +371,7 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-shopee-orange/15 border border-shopee-orange/25 shrink-0">
                 <Search className="h-4 w-4 text-shopee-orange" />
               </span>
-              <span className="leading-tight">Buscar grupos</span>
+              <span className="leading-tight">{isEditLista ? "Editar lista de grupos" : "Buscar grupos"}</span>
             </h2>
             <button
               type="button"
@@ -339,7 +388,8 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
             <select
               value={selectedInstanceId}
               onChange={(e) => handleInstanceChange(e.target.value)}
-              className={metaSelectCls}
+              disabled={isEditLista}
+              className={cn(metaSelectCls, isEditLista && "cursor-not-allowed opacity-70")}
             >
               <option value="">Selecione uma instância</option>
               {instances.map((inst) => {
@@ -505,7 +555,7 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
 
         {/* Rodapé — padrão Meta */}
         <div className="shrink-0 border-t border-dark-border/60 bg-dark-bg/30 px-4 py-3 space-y-3">
-          {criarListaMode && selectedGroupIds.size > 0 && (
+          {(criarListaMode || isEditLista) && selectedGroupIds.size > 0 && (
             <div>
               <label className="block text-[11px] font-semibold text-text-secondary uppercase tracking-wide mb-1.5">
                 Nome da lista
@@ -549,7 +599,7 @@ export default function BuscarGruposModal({ isOpen, onClose, onConfirm, criarLis
                 disabled={!canConfirm}
                 className="rounded-xl bg-shopee-orange px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_2px_12px_rgba(238,77,45,0.25)] transition-opacity"
               >
-                {criarListaMode ? "Criar lista de grupo" : "Confirmar"}
+                {isEditLista ? "Guardar alterações" : criarListaMode ? "Criar lista de grupo" : "Confirmar"}
               </button>
             </div>
           </div>

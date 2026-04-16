@@ -261,9 +261,10 @@ export default function CaptureBlankCanvas({
   /** Com imagem de fundo, animar `background-position` move também a foto — desligamos o shimmer global. */
   const shimmerMotion = config.animation === "shimmer_bg" && !hasBgImage;
 
+  /** `overflow-x-hidden` + `min-w-0`: evita scroll horizontal (tarja do body) por orbs/-mx ou filhos largos. */
   const mainShellClass = previewMode
-    ? `relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto ${shimmerMotion ? "blank-shimmer" : ""}`
-    : `relative flex min-h-screen flex-col ${shimmerMotion ? "blank-shimmer" : ""}`;
+    ? `relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-auto ${shimmerMotion ? "blank-shimmer" : ""}`
+    : `relative flex min-h-screen min-w-0 w-full flex-col overflow-x-hidden ${shimmerMotion ? "blank-shimmer" : ""}`;
 
   const contentColumnPad =
     sticky && !stickyDockInPreview ? "pb-28 sm:pb-32" : "";
@@ -301,11 +302,11 @@ export default function CaptureBlankCanvas({
       {styleBlock}
       {decorative}
       <div
-        className={`relative z-[1] flex flex-1 flex-col px-4 py-10 sm:py-14 ${contentColumnPad}`}
+        className={`relative z-[1] flex min-w-0 w-full flex-1 flex-col px-4 py-10 sm:py-14 ${contentColumnPad}`}
         style={{ justifyContent: config.textAlign === "center" ? "center" : "flex-start" }}
       >
         <div
-          className={`blank-card-anim mx-auto w-full ${config.textAlign === "center" ? "text-center" : config.textAlign === "right" ? "text-right" : "text-left"}`}
+          className={`blank-card-anim mx-auto w-full min-w-0 ${config.textAlign === "center" ? "text-center" : config.textAlign === "right" ? "text-right" : "text-left"}`}
           style={cardStyle}
         >
           {config.showLogo && logoUrl ? (
@@ -402,7 +403,7 @@ export default function CaptureBlankCanvas({
 
   if (previewMode) {
     return (
-      <div className="flex h-full min-h-0 w-full flex-col">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-x-hidden">
         {mainColumn}
         {stickyDockInPreview ? stickyBar : null}
       </div>
