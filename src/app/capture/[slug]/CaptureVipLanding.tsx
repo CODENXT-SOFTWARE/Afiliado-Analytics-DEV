@@ -8,6 +8,8 @@ import CaptureVipVinhoRose from "./CaptureVipVinhoRose";
 import CaptureTheNewChance from "./CaptureTheNewChance";
 import CaptureAuroraLedger from "./CaptureAuroraLedger";
 import CaptureJardimFloral from "./CaptureJardimFloral";
+import CaptureMarketMaster from "./CaptureMarketMaster";
+import CapturePerfumariaLuxuosa from "./CapturePerfumariaLuxuosa";
 
 export type { CaptureVipLandingProps } from "./capture-vip-types";
 
@@ -34,6 +36,12 @@ export default function CaptureVipLanding({ variant, ...rest }: Props) {
   }
   if (variant === "jardim_floral") {
     return <CaptureJardimFloral {...rest} />;
+  }
+  if (variant === "market_master") {
+    return <CaptureMarketMaster {...rest} />;
+  }
+  if (variant === "perfumaria_luxuosa") {
+    return <CapturePerfumariaLuxuosa {...rest} />;
   }
   return <CaptureVipRosa {...rest} />;
 }

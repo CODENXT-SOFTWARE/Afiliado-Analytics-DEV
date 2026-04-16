@@ -8,6 +8,8 @@ const ALLOWED = new Set<PageTemplate>([
   "the_new_chance",
   "aurora_ledger",
   "jardim_floral",
+  "market_master",
+  "perfumaria_luxuosa",
   "em_branco",
 ]);
 
@@ -37,6 +39,25 @@ export function normalizeCapturePageTemplate(raw: unknown): PageTemplate {
   }
   if (s === "jardim_floral" || s === "jardimfloral" || s === "petala" || s === "jardim_rosa") {
     return "jardim_floral";
+  }
+  if (
+    s === "market_master" ||
+    s === "marketmaster" ||
+    s === "mmaster" ||
+    s === "market_master_promo" ||
+    s === "tudo_na_promo"
+  ) {
+    return "market_master";
+  }
+  if (
+    s === "perfumaria_luxuosa" ||
+    s === "perfumarialuxuosa" ||
+    s === "perfumaria" ||
+    s === "luxuoso" ||
+    s === "beleza_luxo" ||
+    s === "grupo_beleza_luxo"
+  ) {
+    return "perfumaria_luxuosa";
   }
   if (s === "em_branco" || s === "embranco" || s === "blank" || s === "canvas_livre") {
     return "em_branco";

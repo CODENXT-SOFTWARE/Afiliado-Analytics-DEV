@@ -339,7 +339,13 @@ export function mergePromoCardsDraftFromDb(
   if (tpl === "vip_rosa" || tpl === "em_branco") draft.rosa = normalizeVipRosaCardsFromDb(raw);
   else if (tpl === "vip_terroso") draft.terroso = normalizeVipTerrosoCardsFromDb(raw);
   else if (tpl === "aurora_ledger") draft.aurora = normalizeAuroraCardsFromDb(raw);
-  else if (tpl === "vinho_rose" || tpl === "the_new_chance") draft.simpleFour = normalizeSimpleFourLinesFromDb(raw);
+  else if (
+    tpl === "vinho_rose" ||
+    tpl === "the_new_chance" ||
+    tpl === "market_master" ||
+    tpl === "perfumaria_luxuosa"
+  )
+    draft.simpleFour = normalizeSimpleFourLinesFromDb(raw);
 
   return draft;
 }
@@ -371,6 +377,8 @@ export function promoSectionCardsToDbValue(pageTemplate: PageTemplate, draft: Pr
       }));
     case "vinho_rose":
     case "the_new_chance":
+    case "market_master":
+    case "perfumaria_luxuosa":
       return draft.simpleFour.map((line) => clip(line, L.line));
     default:
       return null;
@@ -388,6 +396,8 @@ export function resolvePromoCardsForPublicPage(pageTemplate: PageTemplate, raw: 
       return normalizeAuroraCardsFromDb(raw);
     case "vinho_rose":
     case "the_new_chance":
+    case "market_master":
+    case "perfumaria_luxuosa":
       return normalizeSimpleFourLinesFromDb(raw);
     default:
       return null;

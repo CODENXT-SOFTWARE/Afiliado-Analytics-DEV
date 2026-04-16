@@ -1,7 +1,4 @@
--- Cole no Supabase: Dashboard → SQL Editor → Run
--- Corrige: "violates check constraint capture_sites_page_template_check"
--- quando o projeto já tem templates novos no código mas o banco ficou com CHECK antigo.
-
+-- Template de captura "Market Master" (cupons / marcas / depoimentos).
 ALTER TABLE public.capture_sites
   DROP CONSTRAINT IF EXISTS capture_sites_page_template_check;
 
@@ -16,6 +13,5 @@ ALTER TABLE public.capture_sites
     'aurora_ledger',
     'jardim_floral',
     'market_master',
-    'perfumaria_luxuosa',
     'em_branco'
   ));

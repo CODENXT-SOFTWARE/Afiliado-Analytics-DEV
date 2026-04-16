@@ -270,7 +270,9 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
     pageTemplate === "vinho_rose" ||
     pageTemplate === "the_new_chance" ||
     pageTemplate === "aurora_ledger" ||
-    pageTemplate === "jardim_floral";
+    pageTemplate === "jardim_floral" ||
+    pageTemplate === "market_master" ||
+    pageTemplate === "perfumaria_luxuosa";
 
   const blankCanvasConfig = isEmBranco
     ? mergeBlankCanvasFromDb((site as { blank_canvas_json?: unknown }).blank_canvas_json)

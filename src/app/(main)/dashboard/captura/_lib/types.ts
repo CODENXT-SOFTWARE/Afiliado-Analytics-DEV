@@ -9,6 +9,8 @@ export type PageTemplate =
   | "the_new_chance"
   | "aurora_ledger"
   | "jardim_floral"
+  | "market_master"
+  | "perfumaria_luxuosa"
   | "em_branco";
 
 export type CaptureSiteRow = {

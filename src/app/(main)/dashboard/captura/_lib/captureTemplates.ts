@@ -64,6 +64,22 @@ export const PAGE_TEMPLATE_OPTIONS: {
     previewSrc: "/capture-templates/jardim_floral.svg",
   },
   {
+    id: "market_master",
+    title: "Market Master",
+    description:
+      "Landing estilo cupons e promoções: fundo hero PC/mobile, selo de audiência, título em destaque, CTA com pulso, vitrine de produtos, marcas em faixa animada, carrossel de depoimentos e segunda chamada — com YouTube, carrossel de destaques e notificações como nos outros VIP.",
+    badge: "Novo",
+    previewSrc: "/capture-templates/market_master.svg",
+  },
+  {
+    id: "perfumaria_luxuosa",
+    title: "Perfumaria luxuosa",
+    description:
+      "Visual escuro sofisticado (preto quente, creme e dourado champanhe): faixa superior, foto hero, assinatura social, CTA com halo dourado, bullets editáveis, marcas em movimento, contador social, faixa de produtos e grelha de catálogo — imagens em /luxuoso; YouTube, carrossel e notificações como nos VIP.",
+    badge: "Novo",
+    previewSrc: "/capture-templates/perfumaria_luxuosa.svg",
+  },
+  {
     id: "em_branco",
     title: "Em branco",
     description:

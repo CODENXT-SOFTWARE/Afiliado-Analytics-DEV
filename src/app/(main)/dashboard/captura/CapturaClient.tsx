@@ -1790,7 +1790,9 @@ export default function CapturaClient() {
     pageTemplate === "vinho_rose" ||
     pageTemplate === "the_new_chance" ||
     pageTemplate === "aurora_ledger" ||
-    pageTemplate === "jardim_floral";
+    pageTemplate === "jardim_floral" ||
+    pageTemplate === "market_master" ||
+    pageTemplate === "perfumaria_luxuosa";
   const isBlankPreview = pageTemplate === "em_branco";
   const showTemplatePreview = isVipPreview || isBlankPreview;
   /** Em branco: passo 4 = só visual do cartão; passo 5 = YouTube, carrossel, notificações e promo. */
@@ -3544,10 +3546,49 @@ export default function CapturaClient() {
                             </>
                           ) : null}
 
-                          {pageTemplate === "vinho_rose" || pageTemplate === "the_new_chance" ? (
+                          {pageTemplate === "vinho_rose" ||
+                          pageTemplate === "the_new_chance" ||
+                          pageTemplate === "market_master" ||
+                          pageTemplate === "perfumaria_luxuosa" ? (
                             <>
+                              {pageTemplate === "market_master" || pageTemplate === "perfumaria_luxuosa" ? (
+                                <>
+                                  <div>
+                                    <label className={labelClass}>
+                                      {pageTemplate === "market_master"
+                                        ? "Título da secção de confiança"
+                                        : "Título da secção de marcas / produtos"}
+                                    </label>
+                                    <textarea
+                                      value={promoTitleTestimonials}
+                                      onChange={(e) => setPromoTitleTestimonials(e.target.value)}
+                                      className={textareaClass}
+                                      rows={2}
+                                      maxLength={120}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>
+                                      {pageTemplate === "market_master"
+                                        ? "Texto de apoio (abaixo do título)"
+                                        : "Linha social (@ ou assinatura)"}
+                                    </label>
+                                    <textarea
+                                      value={promoTitleInGroup}
+                                      onChange={(e) => setPromoTitleInGroup(e.target.value)}
+                                      className={textareaClass}
+                                      rows={2}
+                                      maxLength={120}
+                                    />
+                                  </div>
+                                </>
+                              ) : null}
                               <div>
-                                <label className={labelClass}>Título opcional acima da lista (deixe vazio para não mostrar)</label>
+                                <label className={labelClass}>
+                                  {pageTemplate === "perfumaria_luxuosa"
+                                    ? "Faixa superior (chamada fina no topo da página)"
+                                    : "Título opcional acima da lista (deixe vazio para não mostrar)"}
+                                </label>
                                 <textarea
                                   value={promoTitleBenefits}
                                   onChange={(e) => setPromoTitleBenefits(e.target.value)}
@@ -3803,7 +3844,11 @@ export default function CapturaClient() {
                                       ? "aurora_ledger"
                                       : pageTemplate === "jardim_floral"
                                         ? "jardim_floral"
-                                        : "vip_rosa"
+                                        : pageTemplate === "market_master"
+                                          ? "market_master"
+                                          : pageTemplate === "perfumaria_luxuosa"
+                                            ? "perfumaria_luxuosa"
+                                            : "vip_rosa"
                             }
                             title={previewTitle}
                             description={previewDesc}
