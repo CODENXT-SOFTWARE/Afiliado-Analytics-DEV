@@ -101,7 +101,8 @@ export default function MainFloatingActions() {
     setOpen(false);
   }, [pathname]);
 
-  if (isCapture) {
+  /** Rotas /capture/… e URLs limpas no subdomínio público (/<slug>, /<slug>/go) — sem FAB de menu. */
+  if (isCapture || slugOnCapturePublicHost) {
     return null;
   }
 
