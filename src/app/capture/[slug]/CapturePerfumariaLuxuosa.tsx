@@ -154,8 +154,27 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
   const handleLine = (promoTitles?.inGroup ?? "").trim();
 
   const simpleLines = useMemo(() => normalizeSimpleFourLinesFromDb(promoCards), [promoCards]);
-  const miniTrack = useMemo(() => [...BRANDS_MINI, ...BRANDS_MINI], []);
-  const stripTrack = useMemo(() => [...PRODUCT_STRIP, ...PRODUCT_STRIP], []);
+  /** Várias repetições por segmento para a largura do track ≥ viewport (evita “faixa vazia” em ecrãs largos). */
+  const miniTrack = useMemo(() => {
+    const segment = [
+      ...BRANDS_MINI,
+      ...BRANDS_MINI,
+      ...BRANDS_MINI,
+      ...BRANDS_MINI,
+      ...BRANDS_MINI,
+      ...BRANDS_MINI,
+    ];
+    return [...segment, ...segment];
+  }, []);
+  const stripTrack = useMemo(() => {
+    const segment = [
+      ...PRODUCT_STRIP,
+      ...PRODUCT_STRIP,
+      ...PRODUCT_STRIP,
+      ...PRODUCT_STRIP,
+    ];
+    return [...segment, ...segment];
+  }, []);
 
   return (
     <>
@@ -194,9 +213,17 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
             width: max-content;
             animation: lux-ticker 22s linear infinite;
           }
+          .lux-marquee-clip {
+            width: 100%;
+            min-width: 0;
+          }
           @media (prefers-reduced-motion: reduce) {
             .lux-cta-pulse { animation: none !important; }
             .lux-marquee-track { animation: none !important; }
+            .lux-marquee-clip {
+              display: flex;
+              justify-content: center;
+            }
             .lux-ticker-track { animation: none !important; }
           }
           .lux-grain {
@@ -354,9 +381,9 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
               </div>
           </div>
 
-          {/* Faixa marketplaces */}
+          {/* Faixa marketplaces — w-full para não herdar largura limitada de colunas acima */}
           <section
-            className="relative z-[1] mt-4 border-y py-5"
+            className="relative z-[1] mt-4 w-full min-w-0 border-y py-5"
             style={{ borderColor: "rgba(201,169,98,0.12)", background: "rgba(0,0,0,0.35)" }}
           >
             <div
@@ -371,7 +398,7 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
                 background: "linear-gradient(270deg, #0c0b0a 0%, transparent 100%)",
               }}
             />
-            <div className="overflow-hidden">
+            <div className="lux-marquee-clip overflow-hidden">
               <div className="lux-marquee-track items-center py-1">
                 {miniTrack.map((b, i) => (
                   <div key={`${b.file}-${i}`} className="flex h-12 shrink-0 items-center opacity-80">
@@ -407,7 +434,7 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
                   </h2>
                 </div>
 
-                <div className="overflow-hidden" style={{ borderColor: GOLD_SOFT }}>
+                <div className="lux-marquee-clip overflow-hidden" style={{ borderColor: GOLD_SOFT }}>
                   <div className="lux-marquee-track lux-marquee-slow">
                     {stripTrack.map((file, i) => (
                       <div key={`${file}-${i}`} className="flex h-[100px] shrink-0 items-center sm:h-[120px]">

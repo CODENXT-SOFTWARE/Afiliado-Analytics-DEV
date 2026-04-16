@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/chart-setup";
 import { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import {
