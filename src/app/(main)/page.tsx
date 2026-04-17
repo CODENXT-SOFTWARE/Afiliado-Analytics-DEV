@@ -9,6 +9,7 @@ import Mockup from "../components/home/Mockup";
 import { motion } from "framer-motion"; // 📦 Importando o Framer Motion
 
 import Link from "next/link";
+import Script from "next/script";
 
 const integrations = [
   "Shopee",
@@ -44,6 +45,13 @@ export default function HomePage() {
 
   return (
     <div className="relative bg-dark-bg text-text-secondary">
+      <Script id="microsoft-clarity" strategy="afterInteractive">
+        {`(function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wd89jlz2r1");`}
+      </Script>
 
       {/* ══════ HERO ══════ */}
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
