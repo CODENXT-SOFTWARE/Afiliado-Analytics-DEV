@@ -445,9 +445,6 @@ export default function GplCalculatorPage() {
   const metaTraficoStartResolved = metaTraficoStartApplied.trim() || startDateApplied;
   const metaTraficoEndResolved = metaTraficoEndApplied.trim() || endDateApplied;
 
-  /** Fim do intervalo Meta: até o máximo permitido na página (ex. ontem na API Shopee); sem tampa de 30 dias — a Meta não exige isso aqui. */
-  const maxMetaEndDraft = useMemo(() => effectiveRange?.max ?? "", [effectiveRange]);
-
   const metaDraftDays = useMemo(() => {
     if (!metaTraficoStartDraft || !metaTraficoEndDraft) return 0;
     const end = new Date(metaTraficoEndDraft + "T00:00:00");
@@ -1076,7 +1073,6 @@ export default function GplCalculatorPage() {
                               type="date"
                               value={metaTraficoStartDraft}
                               min={effectiveRange?.min}
-                              max={effectiveRange?.max}
                               onChange={(e) => setMetaTraficoStartDraft(e.target.value)}
                               className="w-full bg-[#27272a] border border-[#2c2c32] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#e24c30]"
                             />
@@ -1085,7 +1081,6 @@ export default function GplCalculatorPage() {
                               type="date"
                               value={metaTraficoEndDraft}
                               min={metaTraficoStartDraft || effectiveRange?.min}
-                              max={maxMetaEndDraft || effectiveRange?.max}
                               disabled={!metaTraficoStartDraft}
                               onChange={(e) => setMetaTraficoEndDraft(e.target.value)}
                               className="w-full bg-[#27272a] border border-[#2c2c32] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#e24c30] disabled:opacity-40"

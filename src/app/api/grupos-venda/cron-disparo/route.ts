@@ -10,6 +10,7 @@ import crypto from "crypto";
 import { mensagemErroJanela } from "@/lib/grupos-venda-janela";
 import {
   buildListaOfferWebhookPayload,
+  buildInfoprodutorWebhookPayload,
   GRUPOS_VENDA_WEBHOOK_DEFAULT,
   resolveGruposVendaListaWebhookUrl,
 } from "@/lib/grupos-venda-webhook";
@@ -66,7 +67,7 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const sel = "id, user_id, instance_id, lista_id, lista_ofertas_id, lista_ofertas_ml_id, keywords, sub_id_1, sub_id_2, sub_id_3, proximo_indice, keyword_pool_indices, horario_inicio, horario_fim";
+  const sel = "id, user_id, instance_id, lista_id, lista_ofertas_id, lista_ofertas_ml_id, lista_ofertas_info_id, keywords, sub_id_1, sub_id_2, sub_id_3, proximo_indice, keyword_pool_indices, horario_inicio, horario_fim";
 
   let configQuery = supabase.from("grupos_venda_continuo").select(sel);
   if (opts?.singleConfigId && opts.manualUserId) {
@@ -96,6 +97,7 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
     const listaId = (cfg as { lista_id?: string | null }).lista_id ?? null;
     const listaOfertasId = (cfg as { lista_ofertas_id?: string | null }).lista_ofertas_id ?? null;
     const listaOfertasMlId = (cfg as { lista_ofertas_ml_id?: string | null }).lista_ofertas_ml_id ?? null;
+    const listaOfertasInfoId = (cfg as { lista_ofertas_info_id?: string | null }).lista_ofertas_info_id ?? null;
     const keywords = (cfg.keywords as string[]) ?? [];
     const proximoIndice = Number(cfg.proximo_indice) ?? 0;
     const subIds = [cfg.sub_id_1, cfg.sub_id_2, cfg.sub_id_3].filter(Boolean) as string[];
@@ -118,7 +120,8 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
     }
 
     const isListaOfertasMode = !!listaOfertasId || !!listaOfertasMlId;
-    if (!isListaOfertasMode && keywords.length === 0) {
+    const isListaInfoMode = !!listaOfertasInfoId;
+    if (!isListaOfertasMode && !isListaInfoMode && keywords.length === 0) {
       results.push({ userId, ok: false, error: "Sem keywords" });
       continue;
     }
@@ -134,6 +137,79 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
       const groupIds = (groups ?? []).map((g: { group_id: string }) => g.group_id);
       if (groupIds.length === 0) {
         results.push({ userId, ok: false, error: "Nenhum grupo salvo" });
+        continue;
+      }
+
+      if (isListaInfoMode) {
+        type InfoRow = {
+          product_name: string;
+          description: string | null;
+          image_url: string | null;
+          link: string;
+          price: number | string | null;
+          price_old: number | string | null;
+        };
+        const { data: itensInfo } = await supabase
+          .from("minha_lista_ofertas_info")
+          .select("id, product_name, description, image_url, link, price, price_old")
+          .eq("lista_id", listaOfertasInfoId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true });
+        const infoItems = (itensInfo ?? []) as InfoRow[];
+        if (infoItems.length === 0) {
+          results.push({ userId, ok: false, error: "Lista Infoprodutor vazia" });
+          continue;
+        }
+        const idx = proximoIndice % infoItems.length;
+        const nextIndex = (proximoIndice + 1) % infoItems.length;
+        const item = infoItems[idx];
+        const link = item.link?.trim() || "";
+        if (!link) {
+          results.push({ userId, ok: false, error: "Produto sem link" });
+          await supabase.from("grupos_venda_continuo").update({ proximo_indice: nextIndex, updated_at: new Date().toISOString() }).eq("id", cfg.id);
+          continue;
+        }
+        const preco =
+          item.price == null || item.price === ""
+            ? null
+            : Number.isFinite(Number(item.price))
+              ? Number(item.price)
+              : null;
+        const precoAntigo =
+          item.price_old == null || item.price_old === ""
+            ? null
+            : Number.isFinite(Number(item.price_old))
+              ? Number(item.price_old)
+              : null;
+        const payloadBody = buildInfoprodutorWebhookPayload({
+          instanceName,
+          hash,
+          groupIds,
+          nomeProduto: item.product_name ?? "",
+          descricaoLivre: item.description ?? "",
+          imageUrl: item.image_url ?? "",
+          link,
+          preco,
+          precoAntigo,
+        });
+        const whRes = await fetch(GRUPOS_VENDA_WEBHOOK_DEFAULT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadBody),
+        });
+        if (!whRes.ok) {
+          results.push({ userId, ok: false, error: `Webhook ${whRes.status}` });
+        } else {
+          results.push({ userId, keyword: (item.product_name ?? "").slice(0, 30), ok: true });
+        }
+        await supabase
+          .from("grupos_venda_continuo")
+          .update({
+            proximo_indice: nextIndex,
+            ultimo_disparo_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", cfg.id);
         continue;
       }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useMemo, useState, useCallback, useEffect } from "react";
+import React, { useId, useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Search, X } from "lucide-react";
 
@@ -39,6 +39,11 @@ export type MetaSearchablePickerProps = {
    * `field` — uma linha como input do assistente (texto + seta); abre o mesmo modal.
    */
   triggerVariant?: "tag" | "field";
+  /** Não renderiza gatilho; abre só o modal (use com `modalOpen` + `onModalOpenChange`). */
+  hideTrigger?: boolean;
+  /** Abertura do modal controlada pelo pai (ex.: abrir direto ao clicar num botão da página). */
+  modalOpen?: boolean;
+  onModalOpenChange?: (open: boolean) => void;
 };
 
 /**
@@ -61,11 +66,24 @@ export default function MetaSearchablePicker({
   className = "",
   emptyOptionsMessage = "Nenhuma opção disponível.",
   triggerVariant = "tag",
+  hideTrigger = false,
+  modalOpen: modalOpenProp,
+  onModalOpenChange,
 }: MetaSearchablePickerProps) {
   const titleId = useId();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<string>("");
+
+  const isModalControlled = modalOpenProp !== undefined && onModalOpenChange !== undefined;
+  const open = isModalControlled ? modalOpenProp : uncontrolledOpen;
+  const setModalOpen = useCallback(
+    (next: boolean) => {
+      if (isModalControlled) onModalOpenChange(next);
+      else setUncontrolledOpen(next);
+    },
+    [isModalControlled, onModalOpenChange],
+  );
 
   const labelFor = useCallback(
     (v: string) => {
@@ -80,10 +98,10 @@ export default function MetaSearchablePicker({
     if (disabled || options.length === 0) return;
     setDraft(value);
     setQuery("");
-    setOpen(true);
-  }, [disabled, options.length, value]);
+    setModalOpen(true);
+  }, [disabled, options.length, value, setModalOpen]);
 
-  const closeModal = useCallback(() => setOpen(false), []);
+  const closeModal = useCallback(() => setModalOpen(false), [setModalOpen]);
 
   const filtered = useMemo(() => {
     const q = normalizeSearch(query);
@@ -98,16 +116,25 @@ export default function MetaSearchablePicker({
 
   const confirm = useCallback(() => {
     onChange(draft);
-    setOpen(false);
-  }, [draft, onChange]);
+    setModalOpen(false);
+  }, [draft, onChange, setModalOpen]);
 
   const showBigButton = value === "" && !emptyAsTag;
   const showTagRow = value !== "" || emptyAsTag;
 
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setDraft(value);
+      setQuery("");
+    }
+    prevOpenRef.current = open;
+  }, [open, value]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") setModalOpen(false);
     };
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -116,7 +143,7 @@ export default function MetaSearchablePicker({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open]);
+  }, [open, setModalOpen]);
 
   const modal =
     open && typeof document !== "undefined"
@@ -239,6 +266,10 @@ export default function MetaSearchablePicker({
     </button>
   );
 
+  if (options.length === 0 && hideTrigger) {
+    return null;
+  }
+
   if (options.length === 0 && !emptyAsTag) {
     return <p className={`text-xs text-amber-500/90 ${className}`}>{emptyOptionsMessage}</p>;
   }
@@ -263,7 +294,7 @@ export default function MetaSearchablePicker({
 
   return (
     <div className={className}>
-      {showBigButton &&
+      {!hideTrigger && showBigButton &&
         (triggerVariant === "field" ? (
           <button
             type="button"
@@ -288,7 +319,7 @@ export default function MetaSearchablePicker({
           </button>
         ))}
 
-      {showTagRow &&
+      {!hideTrigger && showTagRow &&
         (triggerVariant === "field" ? (
           <div className="flex w-full min-w-0 items-stretch gap-2">
             <button

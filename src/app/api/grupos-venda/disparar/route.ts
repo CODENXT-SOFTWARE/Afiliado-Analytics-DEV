@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "../../../../../utils/supabase/server";
 import {
   buildListaOfferWebhookPayload,
+  buildInfoprodutorWebhookPayload,
   GRUPOS_VENDA_WEBHOOK_DEFAULT,
   resolveGruposVendaListaWebhookUrl,
 } from "@/lib/grupos-venda-webhook";
@@ -47,15 +48,16 @@ export async function POST(req: Request) {
     const subId3 = typeof body.subId3 === "string" ? body.subId3.trim() : "";
     const listaOfertasId = typeof body.listaOfertasId === "string" ? body.listaOfertasId.trim() : "";
     const listaOfertasMlId = typeof body.listaOfertasMlId === "string" ? body.listaOfertasMlId.trim() : "";
+    const listaOfertasInfoId = typeof body.listaOfertasInfoId === "string" ? body.listaOfertasInfoId.trim() : "";
 
     if (!listaId && !instanceId) return NextResponse.json({ error: "Informe listaId ou instanceId." }, { status: 400 });
-    if (!listaOfertasId && !listaOfertasMlId && keywords.length === 0) {
+    if (!listaOfertasId && !listaOfertasMlId && !listaOfertasInfoId && keywords.length === 0) {
       return NextResponse.json(
-        { error: "Informe ao menos uma keyword ou uma lista de ofertas (Shopee e/ou Mercado Livre)." },
+        { error: "Informe ao menos uma keyword ou uma lista de ofertas (Shopee, Mercado Livre ou Infoprodutor)." },
         { status: 400 },
       );
     }
-    if ((listaOfertasId || listaOfertasMlId) && keywords.length > 0) {
+    if ((listaOfertasId || listaOfertasMlId || listaOfertasInfoId) && keywords.length > 0) {
       return NextResponse.json(
         { error: "Remova as keywords ao disparar por lista de ofertas, ou remova a lista e use só keywords." },
         { status: 400 },
@@ -168,13 +170,85 @@ export async function POST(req: Request) {
       }
     };
 
+    const dispararListaInfoprodutor = async (fk: string, webhookUrl: string) => {
+      const { data: itens, error: qErr } = await supabase
+        .from("minha_lista_ofertas_info")
+        .select("product_name, description, image_url, link, price, price_old")
+        .eq("lista_id", fk)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+      if (qErr) {
+        errors.push({ keyword: "(infoprodutor)", error: qErr.message });
+        return;
+      }
+      type InfoRow = {
+        product_name: string;
+        description: string | null;
+        image_url: string | null;
+        link: string;
+        price: number | string | null;
+        price_old: number | string | null;
+      };
+      const items = (itens ?? []) as InfoRow[];
+      if (items.length === 0) {
+        errors.push({ keyword: "(infoprodutor)", error: "Lista vazia" });
+        return;
+      }
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const link = item.link?.trim() || "";
+        const label = item.product_name?.trim() || `item ${i + 1}`;
+        if (!link) {
+          errors.push({ keyword: label, error: "Produto sem link de venda" });
+          continue;
+        }
+        const preco =
+          item.price == null || item.price === ""
+            ? null
+            : Number.isFinite(Number(item.price))
+              ? Number(item.price)
+              : null;
+        const precoAntigo =
+          item.price_old == null || item.price_old === ""
+            ? null
+            : Number.isFinite(Number(item.price_old))
+              ? Number(item.price_old)
+              : null;
+        const payload = buildInfoprodutorWebhookPayload({
+          instanceName,
+          hash,
+          groupIds,
+          nomeProduto: item.product_name ?? "",
+          descricaoLivre: item.description ?? "",
+          imageUrl: item.image_url ?? "",
+          link,
+          preco,
+          precoAntigo,
+        });
+        const whRes = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!whRes.ok) {
+          const whText = await whRes.text();
+          errors.push({ keyword: label, error: `Webhook ${whRes.status}: ${whText.slice(0, 100)}` });
+          continue;
+        }
+        sent.push({ keyword: label.slice(0, 40), productName: label.slice(0, 50), link });
+      }
+    };
+
     if (listaOfertasId) {
       await dispararListaSalva("minha_lista_ofertas", listaOfertasId, listaWebhookUrl);
     }
     if (listaOfertasMlId) {
       await dispararListaSalva("minha_lista_ofertas_ml", listaOfertasMlId, listaWebhookUrl);
     }
-    if (listaOfertasId || listaOfertasMlId) {
+    if (listaOfertasInfoId) {
+      await dispararListaInfoprodutor(listaOfertasInfoId, GRUPOS_VENDA_WEBHOOK_DEFAULT);
+    }
+    if (listaOfertasId || listaOfertasMlId || listaOfertasInfoId) {
       return NextResponse.json({
         success: true,
         sent: sent.length,

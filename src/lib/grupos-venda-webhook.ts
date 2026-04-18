@@ -60,3 +60,67 @@ export function buildListaOfferWebhookPayload(input: ListaOfferWebhookInput) {
     precoPor: precoPor > 0 ? precoPor : null,
   };
 }
+
+/**
+ * Infoprodutor: produto cadastrado pelo próprio utilizador (sem API de afiliados).
+ * Pode ter descrição livre e preço opcional; não há "risco/desconto".
+ */
+export type InfoprodutorWebhookInput = {
+  instanceName: string;
+  hash: string;
+  groupIds: string[];
+  nomeProduto: string;
+  descricaoLivre: string;
+  imageUrl: string;
+  link: string;
+  preco: number | null;
+  /** Preço “de” (riscado no texto; opcional). */
+  precoAntigo?: number | null;
+};
+
+export function buildInfoprodutorDescription(input: InfoprodutorWebhookInput): string {
+  const { nomeProduto, descricaoLivre, preco, precoAntigo, link } = input;
+  const parts: string[] = [];
+  parts.push(`✨ ${nomeProduto}`);
+  if (descricaoLivre && descricaoLivre.trim()) {
+    parts.push("");
+    parts.push(descricaoLivre.trim());
+  }
+  const old = precoAntigo != null && precoAntigo > 0 ? precoAntigo : null;
+  const cur = preco != null && preco > 0 ? preco : null;
+  if (old != null || cur != null) {
+    parts.push("");
+    let line = "💰 ";
+    if (old != null) {
+      line += `De: ~${formatBRL(old)}~ 📉 `;
+    }
+    if (cur != null) {
+      line += `Por apenas: *${formatBRL(cur)}*`;
+    } else if (old != null) {
+      line = line.trimEnd();
+    }
+    parts.push(line);
+  }
+  parts.push("");
+  parts.push("🛒 GARANTA O SEU - CLIQUE NO LINK 👇");
+  parts.push(link);
+  return parts.join("\n");
+}
+
+export function buildInfoprodutorWebhookPayload(input: InfoprodutorWebhookInput) {
+  const { preco, precoAntigo, link, imageUrl, instanceName, hash, groupIds } = input;
+  const descricao = buildInfoprodutorDescription(input);
+  const old = precoAntigo != null && precoAntigo > 0 ? precoAntigo : null;
+  return {
+    instanceName,
+    hash,
+    groupIds,
+    imagem: imageUrl ?? "",
+    descricao,
+    valor: preco ?? 0,
+    linkAfiliado: link,
+    desconto: null as number | null,
+    precoRiscado: old,
+    precoPor: preco != null && preco > 0 ? preco : null,
+  };
+}

@@ -26,6 +26,7 @@ type ContinuoItem = {
   id: string; listaId: string | null; listaNome: string;
   listaOfertasId: string | null; listaOfertasNome: string | null;
   listaOfertasMlId: string | null; listaOfertasMlNome: string | null;
+  listaOfertasInfoId: string | null; listaOfertasInfoNome: string | null;
   instanceId: string; keywords: string[]; subId1: string; subId2: string; subId3: string;
   ativo: boolean; proximoIndice: number; ultimoDisparoAt: string | null; updatedAt: string;
   proximaKeyword: string | null;
@@ -227,6 +228,14 @@ function DisparoCard({ c, togglingId, onToggle, onRemove, onTestPulse, testPulse
             </span>
           </div>
         )}
+        {c.listaOfertasInfoNome && (
+          <div className="flex items-start md:items-center gap-1.5 text-[9px] text-[#a0a0a0] min-w-0">
+            <Layers className="w-2.5 h-2.5 text-emerald-400 shrink-0 mt-0.5 md:mt-0" />
+            <span className="min-w-0 max-md:break-words md:truncate">
+              Lista Infoprodutor: <span className="text-white">{c.listaOfertasInfoNome}</span>
+            </span>
+          </div>
+        )}
         {c.instanceId && (
           <div className="flex items-start md:items-center gap-1.5 text-[9px] text-[#a0a0a0] min-w-0">
             <User className="w-2.5 h-2.5 text-[#e24c30] shrink-0 mt-0.5 md:mt-0" />
@@ -318,7 +327,10 @@ export default function GruposVendaPage() {
   const [listasOfertasMl, setListasOfertasMl] = useState<ListaOfertasItem[]>([]);
   const [loadingListasOfertasMl, setLoadingListasOfertasMl] = useState(false);
   const [selectedListaOfertasMlId, setSelectedListaOfertasMlId] = useState("");
-  const [offerListSource, setOfferListSource] = useState<"shopee" | "ml" | "crossover">("shopee");
+  const [listasOfertasInfo, setListasOfertasInfo] = useState<ListaOfertasItem[]>([]);
+  const [loadingListasOfertasInfo, setLoadingListasOfertasInfo] = useState(false);
+  const [selectedListaOfertasInfoId, setSelectedListaOfertasInfoId] = useState("");
+  const [offerListSource, setOfferListSource] = useState<"shopee" | "ml" | "crossover" | "infoprodutor">("shopee");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaFim, setHoraFim] = useState("");
 
@@ -406,11 +418,22 @@ export default function GruposVendaPage() {
     finally { setLoadingListasOfertasMl(false); }
   }, []);
 
+  const loadListasOfertasInfo = useCallback(async () => {
+    setLoadingListasOfertasInfo(true);
+    try {
+      const res = await fetch("/api/infoprodutor/minha-lista-ofertas/listas");
+      const data = await res.json();
+      if (res.ok) setListasOfertasInfo(Array.isArray(data.data) ? data.data : []);
+    } catch { setListasOfertasInfo([]); }
+    finally { setLoadingListasOfertasInfo(false); }
+  }, []);
+
   useEffect(() => { loadInstances(); }, [loadInstances]);
   useEffect(() => { loadListas(); }, [loadListas]);
   useEffect(() => { loadContinuo(); }, [loadContinuo]);
   useEffect(() => { loadListasOfertas(); }, [loadListasOfertas]);
   useEffect(() => { loadListasOfertasMl(); }, [loadListasOfertasMl]);
+  useEffect(() => { loadListasOfertasInfo(); }, [loadListasOfertasInfo]);
 
   const handleConfirmGroups = useCallback(async (payload: BuscarGruposPayload) => {
     const instance = instances.find((i) => i.nome_instancia === payload.nomeInstancia);
@@ -507,9 +530,11 @@ export default function GruposVendaPage() {
     const kwList = keywords.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
     const pickShopee = contentMode === "list" && (offerListSource === "shopee" || offerListSource === "crossover");
     const pickMl = contentMode === "list" && (offerListSource === "ml" || offerListSource === "crossover");
+    const pickInfo = contentMode === "list" && offerListSource === "infoprodutor";
     const useListaShopee = pickShopee && !!selectedListaOfertasId;
     const useListaMl = pickMl && !!selectedListaOfertasMlId;
-    const useListaOfertas = useListaShopee || useListaMl;
+    const useListaInfo = pickInfo && !!selectedListaOfertasInfoId;
+    const useListaOfertas = useListaShopee || useListaMl || useListaInfo;
     if (contentMode === "list") {
       if (isGruposVendaMlOfferBlocked(offerListSource)) {
         setError("Mercado Livre e crossover estão em breve. Use a lista Shopee ou keywords.");
@@ -527,6 +552,10 @@ export default function GruposVendaPage() {
         setError("No crossover, selecione uma lista Shopee e uma lista Mercado Livre.");
         return;
       }
+      if (offerListSource === "infoprodutor" && !selectedListaOfertasInfoId) {
+        setError("Selecione uma lista do Infoprodutor.");
+        return;
+      }
     } else if (kwList.length === 0) {
       setError("Digite ao menos uma keyword.");
       return;
@@ -540,6 +569,7 @@ export default function GruposVendaPage() {
           keywords: useListaOfertas ? [] : kwList,
           listaOfertasId: useListaShopee ? selectedListaOfertasId : undefined,
           listaOfertasMlId: useListaMl ? selectedListaOfertasMlId : undefined,
+          listaOfertasInfoId: useListaInfo ? selectedListaOfertasInfoId : undefined,
           subId1, subId2, subId3,
         }),
       });
@@ -552,7 +582,7 @@ export default function GruposVendaPage() {
       if (errList.length > 0) setError(errList.map((e: { keyword: string; error: string }) => `${e.keyword}: ${e.error}`).join("; "));
     } catch (e) { setError(e instanceof Error ? e.message : "Erro ao disparar"); }
     finally { setDisparando(false); }
-  }, [selectedListaId, contentMode, offerListSource, selectedListaOfertasId, selectedListaOfertasMlId, keywords, subId1, subId2, subId3]);
+  }, [selectedListaId, contentMode, offerListSource, selectedListaOfertasId, selectedListaOfertasMlId, selectedListaOfertasInfoId, keywords, subId1, subId2, subId3]);
 
   const handleContinuoToggle = useCallback(async (configId: string, ativar: boolean) => {
     setError(null);
@@ -576,7 +606,7 @@ export default function GruposVendaPage() {
       } else {
         const c = continuoList.find((x) => x.id === configId);
         if (!c?.listaId) throw new Error("Config sem lista");
-        const res = await fetch("/api/grupos-venda/continuo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: configId, listaId: c.listaId, listaOfertasId: c.listaOfertasId || undefined, listaOfertasMlId: c.listaOfertasMlId || undefined, keywords: c.keywords, subId1: c.subId1, subId2: c.subId2, subId3: c.subId3, horarioInicio: c.horarioInicio, horarioFim: c.horarioFim, ativo: true }) });
+        const res = await fetch("/api/grupos-venda/continuo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: configId, listaId: c.listaId, listaOfertasId: c.listaOfertasId || undefined, listaOfertasMlId: c.listaOfertasMlId || undefined, listaOfertasInfoId: c.listaOfertasInfoId || undefined, keywords: c.keywords, subId1: c.subId1, subId2: c.subId2, subId3: c.subId3, horarioInicio: c.horarioInicio, horarioFim: c.horarioFim, ativo: true }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error ?? "Erro ao ativar");
         setFeedback("Automação ativada.");
@@ -591,9 +621,11 @@ export default function GruposVendaPage() {
     if (!selectedListaId) { setError("Selecione uma lista de grupos."); return; }
     const pickShopee = contentMode === "list" && (offerListSource === "shopee" || offerListSource === "crossover");
     const pickMl = contentMode === "list" && (offerListSource === "ml" || offerListSource === "crossover");
+    const pickInfo = contentMode === "list" && offerListSource === "infoprodutor";
     const useListaShopee = pickShopee && !!selectedListaOfertasId;
     const useListaMl = pickMl && !!selectedListaOfertasMlId;
-    const useListaOfertas = useListaShopee || useListaMl;
+    const useListaInfo = pickInfo && !!selectedListaOfertasInfoId;
+    const useListaOfertas = useListaShopee || useListaMl || useListaInfo;
     const kwList = keywords.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
     if (!useListaOfertas && kwList.length === 0) { setError("Digite ao menos uma keyword ou selecione uma lista de ofertas."); return; }
     if (contentMode === "list" && isGruposVendaMlOfferBlocked(offerListSource)) {
@@ -602,6 +634,10 @@ export default function GruposVendaPage() {
     }
     if (contentMode === "list" && offerListSource === "crossover" && (!selectedListaOfertasId || !selectedListaOfertasMlId)) {
       setError("No crossover, selecione uma lista Shopee e uma lista Mercado Livre.");
+      return;
+    }
+    if (contentMode === "list" && offerListSource === "infoprodutor" && !selectedListaOfertasInfoId) {
+      setError("Selecione uma lista do Infoprodutor.");
       return;
     }
     const jErr = mensagemErroJanela(horaInicio, horaFim);
@@ -614,6 +650,7 @@ export default function GruposVendaPage() {
           listaId: selectedListaId,
           listaOfertasId: useListaShopee ? selectedListaOfertasId : undefined,
           listaOfertasMlId: useListaMl ? selectedListaOfertasMlId : undefined,
+          listaOfertasInfoId: useListaInfo ? selectedListaOfertasInfoId : undefined,
           keywords: useListaOfertas ? [] : kwList,
           subId1, subId2, subId3, horarioInicio: horaInicio.trim(), horarioFim: horaFim.trim(), ativo: true,
         }),
@@ -624,17 +661,19 @@ export default function GruposVendaPage() {
       const listaMsg =
         offerListSource === "crossover" && useListaOfertas
           ? "Automação crossover (Shopee + ML) criada."
-          : useListaOfertas
-            ? "Automação por lista de ofertas criada."
-            : "Automação criada.";
+          : useListaInfo
+            ? "Automação por lista do Infoprodutor criada."
+            : useListaOfertas
+              ? "Automação por lista de ofertas criada."
+              : "Automação criada.";
       setFeedback(`${listaMsg}${horarioMsg}`);
       setTimeout(() => setFeedback(""), 5000);
-      setSelectedListaId(""); setKeywords(""); setSelectedListaOfertasId(""); setSelectedListaOfertasMlId(""); setSubId1(""); setSubId2(""); setSubId3(""); setHoraInicio(""); setHoraFim("");
+      setSelectedListaId(""); setKeywords(""); setSelectedListaOfertasId(""); setSelectedListaOfertasMlId(""); setSelectedListaOfertasInfoId(""); setSubId1(""); setSubId2(""); setSubId3(""); setHoraInicio(""); setHoraFim("");
       setView("panel");
       await loadContinuo();
     } catch (e) { setError(e instanceof Error ? e.message : "Erro ao criar automação"); }
     finally { setContinuoTogglingId(null); }
-  }, [selectedListaId, contentMode, offerListSource, selectedListaOfertasId, selectedListaOfertasMlId, keywords, subId1, subId2, subId3, horaInicio, horaFim, loadContinuo]);
+  }, [selectedListaId, contentMode, offerListSource, selectedListaOfertasId, selectedListaOfertasMlId, selectedListaOfertasInfoId, keywords, subId1, subId2, subId3, horaInicio, horaFim, loadContinuo]);
 
   const handleRemoveContinuo = useCallback(async (id: string) => {
     try {
@@ -892,6 +931,22 @@ export default function GruposVendaPage() {
     [listasOfertasMl],
   );
 
+  const listaOfertasInfoPickerOptions = useMemo(
+    () => [
+      {
+        value: "",
+        label: "Selecione uma lista Infoprodutor",
+        description: "Crie em Infoprodutor",
+      },
+      ...listasOfertasInfo.map((l) => ({
+        value: l.id,
+        label: l.nome,
+        description: `${l.totalItens} ${l.totalItens === 1 ? "item" : "itens"}`,
+      })),
+    ],
+    [listasOfertasInfo],
+  );
+
   function openWizard() {
     setWizardStep(1);
     setShowStepInfo(false);
@@ -940,6 +995,10 @@ export default function GruposVendaPage() {
         }
         if (offerListSource === "crossover" && (!selectedListaOfertasId || !selectedListaOfertasMlId)) {
           setError("No crossover, selecione uma lista Shopee e uma lista Mercado Livre.");
+          return;
+        }
+        if (offerListSource === "infoprodutor" && !selectedListaOfertasInfoId) {
+          setError("Selecione uma lista do Infoprodutor.");
           return;
         }
         setError(null);
@@ -1353,12 +1412,13 @@ export default function GruposVendaPage() {
                   ) : (
                     <div className="min-w-0">
                       <FieldLabel>Origem da lista</FieldLabel>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 rounded-xl overflow-hidden border border-[#2c2c32] mb-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 rounded-xl overflow-hidden border border-[#2c2c32] mb-3">
                         <button
                           type="button"
                           onClick={() => {
                             setOfferListSource("shopee");
                             setSelectedListaOfertasMlId("");
+                            setSelectedListaOfertasInfoId("");
                           }}
                           className={cn(
                             "flex items-center justify-center gap-2 px-3 py-2.5 text-[10px] font-bold transition-all sm:border-r border-[#2c2c32]",
@@ -1372,9 +1432,10 @@ export default function GruposVendaPage() {
                           onClick={() => {
                             setOfferListSource("ml");
                             setSelectedListaOfertasId("");
+                            setSelectedListaOfertasInfoId("");
                           }}
                           className={cn(
-                            "flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-[10px] font-bold transition-all border-t sm:border-t-0 sm:border-l border-[#2c2c32] sm:flex-row sm:gap-2 sm:px-3",
+                            "flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-[10px] font-bold transition-all border-l sm:border-l border-[#2c2c32] sm:flex-row sm:gap-2 sm:px-3",
                             offerListSource === "ml" ? "bg-amber-500/15 text-amber-400" : "bg-[#222228] text-[#a0a0a0] hover:text-white",
                           )}
                         >
@@ -1387,7 +1448,10 @@ export default function GruposVendaPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setOfferListSource("crossover")}
+                          onClick={() => {
+                            setOfferListSource("crossover");
+                            setSelectedListaOfertasInfoId("");
+                          }}
                           className={cn(
                             "flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-[10px] font-bold transition-all border-t sm:border-t-0 sm:border-l border-[#2c2c32] sm:flex-row sm:gap-2 sm:px-3",
                             offerListSource === "crossover"
@@ -1401,6 +1465,22 @@ export default function GruposVendaPage() {
                               Em breve
                             </span>
                           ) : null}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOfferListSource("infoprodutor");
+                            setSelectedListaOfertasId("");
+                            setSelectedListaOfertasMlId("");
+                          }}
+                          className={cn(
+                            "flex items-center justify-center gap-2 px-3 py-2.5 text-[10px] font-bold transition-all border-t sm:border-t-0 border-l border-[#2c2c32]",
+                            offerListSource === "infoprodutor"
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : "bg-[#222228] text-[#a0a0a0] hover:text-white",
+                          )}
+                        >
+                          <span className="text-center leading-tight">Infoprodutor</span>
                         </button>
                       </div>
                       {isGruposVendaMlOfferBlocked(offerListSource) ? null : (
@@ -1453,12 +1533,40 @@ export default function GruposVendaPage() {
                               )}
                             </div>
                           )}
+                          {offerListSource === "infoprodutor" && (
+                            <div className="mb-1 min-w-0">
+                              <FieldLabel>Lista Infoprodutor</FieldLabel>
+                              {loadingListasOfertasInfo ? (
+                                <div className="flex items-center gap-2 text-[#a0a0a0] text-xs py-2">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando listas…
+                                </div>
+                              ) : (
+                                <MetaSearchablePicker
+                                  value={selectedListaOfertasInfoId}
+                                  onChange={setSelectedListaOfertasInfoId}
+                                  options={listaOfertasInfoPickerOptions}
+                                  modalTitle="Lista do Infoprodutor"
+                                  modalDescription="Listas com produtos cadastrados por você na página Infoprodutor."
+                                  searchPlaceholder="Filtrar listas…"
+                                  emptyButtonLabel="Escolher lista Infoprodutor"
+                                  emptyAsTag
+                                  emptyTagLabel="Selecionar Lista"
+                                  emptyOptionsMessage="Nenhuma lista cadastrada."
+                                  className="w-full max-w-full"
+                                />
+                              )}
+                            </div>
+                          )}
                           <p className="text-[9px] text-[#a0a0a0] mt-2 leading-relaxed">
                             {offerListSource === "crossover" ? (
                               <>
                                 <span className="text-amber-400/90 font-semibold">Crossover:</span> itens Shopee e ML viram{" "}
                                 <strong className="text-white">uma única fila</strong> (Shopee primeiro, depois ML, cada um na ordem da lista). O cron envia{" "}
                                 <strong className="text-white">um produto por tick</strong>, no mesmo formato de payload do n8n que você já usa para Shopee.
+                              </>
+                            ) : offerListSource === "infoprodutor" ? (
+                              <>
+                                <span className="text-emerald-400/90 font-semibold">Infoprodutor:</span> seus próprios produtos (imagem, título, descrição e link) são enviados pelo mesmo webhook do n8n, sem depender de API de afiliados.
                               </>
                             ) : (
                               <>
@@ -1595,7 +1703,9 @@ export default function GruposVendaPage() {
                             ? "Crossover Shopee + ML"
                             : offerListSource === "ml"
                               ? "Lista ML"
-                              : "Lista Shopee"}{" "}
+                              : offerListSource === "infoprodutor"
+                                ? "Lista Infoprodutor"
+                                : "Lista Shopee"}{" "}
                         · {horaInicio && horaFim ? `${horaInicio}–${horaFim}` : "Definir janela"}
                         {" "}
                         · A cada 10 min
@@ -1634,7 +1744,9 @@ export default function GruposVendaPage() {
                               ? "Crossover (Shopee + Mercado Livre)"
                               : offerListSource === "ml"
                                 ? "Lista Mercado Livre"
-                                : "Lista Shopee",
+                                : offerListSource === "infoprodutor"
+                                  ? "Lista Infoprodutor"
+                                  : "Lista Shopee",
                         warn: false,
                       },
                       { icon: <Clock className="w-3.5 h-3.5 text-[#e24c30] shrink-0" />, label: "Horário", value: horaInicio && horaFim ? `${horaInicio} – ${horaFim} (máx. 14 h)` : "Defina início e fim da janela", warn: false },

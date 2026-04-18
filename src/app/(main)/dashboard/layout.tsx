@@ -21,6 +21,7 @@ import {
   Film,
   Lock,
   Sparkles,
+  ShoppingCart,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import {
@@ -120,6 +121,11 @@ const sidebarNavItems: NavItem[] = [
     title: "Minha Lista de Ofertas",
     href: "/dashboard/minha-lista-ofertas",
     icon: <ListChecks className="h-5 w-5" />,
+  },
+  {
+    title: "Infoprodutor",
+    href: "/dashboard/infoprodutor",
+    icon: <ShoppingCart className="h-5 w-5" />,
   },
 
   {
