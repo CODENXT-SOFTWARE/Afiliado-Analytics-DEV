@@ -358,6 +358,8 @@ export default function GeradorLinksShopeePage() {
   const [novaListaNome, setNovaListaNome] = useState("");
   const [selectedListaId, setSelectedListaId] = useState<string | null>(null);
   const [addToListLoading, setAddToListLoading] = useState(false);
+  /** Carrega do servidor todos os itens selecionados (várias páginas do histórico) antes de abrir o modal. */
+  const [historyBulkSelectionLoading, setHistoryBulkSelectionLoading] = useState(false);
   const [hasApiKeys, setHasApiKeys] = useState<boolean | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("config");
   /** Busca automática (debounce/blur) só a partir de lg — no mobile só via botão Buscar */
@@ -612,6 +614,37 @@ export default function GeradorLinksShopeePage() {
     setAddToListModal({ open: true, entries: entriesToAdd });
     setSelectedListaId(null); setNovaListaNome("");
   }, []);
+
+  const openAddToListModalFromHistorySelection = useCallback(async () => {
+    const ids = Array.from(selectedHistoryIds);
+    if (ids.length === 0) return;
+    setHistoryBulkSelectionLoading(true);
+    setAddToListFeedback(null);
+    try {
+      const params = new URLSearchParams({ ids: ids.join(",") });
+      const res = await fetch(`/api/shopee/link-history?${params}`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? "Erro ao carregar itens selecionados");
+      const list = (json?.data ?? []) as HistoryEntry[];
+      if (list.length === 0) {
+        setAddToListFeedback("Nenhum item encontrado para a seleção.");
+        setTimeout(() => setAddToListFeedback(null), 3500);
+        return;
+      }
+      if (list.length < ids.length) {
+        setAddToListFeedback(
+          `${list.length} de ${ids.length} encontrados (alguns podem ter sido excluídos).`,
+        );
+        setTimeout(() => setAddToListFeedback(null), 4000);
+      }
+      openAddToListModal(list);
+    } catch (e) {
+      setAddToListFeedback(e instanceof Error ? e.message : "Erro ao carregar seleção");
+      setTimeout(() => setAddToListFeedback(null), 4000);
+    } finally {
+      setHistoryBulkSelectionLoading(false);
+    }
+  }, [selectedHistoryIds, openAddToListModal]);
 
   const toggleHistorySelect = useCallback((id: string) => {
     setSelectedHistoryIds((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -1048,12 +1081,17 @@ export default function GeradorLinksShopeePage() {
             </button>
             <button
               type="button"
-              onClick={() => openAddToListModal(history.filter((h) => selectedHistoryIds.has(h.id)))}
+              onClick={() => void openAddToListModalFromHistorySelection()}
+              disabled={historyBulkSelectionLoading}
               title={`Adicionar ${selectedHistoryIds.size} à lista`}
               aria-label={`Adicionar ${selectedHistoryIds.size} à lista de ofertas`}
-              className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/35 p-2.5 lg:px-2.5 lg:py-1 rounded-lg transition"
+              className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/35 p-2.5 lg:px-2.5 lg:py-1 rounded-lg transition disabled:opacity-50 disabled:pointer-events-none"
             >
-              <ListPlus className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
+              {historyBulkSelectionLoading ? (
+                <Loader2 className="w-4 h-4 lg:w-3 lg:h-3 shrink-0 animate-spin" />
+              ) : (
+                <ListPlus className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
+              )}
               <span className="hidden lg:inline whitespace-nowrap">Adicionar à lista ({selectedHistoryIds.size})</span>
             </button>
             <button

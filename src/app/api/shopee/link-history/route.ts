@@ -8,6 +8,30 @@ import { createClient } from "../../../../../utils/supabase/server";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_LIMIT = 4;
+const MAX_IDS_BULK = 50;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function mapHistoryRow(r: Record<string, unknown>) {
+  return {
+    id: r.id,
+    shortLink: r.short_link,
+    originUrl: r.origin_url,
+    subId1: r.sub_id_1 ?? "",
+    subId2: r.sub_id_2 ?? "",
+    subId3: r.sub_id_3 ?? "",
+    observation: r.observation ?? "",
+    productName: r.product_name ?? "",
+    slug: r.slug ?? "",
+    imageUrl: r.image_url ?? "",
+    commissionRate: Number(r.commission_rate) ?? 0,
+    commissionValue: Number(r.commission_value) ?? 0,
+    priceShopee: r.price_shopee != null ? Number(r.price_shopee) : null,
+    priceShopeeOriginal: r.price_shopee_original != null ? Number(r.price_shopee_original) : null,
+    priceShopeeDiscountRate: r.price_shopee_discount_rate != null ? Number(r.price_shopee_discount_rate) : null,
+    createdAt: r.created_at,
+  };
+}
 
 export async function GET(req: Request) {
   try {
@@ -16,6 +40,38 @@ export async function GET(req: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const url = new URL(req.url);
+
+    /** Busca vários itens por id (ex.: seleção em massa entre páginas do histórico). */
+    const idsRaw = (url.searchParams.get("ids") || "").trim();
+    if (idsRaw) {
+      const idList = [
+        ...new Set(
+          idsRaw
+            .split(/[,]+/)
+            .map((s) => s.trim())
+            .filter((s) => UUID_RE.test(s)),
+        ),
+      ].slice(0, MAX_IDS_BULK);
+      if (idList.length === 0) {
+        return NextResponse.json({ error: "Nenhum id válido" }, { status: 400 });
+      }
+
+      const { data: rows, error } = await supabase
+        .from("shopee_link_history")
+        .select(
+          "id, short_link, origin_url, sub_id_1, sub_id_2, sub_id_3, observation, product_name, slug, image_url, commission_rate, commission_value, price_shopee, price_shopee_original, price_shopee_discount_rate, created_at",
+        )
+        .eq("user_id", user.id)
+        .in("id", idList);
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      const byId = new Map((rows ?? []).map((r: Record<string, unknown>) => [String(r.id), mapHistoryRow(r)]));
+      const data = idList.map((id) => byId.get(id)).filter(Boolean);
+      const total = data.length;
+      return NextResponse.json({ data, total, page: 1, totalPages: 1 });
+    }
+
     const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
     const limitParam = parseInt(url.searchParams.get("limit") || String(DEFAULT_LIMIT), 10);
     const limit = Math.min(50, Math.max(1, Number.isNaN(limitParam) ? DEFAULT_LIMIT : limitParam));
@@ -45,24 +101,7 @@ export async function GET(req: Request) {
     const total = count ?? 0;
     const totalPages = Math.ceil(total / limit) || 1;
 
-    const data = (rows ?? []).map((r: Record<string, unknown>) => ({
-      id: r.id,
-      shortLink: r.short_link,
-      originUrl: r.origin_url,
-      subId1: r.sub_id_1 ?? "",
-      subId2: r.sub_id_2 ?? "",
-      subId3: r.sub_id_3 ?? "",
-      observation: r.observation ?? "",
-      productName: r.product_name ?? "",
-      slug: r.slug ?? "",
-      imageUrl: r.image_url ?? "",
-      commissionRate: Number(r.commission_rate) ?? 0,
-      commissionValue: Number(r.commission_value) ?? 0,
-      priceShopee: r.price_shopee != null ? Number(r.price_shopee) : null,
-      priceShopeeOriginal: r.price_shopee_original != null ? Number(r.price_shopee_original) : null,
-      priceShopeeDiscountRate: r.price_shopee_discount_rate != null ? Number(r.price_shopee_discount_rate) : null,
-      createdAt: r.created_at,
-    }));
+    const data = (rows ?? []).map((r: Record<string, unknown>) => mapHistoryRow(r));
 
     return NextResponse.json({ data, total, page, totalPages });
   } catch (e) {
