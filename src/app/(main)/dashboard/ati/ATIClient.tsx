@@ -31,6 +31,7 @@ import {
   ChevronRight,
   Loader2,
   RefreshCw,
+  CreditCard,
 } from "lucide-react";
 
 const ATI_CAMPAIGNS_PER_PAGE = 6;
@@ -215,6 +216,8 @@ function AdAccordionItem({
   adTogglingId,
   onEditAd,
   onReloadAti,
+  campaignIsInfoP = false,
+  campaignIsGrupos = false,
 }: {
   row: ATICreativeRow;
   dateLabel: string;
@@ -232,16 +235,26 @@ function AdAccordionItem({
   adTogglingId?: string | null;
   onEditAd?: (r: ATICreativeRow) => void;
   onReloadAti: () => Promise<void>;
+  /** Se a campanha-pai está marcada como InfoP, exibimos o bloco de SubId InfoP. */
+  campaignIsInfoP?: boolean;
+  /** Se a campanha-pai está marcada como Grupos, exibimos o bloco de Sub ID Shopee. */
+  campaignIsGrupos?: boolean;
 }) {
   const isOpen = expandedId === row.adId;
   const [shopeeSubDraft, setShopeeSubDraft] = useState(() => row.shopeeSubId ?? row.subId ?? "");
   const [shopeeSubBusy, setShopeeSubBusy] = useState(false);
   const [shopeeSubFeedback, setShopeeSubFeedback] = useState<string | null>(null);
 
+  const [infopSubDraft, setInfopSubDraft] = useState(() => row.infopSubId ?? "");
+  const [infopSubBusy, setInfopSubBusy] = useState(false);
+  const [infopSubFeedback, setInfopSubFeedback] = useState<string | null>(null);
+
   useEffect(() => {
     setShopeeSubDraft(row.shopeeSubId ?? row.subId ?? "");
     setShopeeSubFeedback(null);
-  }, [row.adId, row.shopeeSubId, row.subId]);
+    setInfopSubDraft(row.infopSubId ?? "");
+    setInfopSubFeedback(null);
+  }, [row.adId, row.shopeeSubId, row.subId, row.infopSubId]);
 
   useEffect(() => {
     if (isOpen && row) onExpandedFetchLink(row);
@@ -322,11 +335,6 @@ function AdAccordionItem({
       >
         <span className="font-medium text-text-primary truncate">{row.adName}</span>
         <span className="flex items-center gap-2 flex-shrink-0">
-          {adStatus !== undefined && (
-            <span className={`text-xs font-medium ${adStatus === "ACTIVE" ? "text-emerald-400" : "text-text-secondary"}`}>
-              {adStatus === "ACTIVE" ? "Ativo" : "Desativado"}
-            </span>
-          )}
           {onAdStatusToggle && (
             <button
               type="button"
@@ -349,6 +357,8 @@ function AdAccordionItem({
 
       {isOpen && (
         <div className="border-t border-dark-border bg-dark-bg/30 p-4 space-y-4">
+          {/* Shopee SubId: só renderiza se a campanha-pai está marcada como Grupos (dados permanecem salvos no banco independente disso). */}
+          {campaignIsGrupos ? (
           <div className="rounded-lg border border-dark-border/80 bg-dark-card/50 p-3 space-y-2">
             <p className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
               <ShoppingBag className="h-3.5 w-3.5 text-shopee-orange" />
@@ -426,6 +436,89 @@ function AdAccordionItem({
               </p>
             )}
           </div>
+          ) : null}
+
+          {/* ── SubId InfoP (cruzamento com produtos Stripe) — só aparece em campanhas marcadas como InfoP ── */}
+          {campaignIsInfoP ? (
+          <div className="rounded-lg border border-[#635bff]/30 bg-[#635bff]/5 p-3 space-y-2">
+            <p className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <CreditCard className="h-3.5 w-3.5 text-[#a8a2ff]" />
+              SubId InfoP (produtos Stripe)
+            </p>
+            <p className="text-[11px] text-text-secondary leading-relaxed">
+              Cole aqui o mesmo SubId do produto Stripe (ex.: <code className="bg-dark-bg px-1 rounded">whey-protein</code>) para cruzar custos e receita na aba Trackeamento.
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-[10px] text-text-secondary mb-0.5">SubId</label>
+                <input
+                  type="text"
+                  value={infopSubDraft}
+                  onChange={(e) => setInfopSubDraft(e.target.value)}
+                  placeholder="ex.: whey-protein"
+                  className="w-full rounded-lg border border-dark-border bg-dark-bg py-1.5 px-2.5 text-xs text-text-primary placeholder-text-secondary/50 focus:outline-none focus:border-[#635bff]"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={infopSubBusy || infopSubDraft.trim().length < 2}
+                onClick={async () => {
+                  setInfopSubBusy(true);
+                  setInfopSubFeedback(null);
+                  try {
+                    const res = await fetch("/api/ati/ad-infop-sub", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ adId: row.adId, infopSubId: infopSubDraft.trim() }),
+                    });
+                    const j = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(j?.error ?? "Erro ao salvar");
+                    setInfopSubFeedback("Salvo.");
+                    await onReloadAti();
+                  } catch (e) {
+                    setInfopSubFeedback(e instanceof Error ? e.message : "Erro");
+                  } finally {
+                    setInfopSubBusy(false);
+                  }
+                }}
+                className="rounded-lg bg-[#635bff] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#5047e5] disabled:opacity-50"
+              >
+                {infopSubBusy ? "…" : "Salvar"}
+              </button>
+              {row.infopSubId && (
+                <button
+                  type="button"
+                  disabled={infopSubBusy}
+                  onClick={async () => {
+                    setInfopSubBusy(true);
+                    setInfopSubFeedback(null);
+                    try {
+                      const res = await fetch(`/api/ati/ad-infop-sub?adId=${encodeURIComponent(row.adId)}`, { method: "DELETE" });
+                      const j = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error(j?.error ?? "Erro");
+                      setInfopSubDraft("");
+                      setInfopSubFeedback("Removido.");
+                      await onReloadAti();
+                    } catch (e) {
+                      setInfopSubFeedback(e instanceof Error ? e.message : "Erro");
+                    } finally {
+                      setInfopSubBusy(false);
+                    }
+                  }}
+                  className="rounded-lg border border-dark-border px-3 py-1.5 text-xs text-text-secondary hover:text-red-400 hover:border-red-500/40 disabled:opacity-50"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+            {infopSubFeedback && (
+              <p className={`text-[11px] ${infopSubFeedback === "Salvo." || infopSubFeedback === "Removido." ? "text-emerald-400" : "text-red-400"}`}>
+                {infopSubFeedback}
+              </p>
+            )}
+          </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -655,6 +748,8 @@ export default function ATIClient() {
   const [adTogglingId, setAdTogglingId] = useState<string | null>(null);
   const [campaignIdsTraficoGrupos, setCampaignIdsTraficoGrupos] = useState<string[]>([]);
   const [traficoGruposTogglingId, setTraficoGruposTogglingId] = useState<string | null>(null);
+  const [campaignIdsInfoP, setCampaignIdsInfoP] = useState<string[]>([]);
+  const [infopTogglingId, setInfopTogglingId] = useState<string | null>(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Record<string, boolean>>({});
   const [expandedAdSets, setExpandedAdSets] = useState<Record<string, boolean>>({});
   const [campaignListPage, setCampaignListPage] = useState(1);
@@ -730,6 +825,7 @@ export default function ATIClient() {
     setAdStatusMap(data.adStatusMap);
     setShopeeWarning(data.shopeeWarning);
     setCampaignIdsTraficoGrupos(data.campaignIdsTraficoGrupos);
+    setCampaignIdsInfoP(Array.isArray(data.campaignIdsInfoP) ? data.campaignIdsInfoP : []);
   }, []);
 
   useEffect(() => {
@@ -771,6 +867,13 @@ export default function ATIClient() {
           campaignIdsTraficoGrupos = Array.isArray(tagsJson.campaignIds) ? tagsJson.campaignIds : [];
         }
 
+        const infopTagsRes = await fetch("/api/ati/campaign-tags?tag=Tráfego%20para%20InfoP", { cache: "no-store" });
+        let campaignIdsInfoP: string[] = [];
+        if (infopTagsRes.ok) {
+          const infopJson = (await infopTagsRes.json()) as { campaignIds?: string[] };
+          campaignIdsInfoP = Array.isArray(infopJson.campaignIds) ? infopJson.campaignIds : [];
+        }
+
         const payload: ATIDashboardSessionPayload = {
           creatives: json.creatives ?? [],
           validated: json.validated ?? [],
@@ -781,6 +884,7 @@ export default function ATIClient() {
           adStatusMap: (json.adStatusMap as Record<string, string>) ?? {},
           shopeeWarning: typeof json.shopeeWarning === "string" ? json.shopeeWarning : null,
           campaignIdsTraficoGrupos,
+          campaignIdsInfoP,
         };
 
         writeAtiSessionCache(start, end, payload);
@@ -796,6 +900,7 @@ export default function ATIClient() {
           setAdSetStatusMap({});
           setAdStatusMap({});
           setCampaignIdsTraficoGrupos([]);
+          setCampaignIdsInfoP([]);
           setShopeeWarning(null);
         }
       } finally {
@@ -956,10 +1061,53 @@ export default function ATIClient() {
       setCampaignIdsTraficoGrupos((prev) =>
         hasTag ? prev.filter((id) => id !== campaignId) : [...prev, campaignId]
       );
+      // Mantém o cache de sessão coerente — senão, ao sair e voltar, o toggle volta ao estado antigo.
+      const cached = readAtiSessionCache(start, end);
+      if (cached) {
+        const currentIds = Array.isArray(cached.campaignIdsTraficoGrupos) ? cached.campaignIdsTraficoGrupos : [];
+        const nextIds = hasTag
+          ? currentIds.filter((id) => id !== campaignId)
+          : [...currentIds, campaignId];
+        writeAtiSessionCache(start, end, { ...cached, campaignIdsTraficoGrupos: nextIds });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao atualizar tag");
     } finally {
       setTraficoGruposTogglingId(null);
+    }
+  };
+
+  const handleToggleInfoP = async (campaignId: string) => {
+    const hasTag = campaignIdsInfoP.includes(campaignId);
+    setInfopTogglingId(campaignId);
+    try {
+      const res = await fetch("/api/ati/campaign-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaign_id: campaignId,
+          tag: "Tráfego para InfoP",
+          add: !hasTag,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Erro ao atualizar tag InfoP");
+      setCampaignIdsInfoP((prev) =>
+        hasTag ? prev.filter((id) => id !== campaignId) : [...prev, campaignId],
+      );
+      // Mantém o cache de sessão coerente — senão, ao sair e voltar, o toggle volta ao estado antigo.
+      const cached = readAtiSessionCache(start, end);
+      if (cached) {
+        const currentIds = Array.isArray(cached.campaignIdsInfoP) ? cached.campaignIdsInfoP : [];
+        const nextIds = hasTag
+          ? currentIds.filter((id) => id !== campaignId)
+          : [...currentIds, campaignId];
+        writeAtiSessionCache(start, end, { ...cached, campaignIdsInfoP: nextIds });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao atualizar tag InfoP");
+    } finally {
+      setInfopTogglingId(null);
     }
   };
 
@@ -1615,7 +1763,8 @@ export default function ATIClient() {
                         disabled={traficoGruposTogglingId === camp.campaignId}
                         onClick={(e) => { e.stopPropagation(); handleToggleTraficoGrupos(camp.campaignId); }}
                         title={campaignIdsTraficoGrupos.includes(camp.campaignId) ? "Remover tag Tráfego para Grupos" : "Marcar como Tráfego para Grupos"}
-                        className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                        aria-label="Tráfego para Grupos"
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
                           campaignIdsTraficoGrupos.includes(camp.campaignId)
                             ? "bg-shopee-orange/15 text-shopee-orange border border-shopee-orange/40"
                             : "text-text-secondary border border-dark-border hover:border-shopee-orange/40 hover:text-shopee-orange"
@@ -1627,6 +1776,25 @@ export default function ATIClient() {
                           <MessageCircle className="h-3 w-3" />
                         )}
                         <span className="hidden md:inline">Grupos</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={infopTogglingId === camp.campaignId}
+                        onClick={(e) => { e.stopPropagation(); handleToggleInfoP(camp.campaignId); }}
+                        title={campaignIdsInfoP.includes(camp.campaignId) ? "Remover tag Tráfego para InfoP" : "Marcar como Tráfego para InfoP (cruza com produtos Stripe)"}
+                        aria-label="Tráfego para InfoP"
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                          campaignIdsInfoP.includes(camp.campaignId)
+                            ? "bg-[#635bff]/15 text-[#a8a2ff] border border-[#635bff]/40"
+                            : "text-text-secondary border border-dark-border hover:border-[#635bff]/40 hover:text-[#a8a2ff]"
+                        } disabled:opacity-50`}
+                      >
+                        {infopTogglingId === camp.campaignId ? (
+                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : (
+                          <CreditCard className="h-3 w-3" />
+                        )}
+                        <span className="hidden md:inline">InfoP</span>
                       </button>
                       <button
                         type="button"
@@ -1692,9 +1860,6 @@ export default function ATIClient() {
                         >
                           <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition ${campIsActive ? "translate-x-4" : "translate-x-0.5"}`} />
                         </button>
-                        <span className={`text-[11px] font-medium shrink-0 ${campIsActive ? "text-emerald-400" : "text-text-secondary"}`}>
-                          {campIsActive ? "Ativo" : "Pausado"}
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -1745,9 +1910,6 @@ export default function ATIClient() {
                                 >
                                   <span className={`pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow ring-0 transition ${adSetIsActive ? "translate-x-3.5" : "translate-x-0.5"}`} />
                                 </button>
-                                <span className={`text-[10px] font-medium hidden sm:inline ${adSetIsActive ? "text-emerald-400" : "text-text-secondary"}`}>
-                                  {adSetIsActive ? "Ativo" : "Pausado"}
-                                </span>
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setAdSetEditModal({ adSetId: set.adSetId, adSetName: set.adSetName, adAccountId: set.adAccountId ?? "", campaignId: camp.campaignId, campaignName: camp.campaignName }); setAdSetEditError(null); }}
@@ -1812,6 +1974,8 @@ export default function ATIClient() {
                                       } else setError("Conta de anúncios não disponível.");
                                     }}
                                     onReloadAti={load}
+                                    campaignIsInfoP={campaignIdsInfoP.includes(camp.campaignId)}
+                                    campaignIsGrupos={campaignIdsTraficoGrupos.includes(camp.campaignId)}
                                   />
                                 ))}
                               </div>

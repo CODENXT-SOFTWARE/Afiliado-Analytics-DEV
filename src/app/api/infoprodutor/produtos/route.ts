@@ -28,6 +28,7 @@ type Row = {
   stripe_product_id: string | null;
   stripe_price_id: string | null;
   stripe_payment_link_id: string | null;
+  stripe_subid: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -50,13 +51,20 @@ function mapProduto(r: Record<string, unknown>) {
     stripeProductId: (r.stripe_product_id as string | null) ?? null,
     stripePriceId: (r.stripe_price_id as string | null) ?? null,
     stripePaymentLinkId: (r.stripe_payment_link_id as string | null) ?? null,
+    stripeSubid: (r.stripe_subid as string | null) ?? null,
     createdAt: String(r.created_at ?? ""),
     updatedAt: String(r.updated_at ?? ""),
   };
 }
 
 const SELECT =
-  "id, user_id, name, description, image_url, link, price, price_old, provider, stripe_product_id, stripe_price_id, stripe_payment_link_id, created_at, updated_at";
+  "id, user_id, name, description, image_url, link, price, price_old, provider, stripe_product_id, stripe_price_id, stripe_payment_link_id, stripe_subid, created_at, updated_at";
+
+const SUBID_REGEX = /^[a-zA-Z0-9_\-.]+$/;
+
+function normalizeSubid(raw: unknown): string {
+  return typeof raw === "string" ? raw.trim().slice(0, 64) : "";
+}
 
 async function getStripeKeyForUser(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -124,6 +132,20 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Preço é obrigatório (em BRL) para produtos Stripe." }, { status: 400 });
       }
 
+      const stripeSubid = normalizeSubid(body?.stripeSubid ?? body?.stripe_subid);
+      if (!stripeSubid || stripeSubid.length < 2) {
+        return NextResponse.json(
+          { error: "SubId é obrigatório em produtos Stripe (mínimo 2 caracteres, ex.: suplementos)." },
+          { status: 400 },
+        );
+      }
+      if (!SUBID_REGEX.test(stripeSubid)) {
+        return NextResponse.json(
+          { error: "SubId: use apenas letras, números, hífen, ponto e underscore." },
+          { status: 400 },
+        );
+      }
+
       const stripeKey = await getStripeKeyForUser(supabase, user.id);
       if (!stripeKey) {
         return NextResponse.json(
@@ -180,6 +202,7 @@ export async function POST(req: Request) {
           stripe_product_id: createdProductId,
           stripe_price_id: createdPriceId,
           stripe_payment_link_id: createdPaymentLinkId,
+          stripe_subid: stripeSubid,
         })
         .select(SELECT)
         .single();
@@ -283,6 +306,27 @@ export async function PATCH(req: Request) {
       if (Object.prototype.hasOwnProperty.call(body ?? {}, "priceOld") || Object.prototype.hasOwnProperty.call(body ?? {}, "price_old")) {
         const p = body.priceOld ?? body.price_old;
         patch.price_old = p == null || p === "" ? null : Number.isFinite(Number(p)) ? Number(p) : null;
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(body ?? {}, "stripeSubid") ||
+        Object.prototype.hasOwnProperty.call(body ?? {}, "stripe_subid")
+      ) {
+        const newSubid = normalizeSubid(body?.stripeSubid ?? body?.stripe_subid);
+        if (!newSubid || newSubid.length < 2) {
+          return NextResponse.json(
+            { error: "SubId é obrigatório (mínimo 2 caracteres)." },
+            { status: 400 },
+          );
+        }
+        if (!SUBID_REGEX.test(newSubid)) {
+          return NextResponse.json(
+            { error: "SubId: use apenas letras, números, hífen, ponto e underscore." },
+            { status: 400 },
+          );
+        }
+        if (newSubid !== currentRow.stripe_subid) {
+          patch.stripe_subid = newSubid;
+        }
       }
 
       // Sincroniza name/description/image no Stripe (best-effort — mudanças cosméticas).

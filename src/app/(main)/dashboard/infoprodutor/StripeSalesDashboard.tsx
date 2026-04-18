@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { ChartOptions, TooltipItem } from "chart.js";
 import "@/lib/chart-setup";
+import { readInfoprodCache, writeInfoprodCache, clearInfoprodCache } from "@/lib/infoprod/cache";
 
 const Line = dynamic(() => import("react-chartjs-2").then((m) => m.Line), { ssr: false });
 
@@ -95,15 +96,31 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR");
 }
 
-export default function StripeSalesDashboard({ stripeConnected }: { stripeConnected: boolean }) {
+const CACHE_SECTION = "sales";
+
+export default function StripeSalesDashboard({
+  stripeConnected,
+  refreshSignal = 0,
+}: {
+  stripeConnected: boolean;
+  refreshSignal?: number;
+}) {
   const [period, setPeriod] = useState<Period>("30d");
   const [data, setData] = useState<SalesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
-    async (p: Period) => {
+    async (p: Period, opts?: { skipCache?: boolean }) => {
       if (!stripeConnected) return;
+      if (!opts?.skipCache) {
+        const cached = readInfoprodCache<SalesResponse>(CACHE_SECTION, p);
+        if (cached) {
+          setData(cached);
+          setError(null);
+          return;
+        }
+      }
       setLoading(true);
       setError(null);
       try {
@@ -111,6 +128,7 @@ export default function StripeSalesDashboard({ stripeConnected }: { stripeConnec
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error ?? "Erro ao carregar vendas");
         setData(json as SalesResponse);
+        writeInfoprodCache(CACHE_SECTION, p, json);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Erro ao carregar vendas");
       } finally {
@@ -123,6 +141,17 @@ export default function StripeSalesDashboard({ stripeConnected }: { stripeConnec
   useEffect(() => {
     if (stripeConnected) void load(period);
   }, [period, stripeConnected, load]);
+
+  // Quando o refresh global é acionado, invalida todo o cache desta seção e recarrega.
+  const lastSignalRef = useRef(refreshSignal);
+  useEffect(() => {
+    if (refreshSignal === lastSignalRef.current) return;
+    lastSignalRef.current = refreshSignal;
+    if (stripeConnected) {
+      clearInfoprodCache(CACHE_SECTION);
+      void load(period, { skipCache: true });
+    }
+  }, [refreshSignal, stripeConnected, period, load]);
 
   const chartData = useMemo(() => {
     const byDay = data?.byDay ?? [];
@@ -255,7 +284,10 @@ export default function StripeSalesDashboard({ stripeConnected }: { stripeConnec
           </div>
           <button
             type="button"
-            onClick={() => void load(period)}
+            onClick={() => {
+              clearInfoprodCache(CACHE_SECTION, period);
+              void load(period, { skipCache: true });
+            }}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#3e3e46] text-[10px] font-semibold text-[#d2d2d2] hover:bg-[#2f2f34] disabled:opacity-60"
             title="Atualizar dados"

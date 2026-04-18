@@ -191,6 +191,17 @@ export async function GET(req: Request) {
       }
     }
 
+    const adToInfopSub = new Map<string, string>();
+    const { data: infopRows, error: infopMapErr } = await supabase
+      .from("ati_ad_infop_sub")
+      .select("ad_id, infop_sub_id")
+      .eq("user_id", user.id);
+    if (!infopMapErr && infopRows) {
+      for (const r of infopRows as { ad_id: string; infop_sub_id: string }[]) {
+        adToInfopSub.set(r.ad_id, r.infop_sub_id);
+      }
+    }
+
     const zeroShopee = { commission: 0, revenue: 0, orders: 0, directOrders: 0 };
     const creatives: ATICreativeRow[] = insights.map((m) => {
       const shopeeSubId = adToShopeeSub.get(m.ad_id) ?? "";
@@ -243,6 +254,7 @@ export async function GET(req: Request) {
         adAccountId: m.ad_account_id,
         subId: shopeeSubId || null,
         shopeeSubId: shopeeSubId || null,
+        infopSubId: adToInfopSub.get(m.ad_id) ?? null,
         cost,
         clicksMeta,
         ctrMeta: m.ctr,

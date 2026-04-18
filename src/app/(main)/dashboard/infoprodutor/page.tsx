@@ -29,10 +29,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import ConfirmModal from "@/app/components/ui/ConfirmModal";
+import Toolist from "@/app/components/ui/Toolist";
 import MetaSearchablePicker from "@/app/components/meta/MetaSearchablePicker";
 import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationBar";
 import StripeSalesDashboard from "./StripeSalesDashboard";
 import StripeOrdersSection from "./StripeOrdersSection";
+import AdPerformanceTable from "./AdPerformanceTable";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ProductProvider = "manual" | "stripe";
@@ -46,6 +48,7 @@ type Produto = {
   price: number | null;
   priceOld: number | null;
   provider: ProductProvider;
+  stripeSubid: string | null;
   createdAt: string;
 };
 
@@ -124,7 +127,15 @@ const ALLOWED_TYPES = new Set([
   "image/gif",
 ]);
 
+type TabKey = "produtos" | "vendas" | "trackeamento";
+
 export default function InfoprodutorPage() {
+  // ─── Navegação entre abas ─────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<TabKey>("produtos");
+
+  // Sinal global de refresh pras seções Vendas/Trackeamento (cache invalidado ao clicar).
+  const [refreshSignal, setRefreshSignal] = useState(0);
+
   // ─── Estado: catálogo de produtos ──────────────────────────────────────────
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loadingProdutos, setLoadingProdutos] = useState(true);
@@ -143,6 +154,7 @@ export default function InfoprodutorPage() {
   const [formLink, setFormLink] = useState("");
   const [formPrice, setFormPrice] = useState("");
   const [formPriceOld, setFormPriceOld] = useState("");
+  const [formStripeSubid, setFormStripeSubid] = useState("");
   const [formImagePreview, setFormImagePreview] = useState<string>("");
   const [formImageUrl, setFormImageUrl] = useState<string>("");
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
@@ -163,7 +175,8 @@ export default function InfoprodutorPage() {
   const [filterByLista, setFilterByLista] = useState<Record<string, string>>({});
   const [pageByLista, setPageByLista] = useState<Record<string, number>>({});
   const [listasPage, setListasPage] = useState(1);
-  const LISTAS_PER_PAGE = 4;
+  const [listaSearch, setListaSearch] = useState("");
+  const LISTAS_PER_PAGE = 6;
   const ITEMS_PER_PAGE = 5;
 
   // ─── Estado: criação de lista ──────────────────────────────────────────────
@@ -272,6 +285,7 @@ export default function InfoprodutorPage() {
     setFormLink("");
     setFormPrice("");
     setFormPriceOld("");
+    setFormStripeSubid("");
     setFormImagePreview("");
     setFormImageUrl("");
     setFormImageFile(null);
@@ -325,6 +339,7 @@ export default function InfoprodutorPage() {
 
     const isStripeCreate = formMode === "create" && formProvider === "stripe";
 
+    const normalizedSubid = formStripeSubid.trim();
     if (isStripeCreate) {
       if (!stripeConnected) {
         setError("Conecte sua conta Stripe em Configurações antes de criar produtos na Stripe.");
@@ -332,6 +347,23 @@ export default function InfoprodutorPage() {
       }
       if (!formPrice.trim()) {
         setError("Preço é obrigatório para produtos criados na Stripe.");
+        return;
+      }
+      if (!normalizedSubid || normalizedSubid.length < 2) {
+        setError("SubId é obrigatório (ex.: suplementos, whey-protein).");
+        return;
+      }
+      if (!/^[a-zA-Z0-9_\-.]+$/.test(normalizedSubid)) {
+        setError("SubId: use apenas letras, números, hífen, ponto e underscore.");
+        return;
+      }
+    } else if (formMode === "edit" && formProvider === "stripe") {
+      if (!normalizedSubid || normalizedSubid.length < 2) {
+        setError("SubId é obrigatório (ex.: suplementos, whey-protein).");
+        return;
+      }
+      if (!/^[a-zA-Z0-9_\-.]+$/.test(normalizedSubid)) {
+        setError("SubId: use apenas letras, números, hífen, ponto e underscore.");
         return;
       }
     } else if (formMode === "create" && !formLink.trim()) {
@@ -356,14 +388,15 @@ export default function InfoprodutorPage() {
       if (isStripeCreate) {
         basePayload.provider = "stripe";
         basePayload.price = priceNum;
+        basePayload.stripeSubid = normalizedSubid;
         // link é gerado pela Stripe
       } else if (formMode === "create") {
         basePayload.provider = "manual";
         basePayload.link = formLink.trim();
         basePayload.price = priceNum;
       } else if (formProvider === "stripe") {
-        // edit em produto Stripe: apenas campos cosméticos (name/description/image/priceOld já estão no basePayload)
-        // price e link não podem ser alterados (bloqueado no backend)
+        // edit em produto Stripe: apenas campos cosméticos + subId (price e link bloqueados no backend)
+        basePayload.stripeSubid = normalizedSubid;
       } else {
         // edit em produto manual
         basePayload.link = formLink.trim();
@@ -404,6 +437,7 @@ export default function InfoprodutorPage() {
     setFormLink(p.link);
     setFormPrice(p.price != null ? String(p.price) : "");
     setFormPriceOld(p.priceOld != null ? String(p.priceOld) : "");
+    setFormStripeSubid(p.stripeSubid ?? "");
     setFormImageUrl(p.imageUrl ?? "");
     setFormImagePreview(p.imageUrl ?? "");
     setFormImageFile(null);
@@ -666,15 +700,21 @@ export default function InfoprodutorPage() {
     setProdutoPage((p) => Math.min(Math.max(1, p), totalProdutosPages));
   }, [filteredProdutos.length, totalProdutosPages]);
 
-  const totalListasPages = Math.max(1, Math.ceil(listas.length / LISTAS_PER_PAGE));
+  const filteredListas = useMemo(() => {
+    const q = listaSearch.trim().toLowerCase();
+    if (!q) return listas;
+    return listas.filter((l) => (l.nome ?? "").toLowerCase().includes(q));
+  }, [listas, listaSearch]);
+
+  const totalListasPages = Math.max(1, Math.ceil(filteredListas.length / LISTAS_PER_PAGE));
   const pagedListas = useMemo(() => {
     const from = (listasPage - 1) * LISTAS_PER_PAGE;
-    return listas.slice(from, from + LISTAS_PER_PAGE);
-  }, [listas, listasPage]);
+    return filteredListas.slice(from, from + LISTAS_PER_PAGE);
+  }, [filteredListas, listasPage]);
 
   useEffect(() => {
     setListasPage((p) => Math.min(Math.max(1, p), totalListasPages));
-  }, [listas.length, totalListasPages]);
+  }, [filteredListas.length, totalListasPages]);
 
   const listaDestinoPickerOptions = useMemo(
     () =>
@@ -708,14 +748,31 @@ export default function InfoprodutorPage() {
     <div className="min-h-screen bg-dark-bg text-text-primary p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         {/* Cabeçalho */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl border border-[#e24c30]/35 bg-[#e24c30]/10 flex items-center justify-center shrink-0">
             <ShoppingCart className="h-5 w-5 text-[#e24c30]" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold leading-tight">Infoprodutor</h1>
-            
+
           </div>
+          {/* Botão Atualizar no mobile — fica ao lado do título. No desktop, aparece ao lado das abas. */}
+          {activeTab !== "produtos" ? (
+            <button
+              type="button"
+              onClick={() => setRefreshSignal((s) => s + 1)}
+              title="Atualizar Vendas e Trackeamento"
+              aria-label="Atualizar"
+              className="sm:hidden relative overflow-hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors shrink-0"
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#e24c30]/55 to-transparent"
+                style={{ animation: "infoprod-sweep 2.8s ease-in-out infinite" }}
+              />
+              <RefreshCw className="relative w-4 h-4" />
+            </button>
+          ) : null}
         </div>
 
         {/* Feedback / erro */}
@@ -734,6 +791,78 @@ export default function InfoprodutorPage() {
           </div>
         ) : null}
 
+        {/* ═══════════════ ABAS: Produtos | Vendas | Trackeamento ═══════════════ */}
+        <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <div role="tablist" aria-label="Seções do Infoprodutor" className="flex items-center gap-1 rounded-xl border border-[#2c2c32] bg-[#222228] p-1 w-fit">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "produtos"}
+            onClick={() => setActiveTab("produtos")}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              activeTab === "produtos" ? "bg-[#e24c30] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            Produtos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "vendas"}
+            onClick={() => setActiveTab("vendas")}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              activeTab === "vendas" ? "bg-emerald-500 text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            Vendas
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "trackeamento"}
+            onClick={() => setActiveTab("trackeamento")}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              activeTab === "trackeamento" ? "bg-[#635bff] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            Trackeamento
+          </button>
+        </div>
+
+        {/* Botão global Atualizar (invalida cache de Vendas + Trackeamento e refaz as requisições) */}
+        {activeTab !== "produtos" ? (
+          <>
+            <style>{`
+              @keyframes infoprod-sweep {
+                0% { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+                20% { opacity: 1; }
+                80% { opacity: 1; }
+                100% { transform: translateX(320%) skewX(-20deg); opacity: 0; }
+              }
+            `}</style>
+            <button
+              type="button"
+              onClick={() => setRefreshSignal((s) => s + 1)}
+              title="Atualizar Vendas e Trackeamento"
+              aria-label="Atualizar"
+              className="hidden sm:inline-flex ml-auto relative overflow-hidden items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors"
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#e24c30]/55 to-transparent"
+                style={{ animation: "infoprod-sweep 2.8s ease-in-out infinite" }}
+              />
+              <RefreshCw className="relative w-4 h-4" />
+            </button>
+          </>
+        ) : null}
+        </div>
+
+        {activeTab === "produtos" ? (
+          <>
         {/* ═══════════════ FORMULÁRIO DE PRODUTO (topo: CTA abre o painel, sem dropdown) ═══════════════ */}
         <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden mb-6">
           {!formOpen ? (
@@ -989,9 +1118,31 @@ export default function InfoprodutorPage() {
                           placeholder="197,00"
                           className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition"
                         />
-                     
+
                       </div>
                     </div>
+
+                    {formProvider === "stripe" ? (
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5">
+                          <CreditCard className="inline w-2.5 h-2.5 text-[#a8a2ff]" />
+                          <span>SubId InfoP</span>
+                          <span className="text-[#a8a2ff] normal-case tracking-normal">(obrigatório)</span>
+                          <Toolist
+                            variant="floating"
+                            wide
+                            text="Usado em Trackeamento para cruzar vendas Stripe com anúncios Meta. Cole o mesmo valor no SubId InfoP do ad em ATI. Vários produtos podem compartilhar o mesmo SubId — as vendas são somadas no ad."
+                          />
+                        </label>
+                        <input
+                          type="text"
+                          value={formStripeSubid}
+                          onChange={(e) => setFormStripeSubid(e.target.value)}
+                          placeholder="ex.: suplementos, whey-protein"
+                          className="w-full bg-[#222228] border border-[#635bff]/40 rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#635bff] outline-none transition"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -1045,9 +1196,10 @@ export default function InfoprodutorPage() {
           )}
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-6 lg:items-start">
+        {!formOpen ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-6 lg:items-stretch">
         {/* ═══════════════ MEUS PRODUTOS ═══════════════ */}
-        <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden mb-6 lg:mb-0">
+        <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden mb-6 lg:mb-0 flex flex-col">
           <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-6 h-6 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
@@ -1121,7 +1273,7 @@ export default function InfoprodutorPage() {
             ) : null}
           </div>
 
-          <div className="bg-[#1c1c1f]">
+          <div className="bg-[#1c1c1f] flex-1">
             {loadingProdutos ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-[#e24c30]" />
@@ -1181,6 +1333,14 @@ export default function InfoprodutorPage() {
                             >
                               <CreditCard className="w-2.5 h-2.5" />
                               Stripe
+                            </span>
+                          ) : null}
+                          {p.provider === "stripe" && p.stripeSubid ? (
+                            <span
+                              title={`SubId InfoP: ${p.stripeSubid}`}
+                              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full border border-[#3e3e46] bg-[#222228] text-[9px] font-semibold text-[#c8c8ce] font-mono"
+                            >
+                              #{p.stripeSubid}
                             </span>
                           ) : null}
                         </div>
@@ -1258,7 +1418,7 @@ export default function InfoprodutorPage() {
         </section>
 
         {/* ═══════════════ MINHAS LISTAS ═══════════════ */}
-        <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden">
+        <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden flex flex-col">
           <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-6 h-6 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
@@ -1271,10 +1431,32 @@ export default function InfoprodutorPage() {
                 </span>
               ) : null}
             </div>
-         
+
           </div>
 
-          <div className="max-h-[min(70vh,720px)] overflow-y-auto bg-[#1c1c1f] scrollbar-thin">
+          {!loadingListas && listas.length > 0 ? (
+            <div className="px-3 sm:px-5 py-3 border-b border-[#2c2c32] bg-[#222228] flex items-center gap-2">
+              <Search className="h-3.5 w-3.5 text-[#a0a0a0] shrink-0" />
+              <input
+                type="text"
+                value={listaSearch}
+                onChange={(e) => setListaSearch(e.target.value)}
+                placeholder="Filtrar por nome da lista…"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-[#2c2c32] bg-[#1c1c1f] text-[#f0f0f2] text-[11px] placeholder:text-[#6b6b72] outline-none focus:border-[#e24c30]"
+              />
+              {listaSearch ? (
+                <button
+                  type="button"
+                  onClick={() => setListaSearch("")}
+                  className="text-[10px] text-[#a0a0a0] hover:text-white shrink-0"
+                >
+                  Limpar
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="flex-1 overflow-y-auto bg-[#1c1c1f] scrollbar-thin">
             {loadingListas ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-[#e24c30]" />
@@ -1288,6 +1470,8 @@ export default function InfoprodutorPage() {
                   <strong>Adicionar à lista</strong> para copiar às listas que você já tem.
                 </p>
               </div>
+            ) : filteredListas.length === 0 ? (
+              <p className="py-10 text-center text-[11px] text-[#9a9aa2]">Nenhuma lista bate com o filtro.</p>
             ) : (
               <div className="space-y-3 p-3 sm:p-5">
                 <ul className="space-y-3">
@@ -1444,12 +1628,12 @@ export default function InfoprodutorPage() {
                   })}
                 </ul>
 
-                {listas.length > LISTAS_PER_PAGE ? (
+                {filteredListas.length > LISTAS_PER_PAGE ? (
                   <div className="rounded-xl border border-[#2c2c32] bg-[#222228] px-3 py-3">
                     <GeradorPaginationBar
                       page={listasPage}
                       totalPages={totalListasPages}
-                      summary={`Mostrando ${pagedListas.length} de ${listas.length} lista(s)`}
+                      summary={`Mostrando ${pagedListas.length} de ${filteredListas.length} lista(s)`}
                       onPrev={() => setListasPage((p) => Math.max(1, p - 1))}
                       onNext={() => setListasPage((p) => Math.min(totalListasPages, p + 1))}
                     />
@@ -1460,12 +1644,27 @@ export default function InfoprodutorPage() {
           </div>
         </section>
         </div>
+        ) : null}
 
-        {/* ═══════════════ DASHBOARD DE VENDAS (STRIPE) ═══════════════ */}
-        <StripeSalesDashboard stripeConnected={stripeConnected} />
+          </>
+        ) : null}
 
-        {/* ═══════════════ PEDIDOS STRIPE ═══════════════ */}
-        <StripeOrdersSection stripeConnected={stripeConnected} />
+        {activeTab === "vendas" ? (
+          <>
+            {/* ═══════════════ DASHBOARD DE VENDAS (STRIPE) ═══════════════ */}
+            <StripeSalesDashboard stripeConnected={stripeConnected} refreshSignal={refreshSignal} />
+
+            {/* ═══════════════ PEDIDOS STRIPE ═══════════════ */}
+            <StripeOrdersSection stripeConnected={stripeConnected} refreshSignal={refreshSignal} />
+          </>
+        ) : null}
+
+        {activeTab === "trackeamento" ? (
+          <>
+            {/* ═══════════════ PERFORMANCE POR AD (ATI × STRIPE) ═══════════════ */}
+            <AdPerformanceTable refreshSignal={refreshSignal} />
+          </>
+        ) : null}
 
         {/* Modal: criar lista */}
         {createListaOpen ? (

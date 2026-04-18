@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   RefreshCw,
@@ -19,6 +19,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import EtiquetasModal from "./EtiquetasModal";
+import { readInfoprodCache, writeInfoprodCache, clearInfoprodCache } from "@/lib/infoprod/cache";
+import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationBar";
 
 type Period = "7d" | "30d" | "90d" | "all";
 
@@ -83,7 +85,15 @@ function formatAddress(a: Address | null): string {
   return [parts, city, cep].filter(Boolean).join(" · ");
 }
 
-export default function StripeOrdersSection({ stripeConnected }: { stripeConnected: boolean }) {
+const CACHE_SECTION = "orders";
+
+export default function StripeOrdersSection({
+  stripeConnected,
+  refreshSignal = 0,
+}: {
+  stripeConnected: boolean;
+  refreshSignal?: number;
+}) {
   const [period, setPeriod] = useState<Period>("30d");
   const [data, setData] = useState<OrdersResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,10 +102,20 @@ export default function StripeOrdersSection({ stripeConnected }: { stripeConnect
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalSessionIds, setModalSessionIds] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const ORDERS_PER_PAGE = 4;
 
   const load = useCallback(
-    async (p: Period) => {
+    async (p: Period, opts?: { skipCache?: boolean }) => {
       if (!stripeConnected) return;
+      if (!opts?.skipCache) {
+        const cached = readInfoprodCache<OrdersResponse>(CACHE_SECTION, p);
+        if (cached) {
+          setData(cached);
+          setError(null);
+          return;
+        }
+      }
       setLoading(true);
       setError(null);
       try {
@@ -103,6 +123,7 @@ export default function StripeOrdersSection({ stripeConnected }: { stripeConnect
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error ?? "Erro ao carregar pedidos");
         setData(json as OrdersResponse);
+        writeInfoprodCache(CACHE_SECTION, p, json);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Erro ao carregar pedidos");
       } finally {
@@ -115,6 +136,16 @@ export default function StripeOrdersSection({ stripeConnected }: { stripeConnect
   useEffect(() => {
     if (stripeConnected) void load(period);
   }, [period, stripeConnected, load]);
+
+  const lastSignalRef = useRef(refreshSignal);
+  useEffect(() => {
+    if (refreshSignal === lastSignalRef.current) return;
+    lastSignalRef.current = refreshSignal;
+    if (stripeConnected) {
+      clearInfoprodCache(CACHE_SECTION);
+      void load(period, { skipCache: true });
+    }
+  }, [refreshSignal, stripeConnected, period, load]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -157,6 +188,18 @@ export default function StripeOrdersSection({ stripeConnected }: { stripeConnect
   };
 
   const filteredPrintable = useMemo(() => filtered.filter((o) => !!o.shipping?.address), [filtered]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ORDERS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const pagedOrders = useMemo(() => {
+    const from = (safePage - 1) * ORDERS_PER_PAGE;
+    return filtered.slice(from, from + ORDERS_PER_PAGE);
+  }, [filtered, safePage]);
+
+  // Reseta página quando filtro/período mudam
+  useEffect(() => {
+    setPage(1);
+  }, [search, period, data]);
 
   const selectAllVisible = () => {
     setSelected((prev) => {
@@ -232,7 +275,10 @@ export default function StripeOrdersSection({ stripeConnected }: { stripeConnect
           </div>
           <button
             type="button"
-            onClick={() => void load(period)}
+            onClick={() => {
+              clearInfoprodCache(CACHE_SECTION, period);
+              void load(period, { skipCache: true });
+            }}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#3e3e46] text-[10px] font-semibold text-[#d2d2d2] hover:bg-[#2f2f34] disabled:opacity-60"
             title="Atualizar pedidos"
@@ -311,7 +357,7 @@ export default function StripeOrdersSection({ stripeConnected }: { stripeConnect
           <p className="py-10 text-center text-[11px] text-[#9a9aa2]">Nenhum pedido bate com o filtro.</p>
         ) : (
           <ul className="divide-y divide-[#2c2c32]">
-            {filtered.map((order) => {
+            {pagedOrders.map((order) => {
               const isOpen = expanded.has(order.sessionId);
               const noShipping = !order.shipping?.address;
               const isSelected = selected.has(order.sessionId);
@@ -455,6 +501,18 @@ export default function StripeOrdersSection({ stripeConnected }: { stripeConnect
             })}
           </ul>
         )}
+
+        {filtered.length > ORDERS_PER_PAGE ? (
+          <div className="px-3 py-3 border-t border-[#2c2c32] bg-[#222228]">
+            <GeradorPaginationBar
+              page={safePage}
+              totalPages={totalPages}
+              summary={`Mostrando ${pagedOrders.length} de ${filtered.length} pedido(s)`}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+            />
+          </div>
+        ) : null}
       </div>
 
       <EtiquetasModal

@@ -54,6 +54,8 @@ export interface ATICreativeRow {
   /** Sub ID Shopee (Sub1 do gerador) configurado no ATI para este anúncio */
   subId: string | null;
   shopeeSubId?: string | null;
+  /** Sub ID InfoP (cruzamento com produtos Stripe) */
+  infopSubId?: string | null;
   /** Métricas Meta */
   cost: number;
   clicksMeta: number;

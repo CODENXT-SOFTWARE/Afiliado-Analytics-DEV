@@ -30,6 +30,7 @@ export type ATIDashboardSessionPayload = {
   adStatusMap: Record<string, string>;
   shopeeWarning: string | null;
   campaignIdsTraficoGrupos: string[];
+  campaignIdsInfoP?: string[];
 };
 
 type Stored = {
