@@ -456,11 +456,29 @@ export default function GeradorLinksShopeePage() {
   const handleSearch = useCallback(async (term?: string) => {
     const trimmed = (term ?? inputValue).trim();
     if (!trimmed || !hasApiKeys) return;
-    if (isShopeeShortLinkInput(trimmed)) return;
     setError(null); setSearchLoading(true);
     setProducts([]); setSelectedProduct(null); setGoldenProducts([]); setBestSellers([]);
     try {
-      const itemId = extractItemIdFromUrl(trimmed);
+      let effective = trimmed;
+      let itemId = extractItemIdFromUrl(effective);
+      if (!Number.isFinite(itemId) && isShopeeShortLinkInput(effective)) {
+        const resolveRes = await fetch(
+          `/api/shopee/resolve-short-link?url=${encodeURIComponent(effective)}`,
+        );
+        const resolveData = await resolveRes.json().catch(() => ({}));
+        if (!resolveRes.ok) {
+          throw new Error(
+            resolveData?.error ??
+              "Não foi possível abrir o link curto da Shopee. Abra no navegador e cole o link do topo.",
+          );
+        }
+        if (resolveData?.finalUrl) effective = String(resolveData.finalUrl);
+        if (Number.isFinite(Number(resolveData?.itemId))) {
+          itemId = Number(resolveData.itemId);
+        } else {
+          itemId = extractItemIdFromUrl(effective);
+        }
+      }
       if (Number.isFinite(itemId)) {
         const res = await fetch(`/api/shopee/product-search?itemId=${itemId}&limit=1`);
         const data = await res.json();
@@ -784,14 +802,6 @@ export default function GeradorLinksShopeePage() {
                   ? <button onClick={() => setInputValue("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a0a0a0] hover:text-[#f0f0f2] transition w-7 h-7 flex items-center justify-center"><X className="w-3 h-3" /></button>
                   : null}
             </div>
-            {isShopeeShortLinkInput(inputValue) && (
-              <div className="mt-2 flex items-start gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5">
-                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
-                <p className="text-[11px] leading-snug text-amber-200">
-                  Por favor, abra o link convertido, copie o link do topo e cole aqui novamente!
-                </p>
-              </div>
-            )}
             </FieldGroup>
 
             <FieldGroup label="Sub IDs" icon={<Hash className="w-2.5 h-2.5" />} tooltip="Identificadores de rastreamento para saber de qual canal vieram seus cliques e vendas.">
@@ -807,7 +817,7 @@ export default function GeradorLinksShopeePage() {
             </FieldGroup>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-              <button onClick={runSearchNow} disabled={searchLoading || !inputValue.trim() || !hasApiKeys || isShopeeShortLinkInput(inputValue)}
+              <button onClick={runSearchNow} disabled={searchLoading || !inputValue.trim() || !hasApiKeys}
                 className="flex w-full items-center justify-center gap-1.5 bg-[#1c1c1f] border border-[#3e3e3e] text-[#d2d2d2] rounded-xl py-2.5 text-[11px] font-semibold hover:text-[#f0f0f2] hover:border-[#585858] disabled:opacity-40 transition min-h-[42px]">
                 {searchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />} Buscar
               </button>
