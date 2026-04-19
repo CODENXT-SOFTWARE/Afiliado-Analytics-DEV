@@ -336,9 +336,7 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
           )}
 
           <div className="px-3 py-2 border-t border-[#2c2c32] flex items-center justify-between flex-wrap gap-2 text-[9px] text-[#7a7a80]">
-            <span>
-              Ads de campanhas marcadas como <strong className="text-[#a8a2ff]">InfoP</strong>. Receita vem do SubId → produto Stripe.
-            </span>
+            
             <Link
               href="https://dashboard.stripe.com/payments"
               target="_blank"
