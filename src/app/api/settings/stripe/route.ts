@@ -22,17 +22,23 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("stripe_secret_key_last4, stripe_secret_key_updated_at, stripe_webhook_endpoint_id")
+    .select(
+      "stripe_secret_key_last4, stripe_secret_key_updated_at, stripe_webhook_endpoint_id, stripe_publishable_key",
+    )
     .eq("id", user.id)
     .single();
 
   if (error) return NextResponse.json({ error: "Failed" }, { status: 500 });
+
+  const pk = (data as { stripe_publishable_key?: string | null } | null)?.stripe_publishable_key ?? null;
 
   return NextResponse.json({
     has_key: !!data?.stripe_secret_key_last4,
     last4: data?.stripe_secret_key_last4 ?? null,
     updated_at: data?.stripe_secret_key_updated_at ?? null,
     webhook_active: !!data?.stripe_webhook_endpoint_id,
+    has_publishable_key: !!pk,
+    publishable_key_last4: pk ? pk.slice(-4) : null,
   });
 }
 
@@ -43,6 +49,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const secretKey = String(body?.stripe_secret_key ?? "").trim();
+  const publishableKey = String(body?.stripe_publishable_key ?? "").trim();
 
   if (!secretKey) {
     return NextResponse.json(
@@ -56,6 +63,25 @@ export async function POST(req: Request) {
       { error: "Chave inválida. A chave secreta da Stripe começa com sk_live_ ou sk_test_." },
       { status: 400 },
     );
+  }
+
+  if (publishableKey && !/^pk_(live|test)_/.test(publishableKey)) {
+    return NextResponse.json(
+      { error: "Publishable key inválida. Começa com pk_live_ ou pk_test_." },
+      { status: 400 },
+    );
+  }
+
+  // Valida coerência de ambiente — live só com live, test só com test.
+  if (publishableKey) {
+    const skEnv = secretKey.startsWith("sk_live_") ? "live" : "test";
+    const pkEnv = publishableKey.startsWith("pk_live_") ? "live" : "test";
+    if (skEnv !== pkEnv) {
+      return NextResponse.json(
+        { error: "Secret e Publishable key precisam ser do mesmo ambiente (ambas live ou ambas test)." },
+        { status: 400 },
+      );
+    }
   }
 
   // Valida a chave + captura o account_id (usado pra detectar produtos órfãos depois).
@@ -100,6 +126,9 @@ export async function POST(req: Request) {
     stripe_secret_key_updated_at: new Date().toISOString(),
     stripe_account_id: stripeAccountId || null,
   };
+  if (publishableKey) {
+    update.stripe_publishable_key = publishableKey;
+  }
   if (wh.ok) {
     update.stripe_webhook_endpoint_id = wh.endpointId;
     // Só sobrescreve o secret se o create retornou um novo — no reuso, mantém o que já está no banco.
@@ -112,6 +141,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     last4: secretKey.slice(-4),
+    publishable_last4: publishableKey ? publishableKey.slice(-4) : null,
     webhook: wh.ok
       ? { active: true, endpointId: wh.endpointId, reused: wh.reused }
       : { active: false, reason: wh.reason },
@@ -144,6 +174,7 @@ export async function DELETE() {
       stripe_webhook_endpoint_id: null,
       stripe_webhook_secret: null,
       stripe_account_id: null,
+      stripe_publishable_key: null,
     })
     .eq("id", user.id);
 

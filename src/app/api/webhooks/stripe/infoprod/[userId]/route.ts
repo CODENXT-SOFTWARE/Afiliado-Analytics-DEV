@@ -73,8 +73,128 @@ export async function POST(req: Request, context: { params: Promise<{ userId: st
     return new NextResponse(`Signature verification failed: ${msg}`, { status: 400 });
   }
 
-  if (event.type !== "checkout.session.completed") {
+  if (event.type !== "checkout.session.completed" && event.type !== "payment_intent.succeeded") {
     return NextResponse.json({ received: true, ignored: event.type });
+  }
+
+  // PaymentIntent flow (checkout inline do comprador via Payment Element).
+  // Formato de evento diferente do Checkout Session — tem metadata + shipping próprios.
+  if (event.type === "payment_intent.succeeded") {
+    try {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      const meta = intent.metadata ?? {};
+      const metaProdutoId = typeof meta.produto_id === "string" ? meta.produto_id.trim() : "";
+      if (!metaProdutoId) {
+        return NextResponse.json({ received: true, skipped: "pi without produto_id metadata" });
+      }
+
+      const { data: produto } = await supabase
+        .from("produtos_infoprodutor")
+        .select("name, thank_you_message")
+        .eq("user_id", userId)
+        .eq("id", metaProdutoId)
+        .maybeSingle();
+      const produtoRow = (produto as { name: string; thank_you_message: string | null } | null) ?? null;
+      if (!produtoRow) {
+        return NextResponse.json({ received: true, skipped: "pi not an infoprod product" });
+      }
+
+      const produtoNome = produtoRow.name;
+      const thankYouMessage = produtoRow.thank_you_message ?? null;
+
+      // Retrieve full PI com charges pra extrair billing_details (email/nome/phone)
+      let fullIntent: Stripe.PaymentIntent = intent;
+      try {
+        fullIntent = await stripe.paymentIntents.retrieve(intent.id, {
+          expand: ["latest_charge"],
+        });
+      } catch {
+        /* best-effort */
+      }
+      const latestCharge = (fullIntent as Stripe.PaymentIntent & { latest_charge?: Stripe.Charge | string | null })
+        .latest_charge;
+      const chargeObj =
+        latestCharge && typeof latestCharge === "object" ? (latestCharge as Stripe.Charge) : null;
+
+      const billing = chargeObj?.billing_details;
+      const shipping = fullIntent.shipping ?? null;
+
+      const buyerName = shipping?.name ?? billing?.name ?? "—";
+      const buyerEmail = billing?.email ?? fullIntent.receipt_email ?? "—";
+      const buyerPhone = billing?.phone ?? shipping?.phone ?? "";
+
+      const amount = formatBRL(fullIntent.amount_received ?? fullIntent.amount ?? 0);
+      const orderShort = fullIntent.id.slice(-10).toUpperCase();
+      const shippingName = typeof meta.shipping_name === "string" ? meta.shipping_name : "";
+      const deliveryMode = typeof meta.delivery_mode === "string" ? meta.delivery_mode : "";
+
+      let deliveryLine = "";
+      let deliverySummaryForBuyer = "";
+      if (shippingName) {
+        deliveryLine = `🚚 Entrega: ${shippingName}`;
+        deliverySummaryForBuyer = shippingName;
+      }
+      if (shipping?.address && deliveryMode !== "pickup") {
+        const addr = shipping.address;
+        const line = [addr.line1, addr.line2].filter(Boolean).join(" — ");
+        const cityUf = [addr.city, addr.state].filter(Boolean).join("/");
+        const cep = addr.postal_code ? `CEP ${addr.postal_code}` : "";
+        deliveryLine += (deliveryLine ? "\n" : "") + `📍 ${[line, cityUf, cep].filter(Boolean).join(" · ")}`;
+      }
+
+      const sellerLines = [
+        "🎉 *Nova venda!*",
+        "",
+        `🛒 *Produto:* ${produtoNome}`,
+        `💰 *Valor:* ${amount}`,
+        "",
+        `👤 *Comprador:* ${buyerName}`,
+        `📧 ${buyerEmail}`,
+      ];
+      if (buyerPhone) sellerLines.push(`📱 ${buyerPhone}`);
+      if (deliveryLine) sellerLines.push("", deliveryLine);
+      sellerLines.push("", `🧾 Pedido #${orderShort}`);
+      const sellerMessage = sellerLines.join("\n");
+
+      const buyerBase =
+        thankYouMessage && thankYouMessage.trim()
+          ? thankYouMessage.trim()
+          : `Olá ${buyerName !== "—" ? buyerName : ""}! 🎉\n\nObrigado pela compra de *${produtoNome}*! Seu pagamento foi aprovado com sucesso.`;
+      const buyerFooter: string[] = [];
+      if (deliverySummaryForBuyer) buyerFooter.push(`🚚 ${deliverySummaryForBuyer}`);
+      buyerFooter.push(`🧾 Pedido #${orderShort}`);
+      const buyerMessage = `${buyerBase}\n\n—\n${buyerFooter.join("\n")}`;
+
+      const result = await notifyPurchase({
+        userId,
+        sellerMessage,
+        buyerMessage,
+        buyerPhone: buyerPhone || null,
+      });
+
+      if (!result.seller.ok) {
+        console.error("[infoprod-webhook] (pi) notificação vendedor falhou:", result.seller.reason, {
+          userId,
+          intentId: fullIntent.id,
+        });
+      }
+      if (result.buyer && !result.buyer.ok) {
+        console.error("[infoprod-webhook] (pi) notificação comprador falhou:", result.buyer.reason, {
+          userId,
+          intentId: fullIntent.id,
+        });
+      }
+
+      return NextResponse.json({
+        received: true,
+        seller: result.seller.ok,
+        buyer: result.buyer ? result.buyer.ok : "skipped",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unknown";
+      console.error("[infoprod-webhook] erro processando payment_intent:", msg);
+      return NextResponse.json({ received: true, error: msg });
+    }
   }
 
   try {

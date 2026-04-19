@@ -11,6 +11,7 @@ import Stripe from "stripe";
 
 export const STRIPE_WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
   "checkout.session.completed",
+  "payment_intent.succeeded",
 ];
 
 export function getAppPublicUrl(): string {
@@ -63,11 +64,13 @@ export async function ensureWebhookForUser(params: {
   if (existingEndpointId) {
     try {
       const endpoint = await stripe.webhookEndpoints.retrieve(existingEndpointId);
-      if (endpoint && endpoint.url === webhookUrl && endpoint.status !== "disabled") {
+      const events = (endpoint?.enabled_events ?? []) as string[];
+      const hasAllEvents = STRIPE_WEBHOOK_EVENTS.every((e) => events.includes(e));
+      if (endpoint && endpoint.url === webhookUrl && endpoint.status !== "disabled" && hasAllEvents) {
         // Sem secret de retorno — o chamador deve manter o secret antigo.
         return { ok: true, endpointId: endpoint.id, secret: "", reused: true };
       }
-      // Divergiu (URL ou status) — apaga pra recriar limpo
+      // Divergiu (URL, status ou eventos) — apaga pra recriar limpo
       try {
         await stripe.webhookEndpoints.del(existingEndpointId);
       } catch {

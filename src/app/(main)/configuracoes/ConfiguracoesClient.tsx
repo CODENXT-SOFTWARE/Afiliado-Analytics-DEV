@@ -26,6 +26,8 @@ type ConfiguracoesClientProps = {
   metaLast4: string | null;
   stripeHasKey?: boolean;
   stripeLast4?: string | null;
+  stripeHasPublishableKey?: boolean;
+  stripePublishableLast4?: string | null;
 };
 
 const CARDS: {
@@ -89,6 +91,8 @@ export default function ConfiguracoesClient({
   metaLast4,
   stripeHasKey = false,
   stripeLast4 = null,
+  stripeHasPublishableKey = false,
+  stripePublishableLast4 = null,
 }: ConfiguracoesClientProps) {
   const [openSection, setOpenSection] = useState<SectionKey>(
     MERCADOLIVRE_UX_COMING_SOON ? null : initialOpenMl ? "mercadolivre" : null,
@@ -181,7 +185,12 @@ export default function ConfiguracoesClient({
       )}
       {openSection === "stripe" && (
         <div className="animate-in fade-in duration-200 space-y-4">
-          <StripeIntegrationCard initialHasKey={stripeHasKey} initialLast4={stripeLast4} />
+          <StripeIntegrationCard
+            initialHasKey={stripeHasKey}
+            initialLast4={stripeLast4}
+            initialHasPublishableKey={stripeHasPublishableKey}
+            initialPublishableLast4={stripePublishableLast4}
+          />
           <ShippingProfileCard />
         </div>
       )}

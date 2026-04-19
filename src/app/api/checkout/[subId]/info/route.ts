@@ -30,6 +30,7 @@ type SenderRow = {
   shipping_sender_city: string | null;
   shipping_sender_uf: string | null;
   shipping_sender_cep: string | null;
+  stripe_publishable_key: string | null;
 };
 
 function num(v: unknown): number | null {
@@ -76,13 +77,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "shipping_sender_street, shipping_sender_number, shipping_sender_complement, shipping_sender_neighborhood, shipping_sender_city, shipping_sender_uf, shipping_sender_cep",
+        "shipping_sender_street, shipping_sender_number, shipping_sender_complement, shipping_sender_neighborhood, shipping_sender_city, shipping_sender_uf, shipping_sender_cep, stripe_publishable_key",
       )
       .eq("id", row.user_id)
       .maybeSingle();
 
     const sender = (profile as SenderRow | null) ?? null;
     const pickupAddress = row.allow_pickup ? formatPickupAddress(sender) : null;
+    const publishableKey = sender?.stripe_publishable_key?.trim() ?? null;
 
     const hasDimensions =
       num(row.peso_g) !== null &&
@@ -104,6 +106,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
         hasDimensions,
       },
       pickupAddress,
+      publishableKey,
     });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });

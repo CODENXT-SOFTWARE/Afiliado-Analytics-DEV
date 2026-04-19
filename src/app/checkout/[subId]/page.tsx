@@ -1,7 +1,24 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { Loader2, Truck, Store, AlertTriangle, CreditCard, Package } from "lucide-react";
+import { use, useEffect, useMemo, useState } from "react";
+import {
+  Loader2,
+  Truck,
+  Store,
+  AlertTriangle,
+  CreditCard,
+  Package,
+  Settings2,
+} from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  AddressElement,
+  LinkAuthenticationElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 
 type Produto = {
   id: string;
@@ -18,6 +35,7 @@ type Produto = {
 type InfoResponse = {
   produto: Produto;
   pickupAddress: string | null;
+  publishableKey: string | null;
 };
 
 type ShippingOption = {
@@ -32,6 +50,11 @@ type QuoteResponse = {
   options: ShippingOption[];
   fallback: boolean;
 };
+
+type Selection =
+  | { type: "shipping"; option: ShippingOption }
+  | { type: "pickup" }
+  | null;
 
 function formatBRL(v: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -55,13 +78,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
   const [options, setOptions] = useState<ShippingOption[] | null>(null);
   const [isFallback, setIsFallback] = useState(false);
 
-  const [selection, setSelection] = useState<
-    | { type: "shipping"; option: ShippingOption }
-    | { type: "pickup" }
-    | null
-  >(null);
-  const [creatingSession, setCreatingSession] = useState(false);
-  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Selection>(null);
 
   useEffect(() => {
     let alive = true;
@@ -107,37 +124,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
     }
   }
 
-  async function finalizar() {
-    if (!selection) return;
-    setCreatingSession(true);
-    setSessionError(null);
-    try {
-      const payload =
-        selection.type === "pickup"
-          ? { mode: "pickup" }
-          : {
-              mode: "shipping",
-              shippingPrice: selection.option.price,
-              shippingName: selection.option.name,
-            };
-      const res = await fetch(`/api/checkout/${encodeURIComponent(slug)}/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Erro ao criar sessão");
-      if (typeof json.url === "string") {
-        window.location.href = json.url;
-        return;
-      }
-      throw new Error("URL de checkout não disponível");
-    } catch (e) {
-      setSessionError(e instanceof Error ? e.message : "Erro");
-      setCreatingSession(false);
-    }
-  }
-
   if (loadingInfo) {
     return (
       <div className="min-h-screen bg-[#18181b] flex items-center justify-center">
@@ -157,7 +143,25 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
     );
   }
 
-  const { produto, pickupAddress } = info;
+  const { produto, pickupAddress, publishableKey } = info;
+
+  // Fallback — vendedor ainda não configurou a Publishable Key da Stripe.
+  if (!publishableKey) {
+    return (
+      <div className="min-h-screen bg-[#18181b] flex items-center justify-center px-4">
+        <div className="max-w-md w-full rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 text-center">
+          <Settings2 className="w-10 h-10 text-amber-300 mx-auto mb-3" />
+          <h1 className="text-base font-bold text-amber-100">Checkout em manutenção</h1>
+          <p className="mt-2 text-sm text-amber-200/90 leading-relaxed">
+            O vendedor ainda não finalizou a configuração do pagamento.
+            <br />
+            Tente novamente em alguns minutos ou entre em contato diretamente com a loja.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const hasShippingFlow = produto.allowShipping;
   const hasPickupFlow = produto.allowPickup && pickupAddress;
 
@@ -314,31 +318,211 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
           ) : null}
         </div>
 
-        {/* Finalizar */}
-        <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-3">
-          {sessionError ? (
-            <p className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-              {sessionError}
-            </p>
-          ) : null}
-          <button
-            type="button"
-            onClick={finalizar}
-            disabled={!selection || creatingSession}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#635bff] text-white text-[14px] font-bold hover:bg-[#5048e5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {creatingSession ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <CreditCard className="w-4 h-4" />
-            )}
-            {creatingSession ? "Redirecionando..." : "Ir para pagamento"}
-          </button>
-          <p className="text-[10px] text-[#7a7a80] text-center">
-            Você será redirecionado pra página segura da Stripe pra finalizar o pagamento.
-          </p>
-        </div>
+        {/* Pagamento */}
+        {selection ? (
+          <PaymentSection slug={slug} produto={produto} selection={selection} publishableKey={publishableKey} />
+        ) : (
+          <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 text-center">
+            <p className="text-[12px] text-[#9a9aa2]">Escolha uma opção de entrega acima pra continuar pro pagamento.</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+// ─── Pagamento (Stripe Elements) ───────────────────────────────────────────────
+
+function PaymentSection({
+  slug,
+  produto,
+  selection,
+  publishableKey,
+}: {
+  slug: string;
+  produto: Produto;
+  selection: NonNullable<Selection>;
+  publishableKey: string;
+}) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const frete = selection.type === "shipping" ? selection.option.price : 0;
+  const total = produto.price + frete;
+
+  const stripePromise = useMemo(() => loadStripe(publishableKey), [publishableKey]);
+
+  useEffect(() => {
+    let alive = true;
+    setClientSecret(null);
+    setError(null);
+    setCreating(true);
+    (async () => {
+      try {
+        const payload =
+          selection.type === "pickup"
+            ? { mode: "pickup" }
+            : {
+                mode: "shipping",
+                shippingPrice: selection.option.price,
+                shippingName: selection.option.name,
+              };
+        const res = await fetch(`/api/checkout/${encodeURIComponent(slug)}/payment-intent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!alive) return;
+        if (!res.ok) throw new Error(json?.error ?? "Erro ao iniciar pagamento");
+        setClientSecret(json.clientSecret as string);
+      } catch (e) {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : "Erro");
+      } finally {
+        if (alive) setCreating(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [slug, selection]);
+
+  if (creating) {
+    return (
+      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-8 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-[#635bff]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+        <p className="text-[12px] text-red-300">{error}</p>
+      </div>
+    );
+  }
+
+  if (!clientSecret) return null;
+
+  return (
+    <Elements
+      stripe={stripePromise}
+      options={{
+        clientSecret,
+        appearance: {
+          theme: "night",
+          variables: {
+            colorPrimary: "#635bff",
+            colorBackground: "#222228",
+            colorText: "#f0f0f2",
+            colorDanger: "#ef4444",
+            fontFamily: "Inter, system-ui, sans-serif",
+            borderRadius: "10px",
+          },
+        },
+        loader: "auto",
+      }}
+    >
+      <CheckoutForm
+        total={total}
+        productPrice={produto.price}
+        frete={frete}
+        showShippingAddress={selection.type === "shipping"}
+      />
+    </Elements>
+  );
+}
+
+function CheckoutForm({
+  total,
+  productPrice,
+  frete,
+  showShippingAddress,
+}: {
+  total: number;
+  productPrice: number;
+  frete: number;
+  showShippingAddress: boolean;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setSubmitting(true);
+    setErr(null);
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout/sucesso`,
+      },
+    });
+    if (error) {
+      setErr(error.message ?? "Erro no pagamento");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-[#d8d8d8]">Seus dados</h2>
+        <LinkAuthenticationElement options={{ defaultValues: { email: "" } }} />
+        {showShippingAddress ? (
+          <AddressElement
+            options={{
+              mode: "shipping",
+              allowedCountries: ["BR"],
+              fields: { phone: "always" },
+              validation: { phone: { required: "always" } },
+            }}
+          />
+        ) : null}
+      </div>
+
+      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-3">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-[#d8d8d8]">Pagamento</h2>
+        <PaymentElement options={{ layout: "tabs" }} />
+      </div>
+
+      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-3">
+        <div className="flex items-center justify-between text-[12px] text-[#c8c8ce]">
+          <span>Produto</span>
+          <span className="font-mono tabular-nums">{formatBRL(productPrice)}</span>
+        </div>
+        <div className="flex items-center justify-between text-[12px] text-[#c8c8ce]">
+          <span>Entrega</span>
+          <span className="font-mono tabular-nums">{frete > 0 ? formatBRL(frete) : "Grátis"}</span>
+        </div>
+        <div className="h-px bg-[#2c2c32]" />
+        <div className="flex items-center justify-between">
+          <span className="text-[14px] font-bold">Total</span>
+          <span className="text-[18px] font-mono font-bold tabular-nums text-emerald-400">{formatBRL(total)}</span>
+        </div>
+
+        {err ? (
+          <p className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{err}</p>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={!stripe || !elements || submitting}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#635bff] text-white text-[14px] font-bold hover:bg-[#5048e5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+          {submitting ? "Processando..." : `Pagar ${formatBRL(total)}`}
+        </button>
+        <p className="text-[10px] text-[#7a7a80] text-center">
+          Pagamento processado pela Stripe. Seus dados de cartão não passam pelo nosso servidor.
+        </p>
+      </div>
+    </form>
+  );
+}
+

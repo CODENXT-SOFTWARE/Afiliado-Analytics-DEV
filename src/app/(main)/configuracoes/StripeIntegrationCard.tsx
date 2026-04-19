@@ -9,15 +9,22 @@ const STRIPE_DASHBOARD_URL = "https://dashboard.stripe.com/apikeys";
 type StripeIntegrationCardProps = {
   initialHasKey?: boolean;
   initialLast4?: string | null;
+  initialHasPublishableKey?: boolean;
+  initialPublishableLast4?: string | null;
 };
 
 export default function StripeIntegrationCard({
   initialHasKey = false,
   initialLast4 = null,
+  initialHasPublishableKey = false,
+  initialPublishableLast4 = null,
 }: StripeIntegrationCardProps) {
   const [secretKey, setSecretKey] = useState("");
+  const [publishableKey, setPublishableKey] = useState("");
   const [hasKey, setHasKey] = useState(initialHasKey);
   const [last4, setLast4] = useState<string | null>(initialLast4);
+  const [hasPk, setHasPk] = useState(initialHasPublishableKey);
+  const [pkLast4, setPkLast4] = useState<string | null>(initialPublishableLast4);
   const [webhookActive, setWebhookActive] = useState<boolean | null>(null);
   const [webhookWarning, setWebhookWarning] = useState<string | null>(null);
   const [testingTipo, setTestingTipo] = useState<"vendedor" | "comprador" | null>(null);
@@ -56,13 +63,21 @@ export default function StripeIntegrationCard({
       const res = await fetch("/api/settings/stripe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stripe_secret_key: secretKey.trim() }),
+        body: JSON.stringify({
+          stripe_secret_key: secretKey.trim(),
+          stripe_publishable_key: publishableKey.trim() || undefined,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Erro ao salvar");
       setSecretKey("");
+      setPublishableKey("");
       setHasKey(true);
       setLast4(json?.last4 ?? null);
+      if (json?.publishable_last4) {
+        setHasPk(true);
+        setPkLast4(json.publishable_last4);
+      }
       if (json?.webhook?.active) {
         setWebhookActive(true);
       } else if (json?.webhook?.reason) {
@@ -87,6 +102,9 @@ export default function StripeIntegrationCard({
       setHasKey(false);
       setLast4(null);
       setSecretKey("");
+      setPublishableKey("");
+      setHasPk(false);
+      setPkLast4(null);
       setConfirmRemove(false);
       setOk(false);
     } catch (e) {
@@ -205,6 +223,39 @@ export default function StripeIntegrationCard({
               >
                 Stripe · API keys <ExternalLink className="h-3 w-3" />
               </a>
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-text-secondary">
+            <KeyRound className="h-4 w-4 text-shopee-orange" />
+            Publishable Key
+            <Toolist
+              variant="floating"
+              wide
+              text="Chave pública da Stripe (pk_live_... ou pk_test_...). Usada no checkout inline do comprador pra renderizar o formulário de cartão/PIX/boleto sem sair da sua página. Pega no mesmo painel da Secret Key."
+            />
+          </label>
+          <input
+            type="text"
+            value={publishableKey}
+            onChange={(e) => {
+              setPublishableKey(e.target.value);
+              setOk(false);
+            }}
+            placeholder={hasPk ? "Deixe em branco para manter a atual" : "pk_live_... ou pk_test_..."}
+            autoComplete="off"
+            spellCheck={false}
+            className="mt-2 w-full rounded-md border border-dark-border bg-dark-bg py-2 px-3 text-text-primary placeholder-text-secondary/60 focus:border-shopee-orange focus:outline-none focus:ring-1 focus:ring-shopee-orange sm:text-sm"
+          />
+          {hasPk && pkLast4 ? (
+            <p className="text-[11px] text-text-secondary mt-1">
+              Publishable salva (termina em <span className="text-shopee-orange/90">…{pkLast4}</span>).
+            </p>
+          ) : (
+            <p className="text-[11px] text-text-secondary mt-1">
+              Obrigatória pro checkout inline (cartão / PIX / boleto no mesmo URL, sem redirect pro Stripe).
             </p>
           )}
         </div>
