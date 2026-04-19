@@ -431,6 +431,7 @@ function PaymentSection({
         productPrice={produto.price}
         frete={frete}
         showShippingAddress={selection.type === "shipping"}
+        slug={slug}
       />
     </Elements>
   );
@@ -441,11 +442,13 @@ function CheckoutForm({
   productPrice,
   frete,
   showShippingAddress,
+  slug: slugForReturn,
 }: {
   total: number;
   productPrice: number;
   frete: number;
   showShippingAddress: boolean;
+  slug: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -460,7 +463,7 @@ function CheckoutForm({
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/sucesso`,
+        return_url: `${window.location.origin}/checkout/sucesso?slug=${encodeURIComponent(slugForReturn)}`,
       },
     });
     if (error) {
