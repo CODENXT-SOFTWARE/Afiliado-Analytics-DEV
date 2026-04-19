@@ -158,6 +158,9 @@ export async function GET(req: Request) {
         if (info.paymentLinkId) produtoByPaymentLink.set(info.paymentLinkId, pid);
       }
 
+      // Rastreia PIs já contabilizados via Checkout Sessions (pra não dobrar)
+      const countedPIs = new Set<string>();
+
       let startingAfter: string | undefined;
       for (let guard = 0; guard < 50; guard++) {
         const params: Stripe.Checkout.SessionListParams = {
@@ -177,10 +180,35 @@ export async function GET(req: Request) {
           agg.revenueCents += s.amount_total ?? 0;
           agg.orders += 1;
           salesByProduct.set(pid, agg);
+          const piId = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id;
+          if (piId) countedPIs.add(piId);
         }
         if (!page.has_more) break;
         startingAfter = page.data[page.data.length - 1]?.id;
         if (!startingAfter) break;
+      }
+
+      // Também agrega vendas via PaymentIntent (checkout inline novo)
+      let piAfter: string | undefined;
+      for (let guard = 0; guard < 50; guard++) {
+        const page = await stripe.paymentIntents.list({
+          limit: 100,
+          ...(gteUnix != null ? { created: { gte: gteUnix } } : {}),
+          ...(piAfter ? { starting_after: piAfter } : {}),
+        });
+        for (const pi of page.data) {
+          if (pi.status !== "succeeded") continue;
+          if (countedPIs.has(pi.id)) continue;
+          const pid = typeof pi.metadata?.produto_id === "string" ? pi.metadata.produto_id : "";
+          if (!pid || !produtoPorId.has(pid)) continue;
+          const agg = salesByProduct.get(pid) ?? { revenueCents: 0, orders: 0 };
+          agg.revenueCents += pi.amount_received ?? pi.amount ?? 0;
+          agg.orders += 1;
+          salesByProduct.set(pid, agg);
+        }
+        if (!page.has_more) break;
+        piAfter = page.data[page.data.length - 1]?.id;
+        if (!piAfter) break;
       }
     }
 

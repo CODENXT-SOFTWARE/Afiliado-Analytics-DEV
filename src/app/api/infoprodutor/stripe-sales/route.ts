@@ -73,18 +73,17 @@ export async function GET(req: Request) {
 
     type ProdInfo = { id: string; name: string; imageUrl: string | null };
     const byPaymentLink = new Map<string, ProdInfo>();
+    const byProductId = new Map<string, ProdInfo>();
     for (const p of produtos ?? []) {
       const row = p as { id: string; name: string; image_url: string | null; stripe_payment_link_id: string | null };
+      const info: ProdInfo = { id: row.id, name: row.name, imageUrl: row.image_url };
+      byProductId.set(row.id, info);
       if (row.stripe_payment_link_id) {
-        byPaymentLink.set(row.stripe_payment_link_id, {
-          id: row.id,
-          name: row.name,
-          imageUrl: row.image_url,
-        });
+        byPaymentLink.set(row.stripe_payment_link_id, info);
       }
     }
 
-    if (byPaymentLink.size === 0) {
+    if (byProductId.size === 0) {
       return NextResponse.json({
         period,
         summary: {
@@ -133,6 +132,49 @@ export async function GET(req: Request) {
     for (const s of sessions) {
       const piId = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id;
       if (piId) ourPaymentIntentIds.add(piId);
+    }
+
+    // ── PaymentIntents do nosso checkout inline (fluxo novo, sem Checkout Session) ──
+    // Nosso payment-intent route grava metadata.produto_id. Listamos todos os PIs do período
+    // e filtramos client-side por essa marca + match com nossos produtos.
+    type PiSale = {
+      id: string;
+      amount: number;
+      created: number;
+      email: string | null;
+      produtoId: string;
+    };
+    const piSales: PiSale[] = [];
+    let piAfter: string | undefined;
+    for (let guard = 0; guard < 50; guard++) {
+      const params: Stripe.PaymentIntentListParams = {
+        limit: 100,
+        ...(gte != null ? { created: { gte } } : {}),
+        ...(piAfter ? { starting_after: piAfter } : {}),
+      };
+      const page = await stripe.paymentIntents.list(params);
+      for (const pi of page.data) {
+        if (pi.status !== "succeeded") continue;
+        const produtoId = typeof pi.metadata?.produto_id === "string" ? pi.metadata.produto_id : "";
+        if (!produtoId || !byProductId.has(produtoId)) continue;
+        // Evita contar 2x quando o PI veio de uma Checkout Session nossa (já contabilizada acima)
+        if (ourPaymentIntentIds.has(pi.id)) continue;
+        const email =
+          typeof pi.receipt_email === "string" && pi.receipt_email
+            ? pi.receipt_email
+            : null;
+        piSales.push({
+          id: pi.id,
+          amount: pi.amount_received ?? pi.amount ?? 0,
+          created: pi.created,
+          email,
+          produtoId,
+        });
+        ourPaymentIntentIds.add(pi.id);
+      }
+      if (!page.has_more) break;
+      piAfter = page.data[page.data.length - 1]?.id;
+      if (!piAfter) break;
     }
 
     // ── Refunds no período ────────────────────────────────────────────────────
@@ -195,14 +237,44 @@ export async function GET(req: Request) {
       }
     }
 
+    // Incorpora vendas via PaymentIntent (checkout inline)
+    for (const pi of piSales) {
+      totalRevenueCents += pi.amount;
+      if (pi.email) customers.add(pi.email);
+
+      const day = isoDateUTC(pi.created);
+      const dayRow = dayMap.get(day) ?? { revenueCents: 0, sales: 0 };
+      dayRow.revenueCents += pi.amount;
+      dayRow.sales += 1;
+      dayMap.set(day, dayRow);
+
+      const info = byProductId.get(pi.produtoId);
+      if (info) {
+        const agg = productAgg.get(info.id) ?? {
+          produtoId: info.id,
+          name: info.name,
+          imageUrl: info.imageUrl,
+          sales: 0,
+          revenueCents: 0,
+        };
+        agg.sales += 1;
+        agg.revenueCents += pi.amount;
+        productAgg.set(info.id, agg);
+      }
+    }
+
     const totalRevenue = totalRevenueCents / 100;
     const totalRefundedAmt = totalRefunded / 100;
-    const totalSales = sessions.length;
+    const totalSales = sessions.length + piSales.length;
     const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
     const refundRate = totalRevenue > 0 ? totalRefundedAmt / totalRevenue : 0;
 
     // Série diária contínua (com gaps = 0)
-    const fromSec = gte ?? (sessions.length > 0 ? Math.min(...sessions.map((s) => s.created)) : now);
+    const allCreated = [
+      ...sessions.map((s) => s.created),
+      ...piSales.map((p) => p.created),
+    ];
+    const fromSec = gte ?? (allCreated.length > 0 ? Math.min(...allCreated) : now);
     const days = buildDailySeries(fromSec, now);
     const byDay = days.map((date) => {
       const row = dayMap.get(date);

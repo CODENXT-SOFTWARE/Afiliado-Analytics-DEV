@@ -54,18 +54,17 @@ export async function GET(req: Request) {
 
     type ProdInfo = { id: string; name: string; imageUrl: string | null };
     const byPaymentLink = new Map<string, ProdInfo>();
+    const byProductId = new Map<string, ProdInfo>();
     for (const p of produtosRows ?? []) {
       const row = p as { id: string; name: string; image_url: string | null; stripe_payment_link_id: string | null };
+      const info: ProdInfo = { id: row.id, name: row.name, imageUrl: row.image_url };
+      byProductId.set(row.id, info);
       if (row.stripe_payment_link_id) {
-        byPaymentLink.set(row.stripe_payment_link_id, {
-          id: row.id,
-          name: row.name,
-          imageUrl: row.image_url,
-        });
+        byPaymentLink.set(row.stripe_payment_link_id, info);
       }
     }
 
-    if (byPaymentLink.size === 0) {
+    if (byProductId.size === 0) {
       return NextResponse.json({ period, orders: [], fetchedAt: new Date().toISOString() });
     }
 
@@ -99,12 +98,46 @@ export async function GET(req: Request) {
     // Ordena por data desc
     sessions.sort((a, b) => b.created - a.created);
 
+    // PaymentIntents do checkout inline (fluxo novo, sem Checkout Session)
+    type PiOrder = Stripe.PaymentIntent & { _produtoId: string };
+    const piOrders: PiOrder[] = [];
+    let piAfter: string | undefined;
+    for (let guard = 0; guard < 50; guard++) {
+      const page = await stripe.paymentIntents.list({
+        limit: 100,
+        expand: ["data.latest_charge"],
+        ...(gte != null ? { created: { gte } } : {}),
+        ...(piAfter ? { starting_after: piAfter } : {}),
+      });
+      for (const pi of page.data) {
+        if (pi.status !== "succeeded") continue;
+        const produtoId = typeof pi.metadata?.produto_id === "string" ? pi.metadata.produto_id : "";
+        if (!produtoId || !byProductId.has(produtoId)) continue;
+        if (produtoIdFilter && produtoId !== produtoIdFilter) continue;
+        // Skip se o PI já veio de uma Checkout Session nossa (evita duplicar)
+        const alreadyFromSession = sessions.some((s) => {
+          const spiId = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id;
+          return spiId === pi.id;
+        });
+        if (alreadyFromSession) continue;
+        piOrders.push(Object.assign(pi, { _produtoId: produtoId }));
+      }
+      if (!page.has_more) break;
+      piAfter = page.data[page.data.length - 1]?.id;
+      if (!piAfter) break;
+    }
+
+    piOrders.sort((a, b) => b.created - a.created);
+
     // Mapa PI → refunded_cents (busca refunds no mesmo período)
     const piToRefund = new Map<string, number>();
     const ourPIs = new Set<string>();
     for (const s of sessions) {
       const piId = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id;
       if (piId) ourPIs.add(piId);
+    }
+    for (const pi of piOrders) {
+      ourPIs.add(pi.id);
     }
     if (ourPIs.size > 0) {
       let refundAfter: string | undefined;
@@ -205,9 +238,72 @@ export async function GET(req: Request) {
       };
     });
 
+    // Mapeia PaymentIntents do checkout inline pro mesmo formato
+    const piOrdersMapped = piOrders.map((pi) => {
+      const produtoId = pi._produtoId;
+      const prod = byProductId.get(produtoId) ?? null;
+      const refundedCents = piToRefund.get(pi.id) ?? 0;
+      const charge =
+        pi.latest_charge && typeof pi.latest_charge === "object" ? (pi.latest_charge as Stripe.Charge) : null;
+      const billing = charge?.billing_details ?? null;
+      const shipping = pi.shipping ?? null;
+
+      const deliveryMode = typeof pi.metadata?.delivery_mode === "string" ? pi.metadata.delivery_mode : "";
+      const deliveryType: "shipping" | "pickup" | "unknown" =
+        deliveryMode === "pickup"
+          ? "pickup"
+          : deliveryMode === "shipping"
+            ? "shipping"
+            : shipping?.address
+              ? "shipping"
+              : "unknown";
+
+      return {
+        sessionId: pi.id, // reusamos o campo pra não quebrar a UI
+        paymentIntentId: pi.id,
+        createdAt: new Date(pi.created * 1000).toISOString(),
+        amount: (pi.amount_received ?? pi.amount ?? 0) / 100,
+        currency: (pi.currency ?? "brl").toUpperCase(),
+        refunded: refundedCents / 100,
+        status:
+          refundedCents > 0
+            ? refundedCents >= (pi.amount_received ?? pi.amount ?? 0)
+              ? "refunded"
+              : "partially_refunded"
+            : "paid",
+        produto: prod,
+        deliveryType,
+        customer: {
+          name: billing?.name ?? null,
+          email: billing?.email ?? pi.receipt_email ?? null,
+          phone: billing?.phone ?? null,
+        },
+        shipping: shipping
+          ? {
+              name: shipping.name ?? null,
+              phone: shipping.phone ?? null,
+              address: shipping.address
+                ? {
+                    line1: shipping.address.line1 ?? null,
+                    line2: shipping.address.line2 ?? null,
+                    city: shipping.address.city ?? null,
+                    state: shipping.address.state ?? null,
+                    postalCode: shipping.address.postal_code ?? null,
+                    country: shipping.address.country ?? null,
+                  }
+                : null,
+            }
+          : null,
+      };
+    });
+
+    const allOrders = [...orders, ...piOrdersMapped].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
     return NextResponse.json({
       period,
-      orders,
+      orders: allOrders,
       fetchedAt: new Date().toISOString(),
     });
   } catch (e) {

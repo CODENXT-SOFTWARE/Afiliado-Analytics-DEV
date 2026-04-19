@@ -64,8 +64,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
     const comprimentoCm = num(row.comprimento_cm);
     const shippingCostFallback = num(row.shipping_cost) ?? 0;
 
-    // Se não tem dimensões cadastradas, pula SuperFrete e retorna só o fixo
-    if (!pesoG || !alturaCm || !larguraCm || !comprimentoCm) {
+    const fallbackResponse = (reason: string) => {
+      console.warn("[checkout/quote] fallback", { slug, reason, cepOrigem, cepDestino });
       return NextResponse.json({
         options: [
           {
@@ -77,7 +77,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
           },
         ],
         fallback: true,
+        fallbackReason: reason,
       });
+    };
+
+    // Se não tem dimensões cadastradas, pula SuperFrete e retorna só o fixo
+    if (!pesoG || !alturaCm || !larguraCm || !comprimentoCm) {
+      return fallbackResponse("product_missing_dimensions");
     }
 
     try {
@@ -88,6 +94,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
         alturaCm,
         larguraCm,
         comprimentoCm,
+      });
+      console.log("[checkout/quote] superfrete raw", {
+        slug,
+        cepOrigem,
+        cepDestino,
+        count: raw.length,
+        sample: raw.slice(0, 3).map((o) => ({ id: o.id, name: o.name, price: o.price, error: o.error })),
       });
       const options = raw
         .filter((o) => !o.error && o.price > 0)
@@ -100,36 +113,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
         }));
 
       if (options.length === 0) {
-        // SuperFrete devolveu sem opções utilizáveis — fallback
-        return NextResponse.json({
-          options: [
-            {
-              id: 0,
-              name: "Frete",
-              price: shippingCostFallback,
-              deliveryTime: null,
-              source: "fallback" as const,
-            },
-          ],
-          fallback: true,
-        });
+        const errorReasons = raw.map((o) => o.error).filter(Boolean);
+        return fallbackResponse(
+          errorReasons.length > 0
+            ? `superfrete_all_failed:${errorReasons[0]}`
+            : "superfrete_no_valid_options",
+        );
       }
 
       return NextResponse.json({ options, fallback: false });
-    } catch {
-      // API SuperFrete fora do ar — fallback
-      return NextResponse.json({
-        options: [
-          {
-            id: 0,
-            name: "Frete",
-            price: shippingCostFallback,
-            deliveryTime: null,
-            source: "fallback" as const,
-          },
-        ],
-        fallback: true,
-      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unknown";
+      console.error("[checkout/quote] superfrete threw", { slug, cepOrigem, cepDestino, msg });
+      return fallbackResponse(`superfrete_error:${msg}`);
     }
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
