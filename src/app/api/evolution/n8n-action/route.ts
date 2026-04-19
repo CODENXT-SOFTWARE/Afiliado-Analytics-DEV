@@ -8,6 +8,7 @@ const TIPOS_ACAO = [
   "reconectar",
   "testar_conexao",
   "buscar_grupo",
+  "enviar_texto",
 ] as const;
 
 export async function POST(req: Request) {

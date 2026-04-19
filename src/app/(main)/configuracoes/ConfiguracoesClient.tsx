@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IdCard, Megaphone, MessageCircle, ChevronRight, ShoppingBag, CreditCard, Truck } from "lucide-react";
+import { IdCard, Megaphone, MessageCircle, ChevronRight, ShoppingBag, CreditCard } from "lucide-react";
 import ShopeeIntegrationCard from "./ShopeeIntegrationCard";
 import MetaIntegrationCard from "./MetaIntegrationCard";
 import EvolutionIntegrationCard from "./EvolutionIntegrationCard";
@@ -10,7 +10,7 @@ import StripeIntegrationCard from "./StripeIntegrationCard";
 import ShippingProfileCard from "./ShippingProfileCard";
 import { MERCADOLIVRE_UX_COMING_SOON } from "@/lib/mercadolivre-ux-coming-soon";
 
-export type SectionKey = "shopee" | "mercadolivre" | "meta" | "evolution" | "stripe" | "shipping" | null;
+export type SectionKey = "shopee" | "mercadolivre" | "meta" | "evolution" | "stripe" | null;
 
 type ConfiguracoesClientProps = {
   initialAppId: string;
@@ -63,14 +63,8 @@ const CARDS: {
   {
     key: "stripe",
     title: "Integração Stripe",
-    description: "Chave secreta para criar produtos e checkout automático",
+    description: "Chave, endereço de remetente e etiquetas",
     icon: CreditCard,
-  },
-  {
-    key: "shipping",
-    title: "Endereço do remetente",
-    description: "Dados para emitir etiquetas de envio dos pedidos",
-    icon: Truck,
   },
 ];
 
@@ -186,12 +180,8 @@ export default function ConfiguracoesClient({
         </div>
       )}
       {openSection === "stripe" && (
-        <div className="animate-in fade-in duration-200">
+        <div className="animate-in fade-in duration-200 space-y-4">
           <StripeIntegrationCard initialHasKey={stripeHasKey} initialLast4={stripeLast4} />
-        </div>
-      )}
-      {openSection === "shipping" && (
-        <div className="animate-in fade-in duration-200">
           <ShippingProfileCard />
         </div>
       )}

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapPin, Loader2, Trash2 } from "lucide-react";
+import { MapPin, Loader2, Trash2, MessageCircle } from "lucide-react";
+import Toolist from "@/app/components/ui/Toolist";
 
 type ShippingProfile = {
   shipping_sender_name: string;
   shipping_sender_document: string;
   shipping_sender_phone: string;
+  shipping_sender_whatsapp: string;
   shipping_sender_cep: string;
   shipping_sender_street: string;
   shipping_sender_number: string;
@@ -20,6 +22,7 @@ const EMPTY: ShippingProfile = {
   shipping_sender_name: "",
   shipping_sender_document: "",
   shipping_sender_phone: "",
+  shipping_sender_whatsapp: "",
   shipping_sender_cep: "",
   shipping_sender_street: "",
   shipping_sender_number: "",
@@ -143,7 +146,7 @@ export default function ShippingProfileCard() {
           Endereço do remetente
         </h2>
         <p className="text-xs text-text-secondary mt-1">
-          Usado na etiqueta de envio dos pedidos. Você como remetente. Preencha o básico pra conseguir imprimir.
+          Usado na etiqueta de envio dos pedidos.
         </p>
       </div>
 
@@ -230,6 +233,24 @@ export default function ShippingProfileCard() {
               className={`mt-1 ${inputCls}`}
             />
           </div>
+        </div>
+
+        <div>
+          <label className={`${labelCls} flex items-center gap-1.5`}>
+            <MessageCircle className="inline h-3.5 w-3.5 text-emerald-400" />
+            <span>WhatsApp da loja</span>
+            <Toolist
+              variant="floating"
+              wide
+              text="Aparece no checkout Stripe como link clicável e na tela de confirmação após o pagamento. Ao salvar, todos os seus Payment Links são atualizados automaticamente na Stripe."
+            />
+          </label>
+          <input
+            value={form.shipping_sender_whatsapp}
+            onChange={(e) => set("shipping_sender_whatsapp", e.target.value)}
+            placeholder="(11) 99999-0000"
+            className={`mt-1 ${inputCls}`}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px] gap-3">

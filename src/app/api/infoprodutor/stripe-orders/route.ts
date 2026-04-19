@@ -10,6 +10,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase-server";
+import { SHIPPING_RATE_DISPLAY_NAMES } from "@/lib/infoprod/stripe-checkout-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,7 @@ export async function GET(req: Request) {
     for (let guard = 0; guard < 50; guard++) {
       const params: Stripe.Checkout.SessionListParams = {
         limit: 100,
+        expand: ["data.shipping_cost.shipping_rate"],
         ...(gte != null ? { created: { gte } } : {}),
         ...(startingAfter ? { starting_after: startingAfter } : {}),
       };
@@ -150,6 +152,24 @@ export async function GET(req: Request) {
 
       const shippingRaw = s.collected_information?.shipping_details ?? s.shipping_details ?? null;
 
+      // Detecta modo de entrega escolhido pelo comprador via display_name do ShippingRate.
+      const shippingRate =
+        s.shipping_cost && typeof s.shipping_cost === "object" && s.shipping_cost.shipping_rate
+          ? s.shipping_cost.shipping_rate
+          : null;
+      const shippingRateName =
+        typeof shippingRate === "object" && shippingRate !== null && "display_name" in shippingRate
+          ? (shippingRate as Stripe.ShippingRate).display_name
+          : null;
+      const deliveryType: "shipping" | "pickup" | "unknown" =
+        shippingRateName === SHIPPING_RATE_DISPLAY_NAMES.pickup
+          ? "pickup"
+          : shippingRateName === SHIPPING_RATE_DISPLAY_NAMES.shipping
+            ? "shipping"
+            : shippingRaw?.address
+              ? "shipping"
+              : "unknown";
+
       return {
         sessionId: s.id,
         paymentIntentId: piId,
@@ -159,6 +179,7 @@ export async function GET(req: Request) {
         refunded: refundedCents / 100,
         status: refundedCents > 0 ? (refundedCents >= (s.amount_total ?? 0) ? "refunded" : "partially_refunded") : "paid",
         produto: prod,
+        deliveryType,
         customer: {
           name: s.customer_details?.name ?? null,
           email: s.customer_details?.email ?? null,

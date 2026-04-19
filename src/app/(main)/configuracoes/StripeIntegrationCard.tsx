@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { KeyRound, Trash2, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { KeyRound, Trash2, ExternalLink, CheckCircle2, AlertTriangle, MessageCircle, Loader2 } from "lucide-react";
+import Toolist from "@/app/components/ui/Toolist";
 
 const STRIPE_DASHBOARD_URL = "https://dashboard.stripe.com/apikeys";
 
@@ -17,6 +18,10 @@ export default function StripeIntegrationCard({
   const [secretKey, setSecretKey] = useState("");
   const [hasKey, setHasKey] = useState(initialHasKey);
   const [last4, setLast4] = useState<string | null>(initialLast4);
+  const [webhookActive, setWebhookActive] = useState<boolean | null>(null);
+  const [webhookWarning, setWebhookWarning] = useState<string | null>(null);
+  const [testingTipo, setTestingTipo] = useState<"vendedor" | "comprador" | null>(null);
+  const [testFeedback, setTestFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -24,10 +29,29 @@ export default function StripeIntegrationCard({
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
+  // Busca o status do webhook ao montar (e quando a chave muda)
+  useEffect(() => {
+    if (!hasKey) {
+      setWebhookActive(null);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch("/api/settings/stripe");
+        if (!res.ok) return;
+        const j = await res.json();
+        setWebhookActive(!!j?.webhook_active);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [hasKey, ok]);
+
   const onSave = async () => {
     setSaving(true);
     setError(null);
     setOk(false);
+    setWebhookWarning(null);
     try {
       const res = await fetch("/api/settings/stripe", {
         method: "POST",
@@ -39,6 +63,12 @@ export default function StripeIntegrationCard({
       setSecretKey("");
       setHasKey(true);
       setLast4(json?.last4 ?? null);
+      if (json?.webhook?.active) {
+        setWebhookActive(true);
+      } else if (json?.webhook?.reason) {
+        setWebhookActive(false);
+        setWebhookWarning(json.webhook.reason);
+      }
       setOk(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro");
@@ -63,6 +93,37 @@ export default function StripeIntegrationCard({
       setError(e instanceof Error ? e.message : "Erro");
     } finally {
       setRemoving(false);
+    }
+  };
+
+  const onTestNotification = async (tipoAcao: "vendedor" | "comprador") => {
+    setTestingTipo(tipoAcao);
+    setTestFeedback(null);
+    try {
+      const res = await fetch("/api/infoprodutor/test-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipoAcao }),
+      });
+      const rawText = await res.text();
+      let parsed: { ok?: boolean; error?: string } = {};
+      try {
+        parsed = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        // Servidor devolveu HTML ou texto puro — provavelmente 500 não-capturado do Next.
+        if (!res.ok) {
+          throw new Error(`Servidor respondeu ${res.status}. Resposta: ${rawText.slice(0, 200)}`);
+        }
+      }
+      if (!res.ok) throw new Error(parsed?.error ?? `Falha no teste (${res.status})`);
+      setTestFeedback({
+        ok: true,
+        msg: `Payload enviado ao n8n com tipoAcao "${tipoAcao}". Confira no seu WhatsApp e no log do n8n.`,
+      });
+    } catch (e) {
+      setTestFeedback({ ok: false, msg: e instanceof Error ? e.message : "Erro" });
+    } finally {
+      setTestingTipo(null);
     }
   };
 
@@ -160,6 +221,92 @@ export default function StripeIntegrationCard({
           {ok && <span className="text-sm text-green-400">Chave validada e salva.</span>}
           {error && <span className="text-sm text-red-400">{error}</span>}
         </div>
+
+        {/* Status do webhook de notificação */}
+        {hasKey ? (
+          <div
+            className={`rounded-md border px-3 py-2.5 text-xs ${
+              webhookActive
+                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-300"
+                : "border-amber-500/30 bg-amber-500/5 text-amber-300"
+            }`}
+          >
+            <p className="font-semibold flex items-center gap-1.5">
+              {webhookActive ? (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              ) : (
+                <AlertTriangle className="h-3.5 w-3.5" />
+              )}
+              <span>Notificação WhatsApp de venda:</span>
+              <span className={webhookActive ? "text-emerald-400" : "text-amber-400"}>
+                {webhookActive ? "ativa" : webhookActive === false ? "inativa" : "—"}
+              </span>
+              {webhookActive ? (
+                <Toolist
+                  variant="floating"
+                  wide
+                  text="Quando sair uma venda, você recebe uma mensagem no WhatsApp da loja com dados do pedido. Certifique-se de que o WhatsApp da loja (em Endereço do remetente, logo abaixo) está conectado em Integração WhatsApp com o mesmo número."
+                />
+              ) : null}
+            </p>
+            {!webhookActive ? (
+              <p className="mt-1 text-text-secondary leading-relaxed">
+                {webhookWarning
+                  ? `Não foi possível registrar o webhook na Stripe: ${webhookWarning}`
+                  : "Webhook ainda não registrado. Clique em Atualizar chave pra tentar criar automaticamente."}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Teste de payload pro n8n (simula o que a Stripe enviaria numa compra real) */}
+        {hasKey ? (
+          <div className="rounded-md border border-dark-border bg-dark-bg/40 px-3 py-3 space-y-2">
+            <p className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <MessageCircle className="h-3.5 w-3.5 text-emerald-400" />
+              Testar envio ao n8n
+              <Toolist
+                variant="floating"
+                wide
+                text='Simula o payload que a Stripe envia numa compra concluída. Escolha o tipo de notificação ("vendedor" ou "comprador") — o backend monta uma mensagem fake e dispara no STRIPE_WEBHOOK_NOTIFICACOES do .env. O destino é sempre o seu próprio WhatsApp da loja, pra você receber e conferir.'
+              />
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => void onTestNotification("vendedor")}
+                disabled={testingTipo !== null}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-60"
+              >
+                {testingTipo === "vendedor" ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-3 w-3" />
+                )}
+                Testar VENDEDOR
+              </button>
+              <button
+                type="button"
+                onClick={() => void onTestNotification("comprador")}
+                disabled={testingTipo !== null}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-sky-500/40 bg-sky-500/10 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 disabled:opacity-60"
+              >
+                {testingTipo === "comprador" ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-3 w-3" />
+                )}
+                Testar COMPRADOR
+              </button>
+            </div>
+            {testFeedback ? (
+              <p className={`text-[11px] leading-relaxed ${testFeedback.ok ? "text-emerald-400" : "text-red-400"}`}>
+                {testFeedback.ok ? "✓ " : "✕ "}
+                {testFeedback.msg}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </section>
   );

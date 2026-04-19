@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase-server";
+import { SHIPPING_RATE_DISPLAY_NAMES } from "@/lib/infoprod/stripe-checkout-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -117,9 +118,12 @@ export async function POST(req: Request) {
     }> = [];
     const errors: { sessionId: string; reason: string }[] = [];
 
-    // Consulta cada sessão em paralelo (limitado ao cap acima)
+    // Consulta cada sessão em paralelo (limitado ao cap acima). Expandimos
+    // shipping_cost.shipping_rate para detectar pickups e pulá-los.
     const results = await Promise.allSettled(
-      sessionIds.map((id) => stripe.checkout.sessions.retrieve(id)),
+      sessionIds.map((id) =>
+        stripe.checkout.sessions.retrieve(id, { expand: ["shipping_cost.shipping_rate"] }),
+      ),
     );
 
     for (let i = 0; i < sessionIds.length; i++) {
@@ -135,6 +139,21 @@ export async function POST(req: Request) {
         errors.push({ sessionId, reason: "Pedido não pertence a um produto seu" });
         continue;
       }
+
+      // Pickup não precisa de etiqueta — pula com mensagem clara.
+      const shippingRate =
+        s.shipping_cost && typeof s.shipping_cost === "object" && s.shipping_cost.shipping_rate
+          ? s.shipping_cost.shipping_rate
+          : null;
+      const shippingRateName =
+        typeof shippingRate === "object" && shippingRate !== null && "display_name" in shippingRate
+          ? (shippingRate as Stripe.ShippingRate).display_name
+          : null;
+      if (shippingRateName === SHIPPING_RATE_DISPLAY_NAMES.pickup) {
+        errors.push({ sessionId, reason: "Retirada na loja — não precisa etiqueta" });
+        continue;
+      }
+
       const anySession = s as Stripe.Checkout.Session & {
         shipping_details?: ShippingCollected | null;
         collected_information?: { shipping_details?: ShippingCollected | null } | null;

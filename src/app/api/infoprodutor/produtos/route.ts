@@ -12,6 +12,16 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase-server";
+import {
+  toWhatsAppUrl,
+  buildPaymentLinkCustomText,
+  buildAfterCompletion,
+  buildStripeProductDescription,
+  formatSenderAddressShort,
+  SHIPPING_RATE_DISPLAY_NAMES,
+  type SenderSnapshot,
+  type DeliveryMode,
+} from "@/lib/infoprod/stripe-checkout-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +39,11 @@ type Row = {
   stripe_price_id: string | null;
   stripe_payment_link_id: string | null;
   stripe_subid: string | null;
+  allow_shipping: boolean | null;
+  allow_pickup: boolean | null;
+  shipping_cost: number | string | null;
+  stripe_account_id: string | null;
+  thank_you_message: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -52,13 +67,18 @@ function mapProduto(r: Record<string, unknown>) {
     stripePriceId: (r.stripe_price_id as string | null) ?? null,
     stripePaymentLinkId: (r.stripe_payment_link_id as string | null) ?? null,
     stripeSubid: (r.stripe_subid as string | null) ?? null,
+    allowShipping: r.allow_shipping === null || r.allow_shipping === undefined ? true : Boolean(r.allow_shipping),
+    allowPickup: Boolean(r.allow_pickup ?? false),
+    shippingCost: numOrNull(r.shipping_cost),
+    stripeAccountId: (r.stripe_account_id as string | null) ?? null,
+    thankYouMessage: (r.thank_you_message as string | null) ?? "",
     createdAt: String(r.created_at ?? ""),
     updatedAt: String(r.updated_at ?? ""),
   };
 }
 
 const SELECT =
-  "id, user_id, name, description, image_url, link, price, price_old, provider, stripe_product_id, stripe_price_id, stripe_payment_link_id, stripe_subid, created_at, updated_at";
+  "id, user_id, name, description, image_url, link, price, price_old, provider, stripe_product_id, stripe_price_id, stripe_payment_link_id, stripe_subid, allow_shipping, allow_pickup, shipping_cost, stripe_account_id, thank_you_message, created_at, updated_at";
 
 const SUBID_REGEX = /^[a-zA-Z0-9_\-.]+$/;
 
@@ -93,7 +113,26 @@ export async function GET() {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    return NextResponse.json({ data: (data ?? []).map((r) => mapProduto(r as Record<string, unknown>)) });
+    // Lê a conta Stripe atual pra marcar produtos órfãos (criados em conta anterior).
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stripe_account_id")
+      .eq("id", user.id)
+      .single();
+    const currentAccountId =
+      (profile as { stripe_account_id?: string | null } | null)?.stripe_account_id ?? null;
+
+    const produtos = (data ?? []).map((r) => {
+      const mapped = mapProduto(r as Record<string, unknown>);
+      const isOrphan =
+        mapped.provider === "stripe" &&
+        !!mapped.stripeAccountId &&
+        !!currentAccountId &&
+        mapped.stripeAccountId !== currentAccountId;
+      return { ...mapped, isOrphan };
+    });
+
+    return NextResponse.json({ data: produtos, currentAccountId });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
   }
@@ -154,6 +193,70 @@ export async function POST(req: Request) {
         );
       }
 
+      // Lê WhatsApp + endereço do remetente + account_id (p/ custom_text de checkout, pickup e marca conta).
+      const { data: senderProfile } = await supabase
+        .from("profiles")
+        .select(
+          "shipping_sender_whatsapp, shipping_sender_street, shipping_sender_number, shipping_sender_complement, shipping_sender_neighborhood, shipping_sender_city, shipping_sender_uf, stripe_account_id",
+        )
+        .eq("id", user.id)
+        .single();
+      const senderRow = senderProfile as {
+        shipping_sender_whatsapp?: string | null;
+        shipping_sender_street?: string | null;
+        shipping_sender_number?: string | null;
+        shipping_sender_complement?: string | null;
+        shipping_sender_neighborhood?: string | null;
+        shipping_sender_city?: string | null;
+        shipping_sender_uf?: string | null;
+        stripe_account_id?: string | null;
+      } | null;
+      const userStripeAccountId = senderRow?.stripe_account_id ?? null;
+      const waUrl = toWhatsAppUrl(senderRow?.shipping_sender_whatsapp ?? null);
+      const senderSnapshot: SenderSnapshot = {
+        street: senderRow?.shipping_sender_street ?? null,
+        number: senderRow?.shipping_sender_number ?? null,
+        complement: senderRow?.shipping_sender_complement ?? null,
+        neighborhood: senderRow?.shipping_sender_neighborhood ?? null,
+        city: senderRow?.shipping_sender_city ?? null,
+        uf: senderRow?.shipping_sender_uf ?? null,
+      };
+      const senderAddress = formatSenderAddressShort(senderSnapshot);
+
+      // Modo de entrega (aceita envio, aceita retirada, valor do frete)
+      const allowShipping = body?.allowShipping !== false; // default true
+      const allowPickup = body?.allowPickup === true; // default false
+      if (!allowShipping && !allowPickup) {
+        return NextResponse.json(
+          { error: "Marque ao menos uma opção de entrega: envio ou retirada." },
+          { status: 400 },
+        );
+      }
+      const shippingCostRaw = body?.shippingCost;
+      const shippingCost =
+        shippingCostRaw == null || shippingCostRaw === ""
+          ? null
+          : Number.isFinite(Number(shippingCostRaw))
+            ? Math.max(0, Number(shippingCostRaw))
+            : null;
+      if (allowShipping && (shippingCost == null || shippingCost < 0)) {
+        return NextResponse.json(
+          { error: "Informe o valor do frete (use 0 para frete grátis)." },
+          { status: 400 },
+        );
+      }
+      if (allowPickup && !senderAddress) {
+        return NextResponse.json(
+          {
+            error:
+              "Preencha o endereço do remetente em Configurações antes de habilitar 'Retirada na loja' (é mostrado ao comprador no checkout).",
+          },
+          { status: 400 },
+        );
+      }
+
+      const mode: DeliveryMode = { allowShipping, allowPickup };
+
       const stripe = new Stripe(stripeKey);
 
       let createdProductId: string | null = null;
@@ -162,9 +265,10 @@ export async function POST(req: Request) {
       let paymentLinkUrl = "";
 
       try {
+        const stripeDescription = buildStripeProductDescription(description, waUrl);
         const stripeProduct = await stripe.products.create({
           name,
-          description: description || undefined,
+          description: stripeDescription ?? undefined,
           images: imageUrl ? [imageUrl] : undefined,
         });
         createdProductId = stripeProduct.id;
@@ -176,10 +280,40 @@ export async function POST(req: Request) {
         });
         createdPriceId = stripePrice.id;
 
+        // ShippingRates dinâmicas conforme modos de entrega habilitados
+        const shippingRateIds: string[] = [];
+        if (allowShipping) {
+          const rate = await stripe.shippingRates.create({
+            display_name: SHIPPING_RATE_DISPLAY_NAMES.shipping,
+            type: "fixed_amount",
+            fixed_amount: { amount: Math.round((shippingCost ?? 0) * 100), currency: "brl" },
+          });
+          shippingRateIds.push(rate.id);
+        }
+        if (allowPickup) {
+          const rate = await stripe.shippingRates.create({
+            display_name: SHIPPING_RATE_DISPLAY_NAMES.pickup,
+            type: "fixed_amount",
+            fixed_amount: { amount: 0, currency: "brl" },
+          });
+          shippingRateIds.push(rate.id);
+        }
+
+        const customText = buildPaymentLinkCustomText(waUrl, mode, senderAddress);
+        const afterCompletion = buildAfterCompletion(waUrl, mode, senderAddress);
         const stripePaymentLink = await stripe.paymentLinks.create({
           line_items: [{ price: stripePrice.id, quantity: 1 }],
-          shipping_address_collection: { allowed_countries: ["BR"] },
+          // shipping_address_collection só é obrigatório quando aceita envio
+          // (pickup puro evita fricção de preencher endereço)
+          ...(allowShipping
+            ? { shipping_address_collection: { allowed_countries: ["BR"] } }
+            : {}),
           phone_number_collection: { enabled: true },
+          ...(shippingRateIds.length > 0
+            ? { shipping_options: shippingRateIds.map((id) => ({ shipping_rate: id })) }
+            : {}),
+          ...(customText ? { custom_text: customText } : {}),
+          ...(afterCompletion ? { after_completion: afterCompletion } : {}),
         });
         createdPaymentLinkId = stripePaymentLink.id;
         paymentLinkUrl = stripePaymentLink.url;
@@ -203,6 +337,14 @@ export async function POST(req: Request) {
           stripe_price_id: createdPriceId,
           stripe_payment_link_id: createdPaymentLinkId,
           stripe_subid: stripeSubid,
+          allow_shipping: allowShipping,
+          allow_pickup: allowPickup,
+          shipping_cost: allowShipping ? (shippingCost ?? 0) : null,
+          stripe_account_id: userStripeAccountId,
+          thank_you_message:
+            typeof body?.thankYouMessage === "string" && body.thankYouMessage.trim()
+              ? body.thankYouMessage.trim()
+              : null,
         })
         .select(SELECT)
         .single();
@@ -329,6 +471,15 @@ export async function PATCH(req: Request) {
         }
       }
 
+      if (
+        Object.prototype.hasOwnProperty.call(body ?? {}, "thankYouMessage") ||
+        Object.prototype.hasOwnProperty.call(body ?? {}, "thank_you_message")
+      ) {
+        const raw = body?.thankYouMessage ?? body?.thank_you_message;
+        const trimmed = typeof raw === "string" ? raw.trim() : "";
+        patch.thank_you_message = trimmed || null;
+      }
+
       // Sincroniza name/description/image no Stripe (best-effort — mudanças cosméticas).
       if ((newName !== null || newDescription !== undefined || newImageUrl !== undefined) && currentRow.stripe_product_id) {
         const stripeKey = await getStripeKeyForUser(supabase, user.id);
@@ -337,7 +488,18 @@ export async function PATCH(req: Request) {
             const stripe = new Stripe(stripeKey);
             const updatePayload: Stripe.ProductUpdateParams = {};
             if (newName !== null) updatePayload.name = newName;
-            if (newDescription !== undefined) updatePayload.description = newDescription ?? undefined;
+            if (newDescription !== undefined) {
+              // Regenera a descrição da Stripe preservando a linha CTA do WhatsApp (se houver).
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("shipping_sender_whatsapp")
+                .eq("id", user.id)
+                .single();
+              const waUrl = toWhatsAppUrl(
+                (profile as { shipping_sender_whatsapp?: string | null } | null)?.shipping_sender_whatsapp ?? null,
+              );
+              updatePayload.description = buildStripeProductDescription(newDescription ?? null, waUrl) ?? undefined;
+            }
             if (newImageUrl !== undefined) updatePayload.images = newImageUrl ? [newImageUrl] : [];
             await stripe.products.update(currentRow.stripe_product_id, updatePayload);
           } catch {
@@ -371,6 +533,28 @@ export async function PATCH(req: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
+
+    // Propaga o update para os snapshots em `minha_lista_ofertas_info` — assim os
+    // itens copiados nas listas refletem as últimas mudanças do produto.
+    const listaPatch: Record<string, unknown> = {};
+    if (Object.prototype.hasOwnProperty.call(patch, "name")) listaPatch.product_name = patch.name;
+    if (Object.prototype.hasOwnProperty.call(patch, "description")) listaPatch.description = patch.description;
+    if (Object.prototype.hasOwnProperty.call(patch, "image_url")) listaPatch.image_url = patch.image_url;
+    if (Object.prototype.hasOwnProperty.call(patch, "link")) listaPatch.link = patch.link;
+    if (Object.prototype.hasOwnProperty.call(patch, "price")) listaPatch.price = patch.price;
+    if (Object.prototype.hasOwnProperty.call(patch, "price_old")) listaPatch.price_old = patch.price_old;
+
+    if (Object.keys(listaPatch).length > 0) {
+      const { error: syncError } = await supabase
+        .from("minha_lista_ofertas_info")
+        .update(listaPatch)
+        .eq("user_id", user.id)
+        .eq("produto_id", id);
+      if (syncError) {
+        // Não trava a resposta — o produto já foi atualizado. Só loga.
+        console.error("[produtos PATCH] falha sync listas:", syncError.message);
+      }
+    }
 
     return NextResponse.json({ data: mapProduto(data as unknown as Row) });
   } catch (e) {

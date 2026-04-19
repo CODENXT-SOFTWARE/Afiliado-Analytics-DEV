@@ -26,6 +26,7 @@ import {
   CreditCard,
   AlertTriangle,
   RefreshCw,
+  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import ConfirmModal from "@/app/components/ui/ConfirmModal";
@@ -49,6 +50,11 @@ type Produto = {
   priceOld: number | null;
   provider: ProductProvider;
   stripeSubid: string | null;
+  allowShipping: boolean;
+  allowPickup: boolean;
+  shippingCost: number | null;
+  thankYouMessage: string;
+  isOrphan?: boolean;
   createdAt: string;
 };
 
@@ -135,6 +141,7 @@ export default function InfoprodutorPage() {
 
   // Sinal global de refresh pras seções Vendas/Trackeamento (cache invalidado ao clicar).
   const [refreshSignal, setRefreshSignal] = useState(0);
+  const [refreshingTab, setRefreshingTab] = useState(false);
 
   // ─── Estado: catálogo de produtos ──────────────────────────────────────────
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -155,6 +162,10 @@ export default function InfoprodutorPage() {
   const [formPrice, setFormPrice] = useState("");
   const [formPriceOld, setFormPriceOld] = useState("");
   const [formStripeSubid, setFormStripeSubid] = useState("");
+  const [formAllowShipping, setFormAllowShipping] = useState(true);
+  const [formAllowPickup, setFormAllowPickup] = useState(false);
+  const [formShippingCost, setFormShippingCost] = useState("");
+  const [formThankYouMessage, setFormThankYouMessage] = useState("");
   const [formImagePreview, setFormImagePreview] = useState<string>("");
   const [formImageUrl, setFormImageUrl] = useState<string>("");
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
@@ -191,7 +202,7 @@ export default function InfoprodutorPage() {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
   const [confirmState, setConfirmState] = useState<{
-    type: "deleteProduto" | "deleteItem" | "emptyList" | "deleteList";
+    type: "deleteProduto" | "deleteItem" | "emptyList" | "deleteList" | "refreshCheckout";
     title: string;
     message: string;
     confirmLabel: string;
@@ -263,6 +274,24 @@ export default function InfoprodutorPage() {
     loadStripeStatus();
   }, [loadProdutos, loadListas, loadStripeStatus]);
 
+  const handleRefreshCurrentTab = useCallback(async () => {
+    if (refreshingTab) return;
+    setRefreshingTab(true);
+    try {
+      if (activeTab === "produtos") {
+        // Produtos recarrega do banco + lista de listas + status da Stripe
+        await Promise.all([loadProdutos(), loadListas(), loadStripeStatus()]);
+        // Limpa estado de expansão das listas pra forçar re-fetch dos itens ao re-abrir
+        setItemsByLista({});
+        setExpandedListas(new Set());
+      } else {
+        setRefreshSignal((s) => s + 1);
+      }
+    } finally {
+      setRefreshingTab(false);
+    }
+  }, [activeTab, refreshingTab, loadProdutos, loadListas, loadStripeStatus]);
+
   const toggleLista = (listaId: string) => {
     setExpandedListas((prev) => {
       const next = new Set(prev);
@@ -286,6 +315,10 @@ export default function InfoprodutorPage() {
     setFormPrice("");
     setFormPriceOld("");
     setFormStripeSubid("");
+    setFormAllowShipping(true);
+    setFormAllowPickup(false);
+    setFormShippingCost("");
+    setFormThankYouMessage("");
     setFormImagePreview("");
     setFormImageUrl("");
     setFormImageFile(null);
@@ -357,6 +390,14 @@ export default function InfoprodutorPage() {
         setError("SubId: use apenas letras, números, hífen, ponto e underscore.");
         return;
       }
+      if (!formAllowShipping && !formAllowPickup) {
+        setError("Marque ao menos uma opção de entrega: envio ou retirada.");
+        return;
+      }
+      if (formAllowShipping && !formShippingCost.trim()) {
+        setError("Informe o valor do frete (use 0 para frete grátis).");
+        return;
+      }
     } else if (formMode === "edit" && formProvider === "stripe") {
       if (!normalizedSubid || normalizedSubid.length < 2) {
         setError("SubId é obrigatório (ex.: suplementos, whey-protein).");
@@ -389,14 +430,21 @@ export default function InfoprodutorPage() {
         basePayload.provider = "stripe";
         basePayload.price = priceNum;
         basePayload.stripeSubid = normalizedSubid;
+        basePayload.allowShipping = formAllowShipping;
+        basePayload.allowPickup = formAllowPickup;
+        basePayload.shippingCost = formAllowShipping
+          ? Number((formShippingCost || "0").replace(",", "."))
+          : 0;
+        basePayload.thankYouMessage = formThankYouMessage.trim();
         // link é gerado pela Stripe
       } else if (formMode === "create") {
         basePayload.provider = "manual";
         basePayload.link = formLink.trim();
         basePayload.price = priceNum;
       } else if (formProvider === "stripe") {
-        // edit em produto Stripe: apenas campos cosméticos + subId (price e link bloqueados no backend)
+        // edit em produto Stripe: apenas campos cosméticos + subId + mensagem de agradecimento
         basePayload.stripeSubid = normalizedSubid;
+        basePayload.thankYouMessage = formThankYouMessage.trim();
       } else {
         // edit em produto manual
         basePayload.link = formLink.trim();
@@ -438,6 +486,10 @@ export default function InfoprodutorPage() {
     setFormPrice(p.price != null ? String(p.price) : "");
     setFormPriceOld(p.priceOld != null ? String(p.priceOld) : "");
     setFormStripeSubid(p.stripeSubid ?? "");
+    setFormAllowShipping(p.allowShipping);
+    setFormAllowPickup(p.allowPickup);
+    setFormShippingCost(p.shippingCost != null ? String(p.shippingCost) : "");
+    setFormThankYouMessage(p.thankYouMessage ?? "");
     setFormImageUrl(p.imageUrl ?? "");
     setFormImagePreview(p.imageUrl ?? "");
     setFormImageFile(null);
@@ -591,7 +643,41 @@ export default function InfoprodutorPage() {
     }
   };
 
+  // ─── Recriar produto órfão (criado em conta Stripe anterior) na conta atual ─
+  const [recreatingOrphanId, setRecreatingOrphanId] = useState<string | null>(null);
+  const handleRecreateOrphan = async (produtoId: string) => {
+    setError(null);
+    setRecreatingOrphanId(produtoId);
+    try {
+      const res = await fetch("/api/infoprodutor/produtos/recreate-orphan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: produtoId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Erro ao recriar produto");
+      setFeedback("Produto recriado na conta Stripe atual. Novo link de checkout ativo.");
+      setTimeout(() => setFeedback(""), 6000);
+      await loadProdutos();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao recriar produto");
+    } finally {
+      setRecreatingOrphanId(null);
+    }
+  };
+
   // ─── Ações destrutivas ─────────────────────────────────────────────────────
+  const askRefreshCheckout = (produtoId: string) => {
+    setConfirmState({
+      type: "refreshCheckout",
+      title: "Atualizar link de checkout",
+      message:
+        "Atenção: Caso confirme a atualização do checkout, fique ciente que você perderá todos os dados de venda e trackeamento deste checkout. Caso não queira perder dados, aconselhamos que crie um novo produto!",
+      confirmLabel: "Atualizar!",
+      variant: "danger",
+      payload: { produtoId },
+    });
+  };
   const askDeleteProduto = (produtoId: string, nome: string) => {
     setConfirmState({
       type: "deleteProduto",
@@ -669,6 +755,11 @@ export default function InfoprodutorPage() {
           delete next[payload.listaId!];
           return next;
         });
+      } else if (type === "refreshCheckout" && payload.produtoId) {
+        // Fecha o modal antes — o feedback/loading fica no botão de refresh da linha.
+        setConfirmState(null);
+        await handleRefreshCheckout(payload.produtoId);
+        return;
       }
       setConfirmState(null);
     } catch (e) {
@@ -676,7 +767,7 @@ export default function InfoprodutorPage() {
     } finally {
       setConfirmLoading(false);
     }
-  }, [confirmState]);
+  }, [confirmState, handleRefreshCheckout]);
 
   const handleConfirmCancel = useCallback(() => {
     if (!confirmLoading) setConfirmState(null);
@@ -746,7 +837,7 @@ export default function InfoprodutorPage() {
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto">
         {/* Cabeçalho */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl border border-[#e24c30]/35 bg-[#e24c30]/10 flex items-center justify-center shrink-0">
@@ -757,22 +848,25 @@ export default function InfoprodutorPage() {
 
           </div>
           {/* Botão Atualizar no mobile — fica ao lado do título. No desktop, aparece ao lado das abas. */}
-          {activeTab !== "produtos" ? (
-            <button
-              type="button"
-              onClick={() => setRefreshSignal((s) => s + 1)}
-              title="Atualizar Vendas e Trackeamento"
-              aria-label="Atualizar"
-              className="sm:hidden relative overflow-hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors shrink-0"
-            >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#e24c30]/55 to-transparent"
-                style={{ animation: "infoprod-sweep 2.8s ease-in-out infinite" }}
-              />
-              <RefreshCw className="relative w-4 h-4" />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => void handleRefreshCurrentTab()}
+            disabled={refreshingTab}
+            title={
+              activeTab === "produtos"
+                ? "Atualizar produtos e listas"
+                : "Atualizar Vendas e Trackeamento"
+            }
+            aria-label="Atualizar"
+            className="sm:hidden relative overflow-hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors shrink-0 disabled:opacity-60"
+          >
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#e24c30]/55 to-transparent"
+              style={{ animation: "infoprod-sweep 2.8s ease-in-out infinite" }}
+            />
+            <RefreshCw className={`relative w-4 h-4 ${refreshingTab ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
         {/* Feedback / erro */}
@@ -832,33 +926,36 @@ export default function InfoprodutorPage() {
           </button>
         </div>
 
-        {/* Botão global Atualizar (invalida cache de Vendas + Trackeamento e refaz as requisições) */}
-        {activeTab !== "produtos" ? (
-          <>
-            <style>{`
-              @keyframes infoprod-sweep {
-                0% { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
-                20% { opacity: 1; }
-                80% { opacity: 1; }
-                100% { transform: translateX(320%) skewX(-20deg); opacity: 0; }
-              }
-            `}</style>
-            <button
-              type="button"
-              onClick={() => setRefreshSignal((s) => s + 1)}
-              title="Atualizar Vendas e Trackeamento"
-              aria-label="Atualizar"
-              className="hidden sm:inline-flex ml-auto relative overflow-hidden items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors"
-            >
+        {/* Botão global Atualizar — recarrega a aba atual (Produtos: banco; Vendas/Trackeamento: cache + refetch) */}
+        <>
+          <style>{`
+            @keyframes infoprod-sweep {
+              0% { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+              20% { opacity: 1; }
+              80% { opacity: 1; }
+              100% { transform: translateX(320%) skewX(-20deg); opacity: 0; }
+            }
+          `}</style>
+          <button
+            type="button"
+            onClick={() => void handleRefreshCurrentTab()}
+            disabled={refreshingTab}
+            title={
+              activeTab === "produtos"
+                ? "Atualizar produtos e listas"
+                : "Atualizar Vendas e Trackeamento"
+            }
+            aria-label="Atualizar"
+            className="hidden sm:inline-flex ml-auto relative overflow-hidden items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors disabled:opacity-60"
+          >
               <span
                 aria-hidden
                 className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#e24c30]/55 to-transparent"
                 style={{ animation: "infoprod-sweep 2.8s ease-in-out infinite" }}
               />
-              <RefreshCw className="relative w-4 h-4" />
+              <RefreshCw className={`relative w-4 h-4 ${refreshingTab ? "animate-spin" : ""}`} />
             </button>
           </>
-        ) : null}
         </div>
 
         {activeTab === "produtos" ? (
@@ -1143,6 +1240,91 @@ export default function InfoprodutorPage() {
                         />
                       </div>
                     ) : null}
+
+                    {formProvider === "stripe" ? (
+                      <div className="space-y-2">
+                        <label className="block text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest">
+                          Formas de entrega
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-3 items-start">
+                          <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
+                            formAllowShipping ? "border-[#635bff]/50 bg-[#635bff]/8" : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30"
+                          }`}>
+                            <input
+                              type="checkbox"
+                              checked={formAllowShipping}
+                              onChange={(e) => setFormAllowShipping(e.target.checked)}
+                              disabled={formMode === "edit"}
+                              className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff] shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-semibold text-[#f0f0f2]">Aceita envio (Correios)</p>
+                              <p className="text-[9px] text-[#9a9aa2] mt-0.5 leading-relaxed">
+                                Cliente informa endereço no checkout.
+                              </p>
+                            </div>
+                          </label>
+                          <div>
+                            <label className="block text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1">
+                              Valor do frete
+                            </label>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={formShippingCost}
+                              onChange={(e) => setFormShippingCost(e.target.value)}
+                              disabled={!formAllowShipping || formMode === "edit"}
+                              placeholder="0,00"
+                              className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                            />
+                          </div>
+                        </div>
+                        <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
+                          formAllowPickup ? "border-[#635bff]/50 bg-[#635bff]/8" : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30"
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={formAllowPickup}
+                            onChange={(e) => setFormAllowPickup(e.target.checked)}
+                            disabled={formMode === "edit"}
+                            className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff] shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-semibold text-[#f0f0f2]">Aceita retirada na loja</p>
+                            <p className="text-[9px] text-[#9a9aa2] mt-0.5 leading-relaxed">
+                              Mostra o endereço da loja (de Configurações) no checkout. Não gera etiqueta.
+                            </p>
+                          </div>
+                        </label>
+                        {formMode === "edit" ? (
+                          <p className="text-[9px] text-[#7a7a80] italic">
+                            Modos de entrega não podem ser editados em produtos já criados. Remova e crie de novo se precisar alterar.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {formProvider === "stripe" ? (
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5">
+                          <MessageCircle className="inline w-2.5 h-2.5 text-emerald-400" />
+                          <span>Mensagem de agradecimento ao comprador</span>
+                          <span className="text-[#9a9aa2] normal-case tracking-normal">(opcional)</span>
+                          <Toolist
+                            variant="floating"
+                            wide
+                            text="Essa mensagem é enviada automaticamente no WhatsApp do comprador logo após a compra. Você pode incluir texto livre, emojis e links (WhatsApp torna URLs clicáveis). Deixe em branco pra usar o agradecimento padrão."
+                          />
+                        </label>
+                        <textarea
+                          value={formThankYouMessage}
+                          onChange={(e) => setFormThankYouMessage(e.target.value)}
+                          placeholder={`Ex.: Olá! 🎉 Obrigado pela compra do Whey Protein!\n\nAcesse seu ebook de receitas: https://...\n\nQualquer dúvida me chama!`}
+                          rows={5}
+                          className="w-full bg-[#222228] border border-emerald-500/40 rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-emerald-500 outline-none resize-y scrollbar-thin leading-relaxed transition"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -1343,6 +1525,15 @@ export default function InfoprodutorPage() {
                               #{p.stripeSubid}
                             </span>
                           ) : null}
+                          {p.isOrphan ? (
+                            <span
+                              title="Produto criado em uma conta Stripe anterior — use 'Recriar nesta conta' pra migrar"
+                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-[9px] font-bold uppercase tracking-wider text-amber-300"
+                            >
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              Conta anterior
+                            </span>
+                          ) : null}
                         </div>
                         {p.description ? (
                           <p className="text-[10px] text-[#9a9aa2] leading-snug truncate mt-0.5">
@@ -1365,10 +1556,26 @@ export default function InfoprodutorPage() {
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {p.provider === "stripe" ? (
+                        {p.provider === "stripe" && p.isOrphan ? (
                           <button
                             type="button"
-                            onClick={() => void handleRefreshCheckout(p.id)}
+                            onClick={() => void handleRecreateOrphan(p.id)}
+                            disabled={recreatingOrphanId === p.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-amber-500/45 bg-amber-500/10 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-60"
+                            title="Recriar este produto na conta Stripe atual (cria produto/preço/link novos; o antigo continua na conta anterior)"
+                          >
+                            {recreatingOrphanId === p.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                            <span className="hidden sm:inline">Recriar</span>
+                          </button>
+                        ) : null}
+                        {p.provider === "stripe" && !p.isOrphan ? (
+                          <button
+                            type="button"
+                            onClick={() => askRefreshCheckout(p.id)}
                             disabled={refreshingLinkId === p.id}
                             className="p-1.5 rounded-md border border-[#635bff]/40 bg-[#635bff]/10 text-[#a8a2ff] hover:bg-[#635bff]/20 disabled:opacity-60"
                             title="Atualizar link de checkout (ativa coleta de endereço/telefone)"

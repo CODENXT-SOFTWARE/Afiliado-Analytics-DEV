@@ -17,9 +17,11 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
+  MessageCircle,
 } from "lucide-react";
 import EtiquetasModal from "./EtiquetasModal";
 import { readInfoprodCache, writeInfoprodCache, clearInfoprodCache } from "@/lib/infoprod/cache";
+import { toWhatsAppUrl } from "@/lib/infoprod/stripe-checkout-copy";
 import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationBar";
 
 type Period = "7d" | "30d" | "90d" | "all";
@@ -39,6 +41,8 @@ type Shipping = {
   address: Address | null;
 } | null;
 
+type DeliveryType = "shipping" | "pickup" | "unknown";
+
 type Order = {
   sessionId: string;
   paymentIntentId: string | null;
@@ -48,6 +52,7 @@ type Order = {
   refunded: number;
   status: "paid" | "refunded" | "partially_refunded";
   produto: { id: string; name: string; imageUrl: string | null } | null;
+  deliveryType?: DeliveryType;
   customer: {
     name: string | null;
     email: string | null;
@@ -187,7 +192,10 @@ export default function StripeOrdersSection({
     });
   };
 
-  const filteredPrintable = useMemo(() => filtered.filter((o) => !!o.shipping?.address), [filtered]);
+  const filteredPrintable = useMemo(
+    () => filtered.filter((o) => !!o.shipping?.address && o.deliveryType !== "pickup"),
+    [filtered],
+  );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ORDERS_PER_PAGE));
   const safePage = Math.min(page, totalPages);
@@ -359,7 +367,9 @@ export default function StripeOrdersSection({
           <ul className="divide-y divide-[#2c2c32]">
             {pagedOrders.map((order) => {
               const isOpen = expanded.has(order.sessionId);
-              const noShipping = !order.shipping?.address;
+              const isPickup = order.deliveryType === "pickup";
+              const noShipping = !isPickup && !order.shipping?.address;
+              const canPrintLabel = !isPickup && !!order.shipping?.address;
               const isSelected = selected.has(order.sessionId);
               return (
                 <li
@@ -368,13 +378,19 @@ export default function StripeOrdersSection({
                 >
                   <div className="flex items-center gap-3 flex-wrap">
                     <label
-                      className={`flex items-center shrink-0 ${noShipping ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
-                      title={noShipping ? "Sem endereço — não pode imprimir etiqueta" : "Selecionar para impressão em lote"}
+                      className={`flex items-center shrink-0 ${!canPrintLabel ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+                      title={
+                        isPickup
+                          ? "Retirada na loja — não precisa imprimir etiqueta"
+                          : noShipping
+                            ? "Sem endereço — não pode imprimir etiqueta"
+                            : "Selecionar para impressão em lote"
+                      }
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        disabled={noShipping}
+                        disabled={!canPrintLabel}
                         onChange={() => toggleSelect(order.sessionId)}
                         className="w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff]"
                       />
@@ -427,7 +443,15 @@ export default function StripeOrdersSection({
                           {order.status === "refunded" ? "Reembolsado" : "Reembolso parcial"}
                         </span>
                       ) : null}
-                      {noShipping ? (
+                      {isPickup ? (
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                          title="Comprador optou por retirar na loja"
+                        >
+                          <MapPin className="w-2.5 h-2.5" />
+                          Retirada
+                        </span>
+                      ) : noShipping ? (
                         <span
                           className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-amber-500/30 bg-amber-500/10 text-amber-300"
                           title="Pedido feito antes de ativar coleta de endereço"
@@ -466,19 +490,44 @@ export default function StripeOrdersSection({
                             </a>
                           </p>
                         ) : null}
-                        {order.customer.phone ?? order.shipping?.phone ? (
-                          <p className="text-[#c8c8ce] flex items-center gap-1.5">
-                            <Phone className="w-3 h-3 text-[#7a7a80]" />
-                            {order.customer.phone ?? order.shipping?.phone}
-                          </p>
-                        ) : null}
+                        {(() => {
+                          const phoneStr = order.customer.phone ?? order.shipping?.phone;
+                          if (!phoneStr) return null;
+                          const waUrl = toWhatsAppUrl(phoneStr);
+                          return (
+                            <p className="text-[#c8c8ce] flex items-center gap-1.5">
+                              <Phone className="w-3 h-3 text-[#7a7a80]" />
+                              {waUrl ? (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-emerald-400 hover:underline inline-flex items-center gap-1"
+                                  title="Abrir conversa no WhatsApp"
+                                >
+                                  {phoneStr}
+                                  <MessageCircle className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                phoneStr
+                              )}
+                            </p>
+                          );
+                        })()}
                       </div>
 
                       <div className="p-3 rounded-lg bg-[#222228] border border-[#2c2c32] space-y-1.5">
                         <p className="text-[9px] font-bold text-[#9a9aa2] uppercase tracking-wider mb-1">
-                          Endereço de entrega
+                          {isPickup ? "Modo de entrega" : "Endereço de entrega"}
                         </p>
-                        {order.shipping?.address ? (
+                        {isPickup ? (
+                          <p className="text-emerald-300 text-[11px] flex items-start gap-1.5 leading-relaxed">
+                            <MapPin className="w-3 h-3 text-emerald-400 mt-0.5 shrink-0" />
+                            <span>
+                              <strong>Retirada na loja</strong> — combine com o comprador pelo WhatsApp ou e-mail.
+                            </span>
+                          </p>
+                        ) : order.shipping?.address ? (
                           <>
                             {order.shipping.name && order.shipping.name !== order.customer.name ? (
                               <p className="text-[#f0f0f2]">{order.shipping.name}</p>
