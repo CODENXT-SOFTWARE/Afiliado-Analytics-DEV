@@ -1,10 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2, MessageCircle, AlertTriangle, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-[#18181b] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-[#635bff]" />
+    </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <CheckoutSuccessInner />
+    </Suspense>
+  );
+}
 
 type OrderInfo = {
   paid: boolean;
@@ -73,7 +89,7 @@ function buildMessage(info: OrderInfo): string {
   return lines.join("\n");
 }
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessInner() {
   const params = useSearchParams();
   const slug = params?.get("slug") ?? "";
   const pi = params?.get("payment_intent") ?? "";
