@@ -1075,7 +1075,7 @@ export default function InfoprodutorPage() {
                 {formProvider === "stripe" && formMode === "create" ? (
                   stripeConnected ? (
                     <p className="mt-2 text-[10px] text-[#9a9aa2] flex items-center gap-1.5">
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3 h-3 text-emerald-400 max-md:hidden" />
                       Conectado{stripeLast4 ? ` (…${stripeLast4})` : ""} — o link de checkout será gerado automaticamente.
                     </p>
                   ) : (
