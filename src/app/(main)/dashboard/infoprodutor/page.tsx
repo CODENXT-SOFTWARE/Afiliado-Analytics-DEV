@@ -32,6 +32,7 @@ import Link from "next/link";
 import ConfirmModal from "@/app/components/ui/ConfirmModal";
 import Toolist from "@/app/components/ui/Toolist";
 import FreteCalculator from "@/app/components/frete/FreteCalculator";
+import CustomCheckoutTab from "./CustomCheckoutTab";
 import MetaSearchablePicker from "@/app/components/meta/MetaSearchablePicker";
 import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationBar";
 import StripeSalesDashboard from "./StripeSalesDashboard";
@@ -138,7 +139,7 @@ const ALLOWED_TYPES = new Set([
   "image/gif",
 ]);
 
-type TabKey = "produtos" | "vendas" | "trackeamento";
+type TabKey = "produtos" | "vendas" | "trackeamento" | "custom-checkout";
 
 export default function InfoprodutorPage() {
   // ─── Navegação entre abas ─────────────────────────────────────────────────
@@ -947,6 +948,18 @@ export default function InfoprodutorPage() {
           >
             <CreditCard className="w-3.5 h-3.5" />
             Trackeamento
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "custom-checkout"}
+            onClick={() => setActiveTab("custom-checkout")}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              activeTab === "custom-checkout" ? "bg-[#a855f7] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            Custom Checkout
           </button>
         </div>
 
@@ -1959,6 +1972,13 @@ export default function InfoprodutorPage() {
           <>
             {/* ═══════════════ PERFORMANCE POR AD (ATI × STRIPE) ═══════════════ */}
             <AdPerformanceTable refreshSignal={refreshSignal} />
+          </>
+        ) : null}
+
+        {activeTab === "custom-checkout" ? (
+          <>
+            {/* ═══════════════ PERSONALIZAÇÃO DO CHECKOUT ═══════════════ */}
+            <CustomCheckoutTab />
           </>
         ) : null}
 

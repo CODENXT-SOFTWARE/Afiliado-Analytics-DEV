@@ -31,6 +31,13 @@ type SenderRow = {
   shipping_sender_uf: string | null;
   shipping_sender_cep: string | null;
   stripe_publishable_key: string | null;
+  checkout_theme_mode: string | null;
+  checkout_header_image_url: string | null;
+  checkout_footer_image_url: string | null;
+  checkout_footer_image_size: string | null;
+  checkout_method_card: boolean | null;
+  checkout_method_pix: boolean | null;
+  checkout_method_boleto: boolean | null;
 };
 
 function num(v: unknown): number | null {
@@ -77,7 +84,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "shipping_sender_street, shipping_sender_number, shipping_sender_complement, shipping_sender_neighborhood, shipping_sender_city, shipping_sender_uf, shipping_sender_cep, stripe_publishable_key",
+        "shipping_sender_street, shipping_sender_number, shipping_sender_complement, shipping_sender_neighborhood, shipping_sender_city, shipping_sender_uf, shipping_sender_cep, stripe_publishable_key, checkout_theme_mode, checkout_header_image_url, checkout_footer_image_url, checkout_footer_image_size, checkout_method_card, checkout_method_pix, checkout_method_boleto",
       )
       .eq("id", row.user_id)
       .maybeSingle();
@@ -85,6 +92,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
     const sender = (profile as SenderRow | null) ?? null;
     const pickupAddress = row.allow_pickup ? formatPickupAddress(sender) : null;
     const publishableKey = sender?.stripe_publishable_key?.trim() ?? null;
+    const themeMode = sender?.checkout_theme_mode === "light" ? "light" : "dark";
+    const headerImageUrl = sender?.checkout_header_image_url?.trim() || null;
+    const footerImageUrl = sender?.checkout_footer_image_url?.trim() || null;
+    const footerSizeRaw = sender?.checkout_footer_image_size;
+    const footerImageSize: "full" | "medium" | "small" =
+      footerSizeRaw === "medium" || footerSizeRaw === "small" ? footerSizeRaw : "full";
+    const methods = {
+      card: sender?.checkout_method_card !== false,
+      pix: sender?.checkout_method_pix !== false,
+      boleto: sender?.checkout_method_boleto !== false,
+    };
 
     const hasDimensions =
       num(row.peso_g) !== null &&
@@ -107,6 +125,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
       },
       pickupAddress,
       publishableKey,
+      theme: {
+        mode: themeMode,
+        headerImageUrl,
+        footerImageUrl,
+        footerImageSize,
+      },
+      methods,
     });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });

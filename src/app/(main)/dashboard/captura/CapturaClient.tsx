@@ -3888,15 +3888,38 @@ export default function CapturaClient() {
                         );
 
                         if (isMobileFrame) {
+                          // Frame de celular 100% CSS (mesma técnica do /dashboard/infoprodutor
+                          // Custom Checkout). Substitui o PNG porque calibrar insets pra
+                          // conteúdos diferentes virou uma dor — CSS dá controle total.
                           return (
                             <div
-                              className={`relative mx-auto h-full max-h-full w-auto shrink-0 ${frameMaxWClass}`}
-                              style={{ aspectRatio: `${mock.w} / ${mock.h}` }}
+                              className={`relative mx-auto shrink-0 shadow-2xl ${frameMaxWClass}`}
+                              style={{
+                                aspectRatio: "320 / 640",
+                                background: "#0a0a0b",
+                                borderRadius: 42,
+                                padding: 8,
+                              }}
                             >
+                              <span
+                                aria-hidden
+                                className="absolute bg-[#1a1a1e]"
+                                style={{ left: -2, top: "18%", width: 3, height: 30, borderRadius: 2 }}
+                              />
+                              <span
+                                aria-hidden
+                                className="absolute bg-[#1a1a1e]"
+                                style={{ right: -2, top: "22%", width: 3, height: 60, borderRadius: 2 }}
+                              />
                               <div
-                                className={`absolute z-[1] overflow-hidden ${screenRoundClass}`}
-                                style={vipMobileScreenInsets}
+                                className="relative w-full h-full overflow-hidden"
+                                style={{ borderRadius: 34, background: "#000" }}
                               >
+                                <div
+                                  aria-hidden
+                                  className="absolute left-1/2 -translate-x-1/2 z-[10] bg-black"
+                                  style={{ top: 8, width: 96, height: 22, borderRadius: 14 }}
+                                />
                                 <VipPreviewViewportShim
                                   enabled={vipMobilePreviewNarrow}
                                   overlay={vipPreviewToastOverlay}
@@ -3904,15 +3927,6 @@ export default function CapturaClient() {
                                   {vipLanding}
                                 </VipPreviewViewportShim>
                               </div>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={mock.src}
-                                alt=""
-                                width={mock.w}
-                                height={mock.h}
-                                className="pointer-events-none absolute inset-0 z-[50] h-full w-full select-none object-contain"
-                                draggable={false}
-                              />
                             </div>
                           );
                         }

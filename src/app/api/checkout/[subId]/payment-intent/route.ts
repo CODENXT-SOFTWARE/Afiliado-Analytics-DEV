@@ -18,6 +18,9 @@ type ProductRow = {
 type ProfileRow = {
   stripe_secret_key: string | null;
   stripe_publishable_key: string | null;
+  checkout_method_card: boolean | null;
+  checkout_method_pix: boolean | null;
+  checkout_method_boleto: boolean | null;
 };
 
 function num(v: unknown): number {
@@ -73,7 +76,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("stripe_secret_key, stripe_publishable_key")
+      .select(
+        "stripe_secret_key, stripe_publishable_key, checkout_method_card, checkout_method_pix, checkout_method_boleto",
+      )
       .eq("id", row.user_id)
       .maybeSingle();
     const prof = (profile as ProfileRow | null) ?? null;
@@ -88,12 +93,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
       );
     }
 
+    // Filtra os métodos de pagamento pelos que o afiliado marcou como aceitos.
+    const allowCard = prof?.checkout_method_card !== false;
+    const allowPix = prof?.checkout_method_pix !== false;
+    const allowBoleto = prof?.checkout_method_boleto !== false;
+    const methods: string[] = [];
+    if (allowCard) methods.push("card");
+    if (allowPix) methods.push("pix");
+    if (allowBoleto) methods.push("boleto");
+
     const stripe = new Stripe(stripeKey);
     const intent = await stripe.paymentIntents.create({
       amount: totalCents,
       currency: "brl",
-      // Payment methods habilitados na conta Stripe do afiliado (cartão, PIX, boleto, etc.)
-      automatic_payment_methods: { enabled: true },
+      // Se o afiliado selecionou pelo menos um método, usamos explícito;
+      // senão cai no automatic_payment_methods da Stripe (bota o que estiver habilitado na conta).
+      ...(methods.length > 0
+        ? { payment_method_types: methods }
+        : { automatic_payment_methods: { enabled: true } }),
       metadata: {
         produto_id: row.id,
         produto_name: row.name,

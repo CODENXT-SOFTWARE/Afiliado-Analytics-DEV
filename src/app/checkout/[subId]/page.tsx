@@ -36,6 +36,54 @@ type InfoResponse = {
   produto: Produto;
   pickupAddress: string | null;
   publishableKey: string | null;
+  theme?: {
+    mode: "dark" | "light";
+    headerImageUrl: string | null;
+    footerImageUrl: string | null;
+    footerImageSize?: "full" | "medium" | "small";
+  };
+};
+
+type ThemePalette = {
+  mode: "dark" | "light";
+  bg: string;
+  cardBg: string;
+  cardBorder: string;
+  inputBg: string;
+  inputBorder: string;
+  text: string;
+  textMuted: string;
+  textFaint: string;
+  accent: string;
+  emerald: string;
+};
+
+const DARK_PALETTE: ThemePalette = {
+  mode: "dark",
+  bg: "#18181b",
+  cardBg: "#27272a",
+  cardBorder: "#2c2c32",
+  inputBg: "#222228",
+  inputBorder: "#3e3e46",
+  text: "#f0f0f2",
+  textMuted: "#c8c8ce",
+  textFaint: "#9a9aa2",
+  accent: "#635bff",
+  emerald: "#34d399",
+};
+
+const LIGHT_PALETTE: ThemePalette = {
+  mode: "light",
+  bg: "#f5f5f7",
+  cardBg: "#ffffff",
+  cardBorder: "#e4e4e7",
+  inputBg: "#f4f4f5",
+  inputBorder: "#d4d4d8",
+  text: "#18181b",
+  textMuted: "#52525b",
+  textFaint: "#71717a",
+  accent: "#635bff",
+  emerald: "#059669",
 };
 
 type ShippingOption = {
@@ -147,6 +195,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
   }
 
   const { produto, pickupAddress, publishableKey } = info;
+  const palette: ThemePalette = info.theme?.mode === "light" ? LIGHT_PALETTE : DARK_PALETTE;
+  const headerImageUrl = info.theme?.headerImageUrl ?? null;
+  const footerImageUrl = info.theme?.footerImageUrl ?? null;
+  const footerImageSize = info.theme?.footerImageSize ?? "full";
 
   // Fallback — vendedor ainda não configurou a Publishable Key da Stripe.
   if (!publishableKey) {
@@ -169,35 +221,57 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
   const hasPickupFlow = produto.allowPickup && pickupAddress;
 
   return (
-    <div className="min-h-screen bg-[#18181b] text-[#f0f0f2] px-4 py-10">
+    <div className="min-h-screen px-4 py-10" style={{ background: palette.bg, color: palette.text }}>
       <div className="max-w-2xl mx-auto space-y-6">
+        {/* Banner customizado do afiliado (se configurado) */}
+        {headerImageUrl ? (
+          <div className="rounded-xl overflow-hidden border" style={{ borderColor: palette.cardBorder }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={headerImageUrl} alt="" className="w-full h-auto object-cover" />
+          </div>
+        ) : null}
+
         {/* Produto */}
-        <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden">
+        <div
+          className="rounded-xl border overflow-hidden"
+          style={{ background: palette.cardBg, borderColor: palette.cardBorder }}
+        >
           <div className="p-5 flex gap-4 items-start">
             {produto.imageUrl ? (
-              <div className="w-24 h-24 rounded-lg overflow-hidden bg-white shrink-0 border border-[#2c2c32]">
+              <div
+                className="w-24 h-24 rounded-lg overflow-hidden bg-white shrink-0 border"
+                style={{ borderColor: palette.cardBorder }}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={produto.imageUrl} alt="" className="w-full h-full object-cover" />
               </div>
             ) : (
-              <div className="w-24 h-24 rounded-lg bg-[#222228] shrink-0 flex items-center justify-center border border-[#2c2c32]">
-                <Package className="w-8 h-8 text-[#6b6b72]" />
+              <div
+                className="w-24 h-24 rounded-lg shrink-0 flex items-center justify-center border"
+                style={{ background: palette.inputBg, borderColor: palette.cardBorder }}
+              >
+                <Package className="w-8 h-8" style={{ color: palette.textFaint }} />
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-bold leading-tight">{produto.name}</h1>
+              <h1 className="text-lg font-bold leading-tight" style={{ color: palette.text }}>
+                {produto.name}
+              </h1>
               <div className="mt-2 flex items-baseline gap-2 flex-wrap">
-                <span className="text-2xl font-bold text-emerald-400 tabular-nums">
+                <span className="text-2xl font-bold tabular-nums" style={{ color: palette.emerald }}>
                   {formatBRL(produto.price)}
                 </span>
                 {produto.priceOld && produto.priceOld > produto.price ? (
-                  <span className="text-sm text-[#868686] line-through tabular-nums">
+                  <span className="text-sm line-through tabular-nums" style={{ color: palette.textFaint }}>
                     {formatBRL(produto.priceOld)}
                   </span>
                 ) : null}
               </div>
               {produto.description ? (
-                <p className="mt-2 text-xs text-[#c8c8ce] leading-relaxed whitespace-pre-wrap line-clamp-3">
+                <p
+                  className="mt-2 text-xs leading-relaxed whitespace-pre-wrap line-clamp-3"
+                  style={{ color: palette.textMuted }}
+                >
                   {produto.description}
                 </p>
               ) : null}
@@ -206,12 +280,20 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
         </div>
 
         {/* Entrega */}
-        <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-4">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-[#d8d8d8]">Entrega</h2>
+        <div
+          className="rounded-xl border p-5 space-y-4"
+          style={{ background: palette.cardBg, borderColor: palette.cardBorder }}
+        >
+          <h2
+            className="text-sm font-bold uppercase tracking-wider"
+            style={{ color: palette.textMuted }}
+          >
+            Entrega
+          </h2>
 
           {hasShippingFlow ? (
             <div className="space-y-3">
-              <label className="block text-[11px] font-semibold text-[#d8d8d8]">
+              <label className="block text-[11px] font-semibold" style={{ color: palette.textMuted }}>
                 Informe seu CEP
               </label>
               <div className="flex gap-2">
@@ -220,7 +302,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                   value={cep}
                   onChange={(e) => setCep(maskCep(e.target.value))}
                   placeholder="00000-000"
-                  className="flex-1 bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[13px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none"
+                  className="flex-1 rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#635bff]"
+                  style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
                 />
                 <button
                   type="button"
@@ -260,11 +343,11 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                     return (
                       <label
                         key={`${opt.id}-${i}`}
-                        className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${
-                          checked
-                            ? "border-[#635bff] bg-[#635bff]/10"
-                            : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/50"
-                        }`}
+                        className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors"
+                        style={{
+                          background: checked ? "#635bff1a" : palette.inputBg,
+                          borderColor: checked ? palette.accent : palette.inputBorder,
+                        }}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <input
@@ -274,17 +357,22 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                             onChange={() => setSelection({ type: "shipping", option: opt })}
                             className="w-4 h-4 accent-[#635bff] shrink-0"
                           />
-                          <Truck className="w-4 h-4 text-[#a8a2ff] shrink-0" />
+                          <Truck className="w-4 h-4 shrink-0" style={{ color: palette.accent }} />
                           <div className="min-w-0">
-                            <p className="text-[13px] font-semibold truncate">{opt.name}</p>
+                            <p className="text-[13px] font-semibold truncate" style={{ color: palette.text }}>
+                              {opt.name}
+                            </p>
                             {opt.deliveryTime ? (
-                              <p className="text-[10px] text-[#9a9aa2]">
+                              <p className="text-[10px]" style={{ color: palette.textFaint }}>
                                 {opt.deliveryTime} dia{opt.deliveryTime === 1 ? "" : "s"} úteis
                               </p>
                             ) : null}
                           </div>
                         </div>
-                        <span className="text-[13px] font-mono font-bold text-emerald-400 tabular-nums shrink-0">
+                        <span
+                          className="text-[13px] font-mono font-bold tabular-nums shrink-0"
+                          style={{ color: palette.emerald }}
+                        >
                           {formatBRL(opt.price)}
                         </span>
                       </label>
@@ -298,11 +386,11 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
           {hasPickupFlow ? (
             <div className="pt-1">
               <label
-                className={`flex items-start gap-3 px-3 py-3 rounded-xl border cursor-pointer transition-colors ${
-                  selection?.type === "pickup"
-                    ? "border-[#635bff] bg-[#635bff]/10"
-                    : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/50"
-                }`}
+                className="flex items-start gap-3 px-3 py-3 rounded-xl border cursor-pointer transition-colors"
+                style={{
+                  background: selection?.type === "pickup" ? "#635bff1a" : palette.inputBg,
+                  borderColor: selection?.type === "pickup" ? palette.accent : palette.inputBorder,
+                }}
               >
                 <input
                   type="radio"
@@ -311,13 +399,20 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                   onChange={() => setSelection({ type: "pickup" })}
                   className="mt-0.5 w-4 h-4 accent-[#635bff] shrink-0"
                 />
-                <Store className="w-4 h-4 text-[#a8a2ff] shrink-0 mt-0.5" />
+                <Store className="w-4 h-4 shrink-0 mt-0.5" style={{ color: palette.accent }} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[13px] font-semibold">Retirar na loja</p>
-                    <span className="text-[12px] font-mono font-bold text-emerald-400">Grátis</span>
+                    <p className="text-[13px] font-semibold" style={{ color: palette.text }}>
+                      Retirar na loja
+                    </p>
+                    <span
+                      className="text-[12px] font-mono font-bold"
+                      style={{ color: palette.emerald }}
+                    >
+                      Grátis
+                    </span>
                   </div>
-                  <p className="text-[11px] text-[#9a9aa2] mt-0.5 leading-relaxed">
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: palette.textFaint }}>
                     {pickupAddress}
                   </p>
                 </div>
@@ -328,12 +423,41 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
 
         {/* Pagamento */}
         {selection ? (
-          <PaymentSection slug={slug} produto={produto} selection={selection} publishableKey={publishableKey} />
+          <PaymentSection
+            slug={slug}
+            produto={produto}
+            selection={selection}
+            publishableKey={publishableKey}
+            palette={palette}
+          />
         ) : (
-          <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 text-center">
-            <p className="text-[12px] text-[#9a9aa2]">Escolha uma opção de entrega acima pra continuar pro pagamento.</p>
+          <div
+            className="rounded-xl border p-5 text-center"
+            style={{ background: palette.cardBg, borderColor: palette.cardBorder }}
+          >
+            <p className="text-[12px]" style={{ color: palette.textFaint }}>
+              Escolha uma opção de entrega acima pra continuar pro pagamento.
+            </p>
           </div>
         )}
+
+        {/* Footer image customizada pelo afiliado (selos / garantia / propaganda extra).
+            No mobile (sm:) sempre w-full; no desktop (md+) respeita o tamanho escolhido. */}
+        {footerImageUrl ? (
+          <div
+            className={`mx-auto rounded-xl overflow-hidden border ${
+              footerImageSize === "small"
+                ? "md:max-w-[40%]"
+                : footerImageSize === "medium"
+                  ? "md:max-w-[65%]"
+                  : ""
+            }`}
+            style={{ borderColor: palette.cardBorder }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={footerImageUrl} alt="" className="w-full h-auto object-cover" />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -346,11 +470,13 @@ function PaymentSection({
   produto,
   selection,
   publishableKey,
+  palette,
 }: {
   slug: string;
   produto: Produto;
   selection: NonNullable<Selection>;
   publishableKey: string;
+  palette: ThemePalette;
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -399,8 +525,11 @@ function PaymentSection({
 
   if (creating) {
     return (
-      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-8 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#635bff]" />
+      <div
+        className="rounded-xl border p-8 flex items-center justify-center"
+        style={{ background: palette.cardBg, borderColor: palette.cardBorder }}
+      >
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: palette.accent }} />
       </div>
     );
   }
@@ -421,11 +550,11 @@ function PaymentSection({
       options={{
         clientSecret,
         appearance: {
-          theme: "night",
+          theme: palette.mode === "light" ? "stripe" : "night",
           variables: {
-            colorPrimary: "#635bff",
-            colorBackground: "#222228",
-            colorText: "#f0f0f2",
+            colorPrimary: palette.accent,
+            colorBackground: palette.inputBg,
+            colorText: palette.text,
             colorDanger: "#ef4444",
             fontFamily: "Inter, system-ui, sans-serif",
             borderRadius: "10px",
@@ -440,6 +569,7 @@ function PaymentSection({
         frete={frete}
         showShippingAddress={selection.type === "shipping"}
         slug={slug}
+        palette={palette}
       />
     </Elements>
   );
@@ -451,12 +581,14 @@ function CheckoutForm({
   frete,
   showShippingAddress,
   slug: slugForReturn,
+  palette,
 }: {
   total: number;
   productPrice: number;
   frete: number;
   showShippingAddress: boolean;
   slug: string;
+  palette: ThemePalette;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -480,10 +612,13 @@ function CheckoutForm({
     }
   }
 
+  const cardStyle = { background: palette.cardBg, borderColor: palette.cardBorder };
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-[#d8d8d8]">Seus dados</h2>
+      <div className="rounded-xl border p-5 space-y-4" style={cardStyle}>
+        <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: palette.textMuted }}>
+          Seus dados
+        </h2>
         <LinkAuthenticationElement options={{ defaultValues: { email: "" } }} />
         {showShippingAddress ? (
           <AddressElement
@@ -497,24 +632,39 @@ function CheckoutForm({
         ) : null}
       </div>
 
-      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-[#d8d8d8]">Pagamento</h2>
+      <div className="rounded-xl border p-5 space-y-3" style={cardStyle}>
+        <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: palette.textMuted }}>
+          Pagamento
+        </h2>
         <PaymentElement options={{ layout: "tabs" }} />
       </div>
 
-      <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-3">
-        <div className="flex items-center justify-between text-[12px] text-[#c8c8ce]">
+      <div className="rounded-xl border p-5 space-y-3" style={cardStyle}>
+        <div
+          className="flex items-center justify-between text-[12px]"
+          style={{ color: palette.textMuted }}
+        >
           <span>Produto</span>
           <span className="font-mono tabular-nums">{formatBRL(productPrice)}</span>
         </div>
-        <div className="flex items-center justify-between text-[12px] text-[#c8c8ce]">
+        <div
+          className="flex items-center justify-between text-[12px]"
+          style={{ color: palette.textMuted }}
+        >
           <span>Entrega</span>
           <span className="font-mono tabular-nums">{frete > 0 ? formatBRL(frete) : "Grátis"}</span>
         </div>
-        <div className="h-px bg-[#2c2c32]" />
+        <div className="h-px" style={{ background: palette.cardBorder }} />
         <div className="flex items-center justify-between">
-          <span className="text-[14px] font-bold">Total</span>
-          <span className="text-[18px] font-mono font-bold tabular-nums text-emerald-400">{formatBRL(total)}</span>
+          <span className="text-[14px] font-bold" style={{ color: palette.text }}>
+            Total
+          </span>
+          <span
+            className="text-[18px] font-mono font-bold tabular-nums"
+            style={{ color: palette.emerald }}
+          >
+            {formatBRL(total)}
+          </span>
         </div>
 
         {err ? (
@@ -524,12 +674,13 @@ function CheckoutForm({
         <button
           type="submit"
           disabled={!stripe || !elements || submitting}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#635bff] text-white text-[14px] font-bold hover:bg-[#5048e5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white text-[14px] font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          style={{ background: palette.accent }}
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
           {submitting ? "Processando..." : `Pagar ${formatBRL(total)}`}
         </button>
-        <p className="text-[10px] text-[#7a7a80] text-center">
+        <p className="text-[10px] text-center" style={{ color: palette.textFaint }}>
           Pagamento processado pela Stripe. Seus dados de cartão não passam pelo nosso servidor.
         </p>
       </div>
