@@ -539,7 +539,7 @@ export default function StripeOrdersSection({
                           </>
                         ) : (
                           <p className="text-amber-300/90 text-[10px] leading-relaxed">
-                            Pedido feito antes da coleta de endereço estar ativa. Atualize o link de checkout do produto em "Meus Produtos" para futuros pedidos.
+                            Pedido feito antes da coleta de endereço estar ativa. Atualize o link de checkout do produto em &quot;Meus Produtos&quot; para futuros pedidos.
                           </p>
                         )}
                       </div>
