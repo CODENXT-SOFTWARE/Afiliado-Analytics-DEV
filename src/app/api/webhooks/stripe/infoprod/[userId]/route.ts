@@ -84,24 +84,48 @@ export async function POST(req: Request, context: { params: Promise<{ userId: st
       return NextResponse.json({ received: true, skipped: "not paid" });
     }
 
-    // Descobre o produto vinculado ao payment_link (além de carregar o thank_you customizado)
+    // Descobre o produto vinculado ao payment_link OU ao metadata (sessões criadas
+    // pelo nosso checkout dinâmico não têm payment_link, mas levam o id no metadata).
     const paymentLinkId =
       typeof session.payment_link === "string" ? session.payment_link : session.payment_link?.id ?? null;
+    const metadataPaymentLinkId =
+      typeof session.metadata?.stripe_payment_link_id === "string" && session.metadata.stripe_payment_link_id.trim()
+        ? session.metadata.stripe_payment_link_id.trim()
+        : null;
+    const metadataProdutoId =
+      typeof session.metadata?.produto_id === "string" && session.metadata.produto_id.trim()
+        ? session.metadata.produto_id.trim()
+        : null;
+
     let produtoNome = "produto Stripe";
     let thankYouMessage: string | null = null;
-    if (paymentLinkId) {
-      const { data: produto } = await supabase
+    type ProdutoLookup = { name: string; thank_you_message: string | null };
+    let produtoRow: ProdutoLookup | null = null;
+    const resolvedPaymentLinkId = paymentLinkId ?? metadataPaymentLinkId;
+    if (resolvedPaymentLinkId) {
+      const { data } = await supabase
         .from("produtos_infoprodutor")
         .select("name, thank_you_message")
         .eq("user_id", userId)
-        .eq("stripe_payment_link_id", paymentLinkId)
+        .eq("stripe_payment_link_id", resolvedPaymentLinkId)
         .maybeSingle();
-      if (!produto) {
+      produtoRow = (data as ProdutoLookup | null) ?? null;
+    } else if (metadataProdutoId) {
+      const { data } = await supabase
+        .from("produtos_infoprodutor")
+        .select("name, thank_you_message")
+        .eq("user_id", userId)
+        .eq("id", metadataProdutoId)
+        .maybeSingle();
+      produtoRow = (data as ProdutoLookup | null) ?? null;
+    }
+
+    if (resolvedPaymentLinkId || metadataProdutoId) {
+      if (!produtoRow) {
         return NextResponse.json({ received: true, skipped: "not an infoprod product" });
       }
-      const row = produto as { name: string; thank_you_message: string | null };
-      produtoNome = row.name;
-      thankYouMessage = row.thank_you_message ?? null;
+      produtoNome = produtoRow.name;
+      thankYouMessage = produtoRow.thank_you_message ?? null;
     }
 
     const buyerName = session.customer_details?.name ?? "—";

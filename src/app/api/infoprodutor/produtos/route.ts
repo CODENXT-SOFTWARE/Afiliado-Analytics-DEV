@@ -22,6 +22,7 @@ import {
   type SenderSnapshot,
   type DeliveryMode,
 } from "@/lib/infoprod/stripe-checkout-copy";
+import { getAppPublicUrl } from "@/lib/infoprod/stripe-webhook-setup";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,10 @@ type Row = {
   shipping_cost: number | string | null;
   stripe_account_id: string | null;
   thank_you_message: string | null;
+  peso_g: number | string | null;
+  altura_cm: number | string | null;
+  largura_cm: number | string | null;
+  comprimento_cm: number | string | null;
   created_at: string;
   updated_at: string;
 };
@@ -72,13 +77,17 @@ function mapProduto(r: Record<string, unknown>) {
     shippingCost: numOrNull(r.shipping_cost),
     stripeAccountId: (r.stripe_account_id as string | null) ?? null,
     thankYouMessage: (r.thank_you_message as string | null) ?? "",
+    pesoG: numOrNull(r.peso_g),
+    alturaCm: numOrNull(r.altura_cm),
+    larguraCm: numOrNull(r.largura_cm),
+    comprimentoCm: numOrNull(r.comprimento_cm),
     createdAt: String(r.created_at ?? ""),
     updatedAt: String(r.updated_at ?? ""),
   };
 }
 
 const SELECT =
-  "id, user_id, name, description, image_url, link, price, price_old, provider, stripe_product_id, stripe_price_id, stripe_payment_link_id, stripe_subid, allow_shipping, allow_pickup, shipping_cost, stripe_account_id, thank_you_message, created_at, updated_at";
+  "id, user_id, name, description, image_url, link, price, price_old, provider, stripe_product_id, stripe_price_id, stripe_payment_link_id, stripe_subid, allow_shipping, allow_pickup, shipping_cost, stripe_account_id, thank_you_message, peso_g, altura_cm, largura_cm, comprimento_cm, created_at, updated_at";
 
 const SUBID_REGEX = /^[a-zA-Z0-9_\-.]+$/;
 
@@ -322,6 +331,22 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `Falha ao criar produto na Stripe: ${msg}` }, { status: 502 });
       }
 
+      const pesoGVal = Number.isFinite(Number(body?.pesoG)) && Number(body?.pesoG) > 0 ? Math.round(Number(body.pesoG)) : null;
+      const alturaCmVal = Number.isFinite(Number(body?.alturaCm)) && Number(body?.alturaCm) > 0 ? Number(body.alturaCm) : null;
+      const larguraCmVal = Number.isFinite(Number(body?.larguraCm)) && Number(body?.larguraCm) > 0 ? Number(body.larguraCm) : null;
+      const comprimentoCmVal = Number.isFinite(Number(body?.comprimentoCm)) && Number(body?.comprimentoCm) > 0 ? Number(body.comprimentoCm) : null;
+      const hasDimensions =
+        allowShipping && pesoGVal !== null && alturaCmVal !== null && larguraCmVal !== null && comprimentoCmVal !== null;
+
+      // Se o produto tem dimensões cadastradas, o link compartilhado vai pro nosso
+      // checkout dinâmico (cota frete via SuperFrete com o CEP do comprador). Caso
+      // contrário, continua apontando pro Payment Link estático da Stripe.
+      const appUrl = getAppPublicUrl();
+      const publicLink =
+        hasDimensions && appUrl && stripeSubid
+          ? `${appUrl}/checkout/${encodeURIComponent(stripeSubid)}`
+          : paymentLinkUrl;
+
       const { data, error } = await supabase
         .from("produtos_infoprodutor")
         .insert({
@@ -329,7 +354,7 @@ export async function POST(req: Request) {
           name,
           description: description || null,
           image_url: imageUrl || null,
-          link: paymentLinkUrl,
+          link: publicLink,
           price,
           price_old,
           provider: "stripe",
@@ -345,6 +370,10 @@ export async function POST(req: Request) {
             typeof body?.thankYouMessage === "string" && body.thankYouMessage.trim()
               ? body.thankYouMessage.trim()
               : null,
+          peso_g: allowShipping ? pesoGVal : null,
+          altura_cm: allowShipping ? alturaCmVal : null,
+          largura_cm: allowShipping ? larguraCmVal : null,
+          comprimento_cm: allowShipping ? comprimentoCmVal : null,
         })
         .select(SELECT)
         .single();

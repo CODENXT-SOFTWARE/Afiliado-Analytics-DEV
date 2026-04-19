@@ -31,6 +31,7 @@ import {
 import Link from "next/link";
 import ConfirmModal from "@/app/components/ui/ConfirmModal";
 import Toolist from "@/app/components/ui/Toolist";
+import FreteCalculator from "@/app/components/frete/FreteCalculator";
 import MetaSearchablePicker from "@/app/components/meta/MetaSearchablePicker";
 import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationBar";
 import StripeSalesDashboard from "./StripeSalesDashboard";
@@ -54,6 +55,10 @@ type Produto = {
   allowPickup: boolean;
   shippingCost: number | null;
   thankYouMessage: string;
+  pesoG: number | null;
+  alturaCm: number | null;
+  larguraCm: number | null;
+  comprimentoCm: number | null;
   isOrphan?: boolean;
   createdAt: string;
 };
@@ -165,6 +170,10 @@ export default function InfoprodutorPage() {
   const [formAllowShipping, setFormAllowShipping] = useState(true);
   const [formAllowPickup, setFormAllowPickup] = useState(false);
   const [formShippingCost, setFormShippingCost] = useState("");
+  const [formPesoG, setFormPesoG] = useState("");
+  const [formAlturaCm, setFormAlturaCm] = useState("");
+  const [formLarguraCm, setFormLarguraCm] = useState("");
+  const [formComprimentoCm, setFormComprimentoCm] = useState("");
   const [formThankYouMessage, setFormThankYouMessage] = useState("");
   const [formImagePreview, setFormImagePreview] = useState<string>("");
   const [formImageUrl, setFormImageUrl] = useState<string>("");
@@ -318,6 +327,10 @@ export default function InfoprodutorPage() {
     setFormAllowShipping(true);
     setFormAllowPickup(false);
     setFormShippingCost("");
+    setFormPesoG("");
+    setFormAlturaCm("");
+    setFormLarguraCm("");
+    setFormComprimentoCm("");
     setFormThankYouMessage("");
     setFormImagePreview("");
     setFormImageUrl("");
@@ -436,6 +449,13 @@ export default function InfoprodutorPage() {
           ? Number((formShippingCost || "0").replace(",", "."))
           : 0;
         basePayload.thankYouMessage = formThankYouMessage.trim();
+        if (formAllowShipping) {
+          const toNum = (s: string) => Number((s || "").replace(",", "."));
+          basePayload.pesoG = toNum(formPesoG);
+          basePayload.alturaCm = toNum(formAlturaCm);
+          basePayload.larguraCm = toNum(formLarguraCm);
+          basePayload.comprimentoCm = toNum(formComprimentoCm);
+        }
         // link é gerado pela Stripe
       } else if (formMode === "create") {
         basePayload.provider = "manual";
@@ -489,6 +509,10 @@ export default function InfoprodutorPage() {
     setFormAllowShipping(p.allowShipping);
     setFormAllowPickup(p.allowPickup);
     setFormShippingCost(p.shippingCost != null ? String(p.shippingCost) : "");
+    setFormPesoG(p.pesoG != null ? String(p.pesoG) : "");
+    setFormAlturaCm(p.alturaCm != null ? String(p.alturaCm) : "");
+    setFormLarguraCm(p.larguraCm != null ? String(p.larguraCm) : "");
+    setFormComprimentoCm(p.comprimentoCm != null ? String(p.comprimentoCm) : "");
     setFormThankYouMessage(p.thankYouMessage ?? "");
     setFormImageUrl(p.imageUrl ?? "");
     setFormImagePreview(p.imageUrl ?? "");
@@ -1279,6 +1303,71 @@ export default function InfoprodutorPage() {
                             />
                           </div>
                         </div>
+                        {formAllowShipping ? (
+                          <div>
+                            <label className="block text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5">
+                              Dimensões do produto{" "}
+                              <span className="text-[#9a9aa2] normal-case tracking-normal">(pra cotação dinâmica)</span>
+                            </label>
+                            <div className="grid grid-cols-4 gap-2">
+                              <div>
+                                <label className="block text-[9px] text-[#9a9aa2] mb-1">Peso (g)</label>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={formPesoG}
+                                  onChange={(e) => setFormPesoG(e.target.value)}
+                                  disabled={formMode === "edit"}
+                                  placeholder="300"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] text-[#9a9aa2] mb-1">Altura (cm)</label>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={formAlturaCm}
+                                  onChange={(e) => setFormAlturaCm(e.target.value)}
+                                  disabled={formMode === "edit"}
+                                  placeholder="5"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] text-[#9a9aa2] mb-1">Largura (cm)</label>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={formLarguraCm}
+                                  onChange={(e) => setFormLarguraCm(e.target.value)}
+                                  disabled={formMode === "edit"}
+                                  placeholder="15"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] text-[#9a9aa2] mb-1">Compr. (cm)</label>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={formComprimentoCm}
+                                  onChange={(e) => setFormComprimentoCm(e.target.value)}
+                                  disabled={formMode === "edit"}
+                                  placeholder="20"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {formAllowShipping && formMode !== "edit" ? (
+                          <FreteCalculator
+                            onPick={(v) => setFormShippingCost(v)}
+                            disabled={!formAllowShipping}
+                          />
+                        ) : null}
                         <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
                           formAllowPickup ? "border-[#635bff]/50 bg-[#635bff]/8" : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30"
                         }`}>
