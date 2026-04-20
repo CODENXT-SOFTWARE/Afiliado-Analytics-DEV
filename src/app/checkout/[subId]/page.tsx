@@ -6,11 +6,11 @@ import {
   Truck,
   Store,
   AlertTriangle,
-  CreditCard,
   Package,
   Settings2,
   Mail,
   Home,
+  ShoppingCart,
 } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -21,6 +21,16 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
+import {
+  SaleNotificationsToast,
+  CountdownBar,
+  StockCounter,
+  ViewersBadge,
+  GuaranteeBadge,
+  PayButton,
+  type TriggerConfig,
+  type TriggerPalette,
+} from "./sales-triggers";
 
 type Produto = {
   id: string;
@@ -47,6 +57,7 @@ type InfoResponse = {
     footerImageUrl: string | null;
     footerImageSize?: "full" | "medium" | "small";
   };
+  triggers?: TriggerConfig;
 };
 
 type ThemePalette = {
@@ -237,9 +248,43 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
   const hasDigitalFlow = produto.allowDigital;
   const hasLocalDeliveryFlow = produto.allowLocalDelivery;
 
+  const triggers: TriggerConfig =
+    info.triggers ?? {
+      payButton: { color: palette.accent, lightSweep: false },
+      saleNotifications: false,
+      countdown: { enabled: false, minutes: 15, message: "", expiredMessage: "" },
+      stock: { enabled: false, initial: 12 },
+      viewers: { enabled: false, min: 50, max: 200 },
+      guarantee: { enabled: false, text: "" },
+    };
+  const triggerPalette: TriggerPalette = {
+    mode: palette.mode,
+    cardBg: palette.cardBg,
+    cardBorder: palette.cardBorder,
+    text: palette.text,
+    textMuted: palette.textMuted,
+  };
+
   return (
-    <div className="min-h-screen px-4 py-10" style={{ background: palette.bg, color: palette.text }}>
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-screen" style={{ background: palette.bg, color: palette.text }}>
+      {triggers.countdown.enabled ? (
+        <CountdownBar
+          minutes={triggers.countdown.minutes}
+          message={triggers.countdown.message}
+          expiredMessage={triggers.countdown.expiredMessage}
+        />
+      ) : null}
+      {triggers.viewers.enabled ? (
+        <ViewersBadge min={triggers.viewers.min} max={triggers.viewers.max} />
+      ) : null}
+      {triggers.saleNotifications ? (
+        <SaleNotificationsToast
+          productImageUrl={produto.imageUrl}
+          palette={triggerPalette}
+        />
+      ) : null}
+      <div className="px-4 py-10">
+        <div className="max-w-2xl mx-auto space-y-6">
         {/* Banner customizado do afiliado (se configurado). Altura fixa + object-cover
             pra sempre virar banner — não importa o tamanho da imagem enviada. */}
         {headerImageUrl ? (
@@ -296,6 +341,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
             </div>
           </div>
         </div>
+
+        {triggers.stock.enabled ? (
+          <StockCounter initial={triggers.stock.initial} palette={triggerPalette} />
+        ) : null}
 
         {/* Entrega */}
         <div
@@ -514,6 +563,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
             setBuyerWhatsapp={setBuyerWhatsapp}
             buyerEmail={buyerEmail}
             setBuyerEmail={setBuyerEmail}
+            triggers={triggers}
+            triggerPalette={triggerPalette}
           />
         ) : (
           <div
@@ -543,6 +594,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
             <img src={footerImageUrl} alt="" className="w-full h-auto object-cover" />
           </div>
         ) : null}
+        </div>
       </div>
     </div>
   );
@@ -560,6 +612,8 @@ function PaymentSection({
   setBuyerWhatsapp,
   buyerEmail,
   setBuyerEmail,
+  triggers,
+  triggerPalette,
 }: {
   slug: string;
   produto: Produto;
@@ -570,6 +624,8 @@ function PaymentSection({
   setBuyerWhatsapp: (v: string) => void;
   buyerEmail: string;
   setBuyerEmail: (v: string) => void;
+  triggers: TriggerConfig;
+  triggerPalette: TriggerPalette;
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -788,6 +844,8 @@ function PaymentSection({
           digitalEmail={isDigital ? buyerEmail.trim() : ""}
           slug={slug}
           palette={palette}
+          triggers={triggers}
+          triggerPalette={triggerPalette}
         />
       </Elements>
     </>
@@ -802,6 +860,8 @@ function CheckoutForm({
   digitalEmail,
   slug: slugForReturn,
   palette,
+  triggers,
+  triggerPalette,
 }: {
   total: number;
   productPrice: number;
@@ -810,6 +870,8 @@ function CheckoutForm({
   digitalEmail: string;
   slug: string;
   palette: ThemePalette;
+  triggers: TriggerConfig;
+  triggerPalette: TriggerPalette;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -892,15 +954,18 @@ function CheckoutForm({
           <p className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{err}</p>
         ) : null}
 
-        <button
-          type="submit"
+        <PayButton
+          color={triggers.payButton.color}
+          lightSweep={triggers.payButton.lightSweep}
+          loading={submitting}
           disabled={!stripe || !elements || submitting}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white text-[14px] font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-          style={{ background: palette.accent }}
         >
-          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+          {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
           {submitting ? "Processando..." : `Pagar ${formatBRL(total)}`}
-        </button>
+        </PayButton>
+        {triggers.guarantee.enabled ? (
+          <GuaranteeBadge text={triggers.guarantee.text} palette={triggerPalette} />
+        ) : null}
         <p className="text-[10px] text-center" style={{ color: palette.textFaint }}>
           Pagamento processado pela Stripe. Seus dados de cartão não passam pelo nosso servidor.
         </p>

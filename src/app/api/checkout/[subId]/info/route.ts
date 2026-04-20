@@ -41,6 +41,20 @@ type SenderRow = {
   checkout_method_card: boolean | null;
   checkout_method_pix: boolean | null;
   checkout_method_boleto: boolean | null;
+  checkout_pay_button_color: string | null;
+  checkout_pay_button_light_sweep: boolean | null;
+  checkout_trigger_sale_notifications: boolean | null;
+  checkout_trigger_countdown: boolean | null;
+  checkout_countdown_minutes: number | null;
+  checkout_countdown_message: string | null;
+  checkout_countdown_expired_message: string | null;
+  checkout_trigger_stock: boolean | null;
+  checkout_stock_initial: number | null;
+  checkout_trigger_viewers: boolean | null;
+  checkout_viewers_min: number | null;
+  checkout_viewers_max: number | null;
+  checkout_trigger_guarantee: boolean | null;
+  checkout_guarantee_text: string | null;
 };
 
 function num(v: unknown): number | null {
@@ -87,7 +101,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "shipping_sender_street, shipping_sender_number, shipping_sender_complement, shipping_sender_neighborhood, shipping_sender_city, shipping_sender_uf, shipping_sender_cep, stripe_publishable_key, checkout_theme_mode, checkout_header_image_url, checkout_footer_image_url, checkout_footer_image_size, checkout_method_card, checkout_method_pix, checkout_method_boleto",
+        "shipping_sender_street, shipping_sender_number, shipping_sender_complement, shipping_sender_neighborhood, shipping_sender_city, shipping_sender_uf, shipping_sender_cep, stripe_publishable_key, checkout_theme_mode, checkout_header_image_url, checkout_footer_image_url, checkout_footer_image_size, checkout_method_card, checkout_method_pix, checkout_method_boleto, checkout_pay_button_color, checkout_pay_button_light_sweep, checkout_trigger_sale_notifications, checkout_trigger_countdown, checkout_countdown_minutes, checkout_countdown_message, checkout_countdown_expired_message, checkout_trigger_stock, checkout_stock_initial, checkout_trigger_viewers, checkout_viewers_min, checkout_viewers_max, checkout_trigger_guarantee, checkout_guarantee_text",
       )
       .eq("id", row.user_id)
       .maybeSingle();
@@ -114,6 +128,46 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
       num(row.comprimento_cm) !== null &&
       (num(row.peso_g) ?? 0) > 0;
 
+    const HEX = /^#[0-9a-fA-F]{6}$/;
+    const clampInt = (n: unknown, min: number, max: number, fb: number): number => {
+      const v = Number(n);
+      if (!Number.isFinite(v)) return fb;
+      return Math.max(min, Math.min(max, Math.round(v)));
+    };
+    const payButtonColor =
+      sender?.checkout_pay_button_color && HEX.test(sender.checkout_pay_button_color.trim())
+        ? sender.checkout_pay_button_color.trim().toLowerCase()
+        : "#635bff";
+    const triggers = {
+      payButton: {
+        color: payButtonColor,
+        lightSweep: Boolean(sender?.checkout_pay_button_light_sweep),
+      },
+      saleNotifications: Boolean(sender?.checkout_trigger_sale_notifications),
+      countdown: {
+        enabled: Boolean(sender?.checkout_trigger_countdown),
+        minutes: clampInt(sender?.checkout_countdown_minutes, 1, 180, 15),
+        message: sender?.checkout_countdown_message ?? "Não feche esta página!",
+        expiredMessage:
+          sender?.checkout_countdown_expired_message ?? "Última chance — compre agora!",
+      },
+      stock: {
+        enabled: Boolean(sender?.checkout_trigger_stock),
+        initial: clampInt(sender?.checkout_stock_initial, 1, 9999, 12),
+      },
+      viewers: {
+        enabled: Boolean(sender?.checkout_trigger_viewers),
+        min: clampInt(sender?.checkout_viewers_min, 1, 9999, 50),
+        max: clampInt(sender?.checkout_viewers_max, 1, 9999, 200),
+      },
+      guarantee: {
+        enabled: Boolean(sender?.checkout_trigger_guarantee),
+        text:
+          sender?.checkout_guarantee_text ??
+          "Garantia de 7 dias. Se não gostar, devolvemos seu dinheiro.",
+      },
+    };
+
     return NextResponse.json({
       produto: {
         id: row.id,
@@ -138,6 +192,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
         footerImageSize,
       },
       methods,
+      triggers,
     });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
