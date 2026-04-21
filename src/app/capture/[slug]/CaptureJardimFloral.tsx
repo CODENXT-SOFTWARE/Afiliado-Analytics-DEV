@@ -5,7 +5,7 @@ import { Heart, Sparkles } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl } from "./capture-vip-shared";
+import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -80,6 +80,7 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
     previewMode = false,
     notificationsEnabled,
     notificationsPosition,
+    metaPixelId,
   } = props;
 
   const notifOn = notificationsEnabled !== false;
@@ -296,6 +297,7 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
               <div className="mt-7 flex w-full flex-col items-stretch">
                 <a
                   href={ctaHref}
+                  onClick={() => trackPixelLead(metaPixelId)}
                   className={`jardim-cta-pulse ${CAPTURE_CTA_CLASS} rounded-full font-bold transition-transform active:scale-[0.98]`}
                   style={{
                     backgroundColor: `rgb(${r},${g},${b})`,
@@ -343,6 +345,7 @@ export default function CaptureJardimFloral(props: CaptureVipLandingProps) {
               <div className="mt-8 flex w-full flex-col items-stretch">
                 <a
                   href={ctaHref}
+                  onClick={() => trackPixelLead(metaPixelId)}
                   className={`jardim-cta-pulse ${CAPTURE_CTA_CLASS} rounded-full font-bold transition-transform active:scale-[0.98]`}
                   style={{
                     backgroundColor: `rgb(${r},${g},${b})`,

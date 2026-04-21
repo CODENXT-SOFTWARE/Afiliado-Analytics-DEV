@@ -14,6 +14,7 @@ import {
   emBrancoShowsAfterCta,
   type EmBrancoCardMediaBundle,
 } from "./CaptureEmBrancoExtraBlocks";
+import { trackPixelLead } from "./capture-vip-shared";
 
 export type CaptureBlankCanvasProps = {
   config: BlankCanvasConfig;
@@ -30,6 +31,8 @@ export type CaptureBlankCanvasProps = {
   bgImagePublicUrl?: string | null;
   /** Modelo Em branco: YouTube, carrossel e promo dentro do cartão (coluna). */
   emBrancoCardMedia?: EmBrancoCardMediaBundle | null;
+  /** Meta Pixel ID para tracking de cliques. */
+  metaPixelId?: string | null;
 };
 
 /** "r,g,b" para rgba() na animação do pulso — alinhado à cor real do CTA (não fixo em laranja). */
@@ -113,6 +116,7 @@ export default function CaptureBlankCanvas({
   siteButtonColor,
   bgImagePublicUrl,
   emBrancoCardMedia,
+  metaPixelId,
 }: CaptureBlankCanvasProps) {
   const ctaSurfaceColor = siteButtonColor?.trim() ? siteButtonColor.trim() : config.btnBg;
   const pulseRgb = useMemo(() => rgbTripletForPulse(ctaSurfaceColor), [ctaSurfaceColor]);
@@ -240,6 +244,7 @@ export default function CaptureBlankCanvas({
       href={ctaHref}
       target={previewMode ? "_self" : "_blank"}
       rel={previewMode ? undefined : "noopener noreferrer"}
+      onClick={() => trackPixelLead(metaPixelId)}
       className={`inline-flex items-center justify-center gap-2 font-semibold transition-transform hover:scale-[1.02] active:scale-[0.98] ${
         config.btnFullWidth ? "w-full" : "min-w-[200px]"
       } ${config.btnPulse ? "blank-cta-pulse" : ""}`}

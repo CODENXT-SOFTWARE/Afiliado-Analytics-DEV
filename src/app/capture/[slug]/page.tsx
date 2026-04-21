@@ -391,6 +391,7 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
             heroPublicUrl={blankHeroPublicUrl}
             siteButtonColor={buttonColor}
             bgImagePublicUrl={blankBgPublicUrl}
+            metaPixelId={metaPixelId}
             emBrancoCardMedia={{
               youtubeUrl: youtubeUrl || null,
               youtubePosition,
@@ -430,6 +431,7 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
           promoRosaUi={promoRosaUi}
           promoRosaCardImageUrls={promoRosaCardImageUrls}
           promoAuroraAvatarUrls={promoAuroraAvatarUrls}
+          metaPixelId={metaPixelId}
         />
       ) : null}
 

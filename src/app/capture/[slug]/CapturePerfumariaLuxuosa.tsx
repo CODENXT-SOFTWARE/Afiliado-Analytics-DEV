@@ -6,7 +6,7 @@ import { Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl } from "./capture-vip-shared";
+import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -79,11 +79,13 @@ function CtaLux(props: {
   r: number;
   g: number;
   b: number;
+  metaPixelId?: string | null;
 }) {
-  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b } = props;
+  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b, metaPixelId } = props;
   return (
     <a
       href={ctaHref}
+      onClick={() => trackPixelLead(metaPixelId)}
       className={`lux-cta-pulse ${CAPTURE_CTA_CLASS} rounded-full border-2 font-semibold tracking-wide`}
       style={{
         background: `linear-gradient(165deg, rgba(${r},${g},${b},0.95) 0%, rgb(${Math.max(0, r - 35)},${Math.max(0, g - 35)},${Math.max(0, b - 35)}) 100%)`,
@@ -131,6 +133,7 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
     promoSectionsEnabled,
     promoTitles,
     promoCards,
+    metaPixelId,
   } = props;
 
   const notifOn = notificationsEnabled !== false;
@@ -341,15 +344,16 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
               <CaptureOfertCarouselIf {...props} slot="above_cta" variant="aurora" eyebrow="Destaques" />
 
               <div className="mt-8 w-full">
-                <CtaLux
-                  ctaHref={ctaHref}
-                  buttonColor={color}
-                  safeBtn={safeBtn}
-                  showWa={showWa}
-                  r={r}
-                  g={g}
-                  b={b}
-                />
+                  <CtaLux
+                    ctaHref={ctaHref}
+                    buttonColor={color}
+                    safeBtn={safeBtn}
+                    showWa={showWa}
+                    r={r}
+                    g={g}
+                    b={b}
+                    metaPixelId={metaPixelId}
+                  />
               </div>
 
               <CaptureOfertCarouselIf {...props} slot="below_cta" variant="aurora" eyebrow="Destaques" />
@@ -491,6 +495,7 @@ export default function CapturePerfumariaLuxuosa(props: CaptureVipLandingProps) 
                     r={r}
                     g={g}
                     b={b}
+                    metaPixelId={metaPixelId}
                   />
                 </div>
               </div>

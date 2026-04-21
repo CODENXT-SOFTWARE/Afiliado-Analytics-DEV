@@ -6,7 +6,7 @@ import { Check, Flame } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl } from "./capture-vip-shared";
+import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -122,12 +122,14 @@ function CtaBlock(props: {
   g: number;
   b: number;
   className?: string;
+  metaPixelId?: string | null;
 }) {
-  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b, className = "" } = props;
+  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b, className = "", metaPixelId } = props;
   return (
     <>
       <a
         href={ctaHref}
+        onClick={() => trackPixelLead(metaPixelId)}
         className={`newchance-cta-pulse ${CAPTURE_CTA_CLASS_UPPER} font-black shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] ${className}`}
         style={{
           backgroundColor: buttonColor,
@@ -160,6 +162,7 @@ export default function CaptureTheNewChance(props: CaptureVipLandingProps) {
     promoSectionsEnabled,
     promoTitles,
     promoCards,
+    metaPixelId,
   } = props;
 
   const promoOn = promoSectionsEnabled !== false;
@@ -537,6 +540,7 @@ export default function CaptureTheNewChance(props: CaptureVipLandingProps) {
                     r={r}
                     g={g}
                     b={b}
+                    metaPixelId={metaPixelId}
                   />
                 </div>
               </div>
@@ -612,6 +616,7 @@ export default function CaptureTheNewChance(props: CaptureVipLandingProps) {
               r={r}
               g={g}
               b={b}
+              metaPixelId={metaPixelId}
             />
           </div>
 
