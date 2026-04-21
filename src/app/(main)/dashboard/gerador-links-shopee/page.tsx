@@ -805,7 +805,21 @@ export default function GeradorLinksShopeePage() {
         <aside ref={configCardRef}
           className={cn("w-full lg:w-60 lg:shrink-0 border-r border-[#2c2c32] bg-[#27272a] lg:flex flex-col min-w-0",
             mobileTab === "config" ? "flex" : "hidden")}>
-          <ColHeader step={1} active label="Configurar Link" tooltip="Painel principal de configuração. Informe o produto e os Sub IDs para que o sistema gere seu link de afiliado rastreável." />
+          <ColHeader
+            step={1}
+            active
+            label="Configurar Link"
+            tooltip="Painel principal de configuração. Informe o produto e os Sub IDs para que o sistema gere seu link de afiliado rastreável."
+            right={
+              <button
+                onClick={() => setMobileTab("historico")}
+                className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 bg-[#e24c30] text-white text-[10px] font-black rounded-lg shadow-md shadow-[#e24c30]/20 active:translate-y-0.5 transition-all"
+              >
+                MEUS LINKS
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            }
+          />
           <div className="p-4 flex flex-col gap-4">
             <FieldGroup label="Link ou nome do produto" tooltip="Cole o link direto de um produto da Shopee ou digite o nome para busca.">
               <div className="relative">
@@ -850,14 +864,10 @@ export default function GeradorLinksShopeePage() {
               </div>
             </FieldGroup>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <button onClick={runSearchNow} disabled={searchLoading || !inputValue.trim() || !hasApiKeys}
                 className="flex w-full items-center justify-center gap-1.5 bg-transparent border border-[#e24c30] text-[#e24c30] rounded-xl py-2.5 text-[11px] font-semibold hover:text-[#e24c30] hover:border-[#e24c30]/70 hover:bg-[#e24c30]/5 disabled:opacity-40 transition min-h-[42px]">
                 {searchLoading ? <Loader2 className="w-3 h-3 animate-spin text-[#e24c30]" /> : <Search className="w-3 h-3 text-[#e24c30]" />} Buscar
-              </button>
-              <button type="button" onClick={handleConvertLink} disabled={!canConvert}
-                className="hidden lg:flex items-center justify-center gap-1.5 bg-[#e24c30] text-white rounded-xl py-2.5 text-[11px] font-semibold hover:bg-[#c94028] disabled:opacity-40 transition shadow-lg shadow-[#e24c30]/20 min-h-[42px]">
-                {convertLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />} Converter
               </button>
             </div>
 
@@ -969,12 +979,22 @@ export default function GeradorLinksShopeePage() {
                 </div>
               </div>
 
-              {/* Mobile: Converter no passo 2, abaixo do produto pesquisado e acima de ofertas semelhantes */}
-              <div className="lg:hidden w-full min-w-0">
+              {/* Converter: Agora em ambos Mobile e Desktop, abaixo do produto pesquisado */}
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full min-w-0">
                 <button type="button" onClick={handleConvertLink} disabled={!canConvert}
-                  className="w-full flex items-center justify-center gap-2 bg-[#e24c30] text-white rounded-xl py-3 text-[12px] font-semibold hover:bg-[#c94028] disabled:opacity-40 transition shadow-lg shadow-[#e24c30]/20 min-h-[48px]">
-                  {convertLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} Converter link
+                  className="w-full lg:w-auto lg:px-8 flex items-center justify-center gap-2 bg-[#e24c30] text-white rounded-xl py-2.5 text-[12px] font-semibold hover:bg-[#c94028] disabled:opacity-40 transition shadow-lg shadow-[#e24c30]/20 shrink-0">
+                  {convertLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} 
+                  Converter link
                 </button>
+                
+                {lastGeneratedLink && (
+                  <div className="hidden lg:flex items-center gap-2 text-amber-300 text-[11px] font-bold animate-in fade-in slide-in-from-left-3 duration-500">
+                    <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Pronto! O link já está disponível em "Links Gerados".</span>
+                  </div>
+                )}
               </div>
 
               {goldenProducts.length > 0 && (
