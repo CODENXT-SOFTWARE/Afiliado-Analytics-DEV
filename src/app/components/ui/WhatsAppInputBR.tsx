@@ -2,6 +2,23 @@
 
 import { useMemo } from 'react'
 
+/** SVG da bandeira brasileira — renderização consistente (Windows/Chrome
+ * não renderiza flag emoji, cai em "BR" texto). */
+function BRFlagSVG({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 14 10"
+      className={className}
+      aria-hidden
+      preserveAspectRatio="xMidYMid slice"
+    >
+      <rect width="14" height="10" fill="#009C3B" />
+      <polygon points="7,1 13,5 7,9 1,5" fill="#FFDF00" />
+      <circle cx="7" cy="5" r="2" fill="#002776" />
+    </svg>
+  )
+}
+
 /** Formata dígitos BR: 11XXXXXXXXX → (11) XXXXX-XXXX.
  * Aceita até 11 dígitos (DDD 2 + número 8 ou 9). Descarta não-dígitos.
  */
@@ -54,7 +71,7 @@ export default function WhatsAppInputBR({
         style={{ borderColor: style?.borderColor, color: style?.color }}
         aria-hidden
       >
-        <span className="text-base leading-none">🇧🇷</span>
+        <BRFlagSVG className="h-4 w-[22px] shrink-0 rounded-sm" />
         <span className="text-[13px] font-medium">+55</span>
       </div>
       <input

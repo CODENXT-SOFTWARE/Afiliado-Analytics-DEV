@@ -663,13 +663,14 @@ function PaymentSection({
     setCreating(true);
     (async () => {
       try {
+        const waE164 = `55${buyerWhatsapp.replace(/\D/g, "")}`;
         const payload =
           selection.type === "pickup"
-            ? { mode: "pickup", buyerWhatsapp: buyerWhatsapp.trim() }
+            ? { mode: "pickup", buyerWhatsapp: waE164 }
             : selection.type === "digital"
               ? {
                   mode: "digital",
-                  buyerWhatsapp: buyerWhatsapp.trim(),
+                  buyerWhatsapp: waE164,
                   buyerEmail: buyerEmail.trim(),
                 }
               : selection.type === "local_delivery"
