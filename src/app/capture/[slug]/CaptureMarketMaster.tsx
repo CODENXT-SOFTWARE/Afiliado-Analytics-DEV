@@ -6,7 +6,7 @@ import { Montserrat, Playfair_Display } from "next/font/google";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl } from "./capture-vip-shared";
+import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -84,11 +84,13 @@ function CtaBlock(props: {
   r: number;
   g: number;
   b: number;
+  metaPixelId?: string | null;
 }) {
-  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b } = props;
+  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b, metaPixelId } = props;
   return (
     <a
       href={ctaHref}
+      onClick={() => trackPixelLead(metaPixelId)}
       className={`mm-cta-pulse ${CAPTURE_CTA_CLASS} rounded-xl font-bold shadow-lg transition-transform active:scale-[0.99]`}
       style={{
         backgroundColor: buttonColor,
@@ -139,6 +141,7 @@ export default function CaptureMarketMaster(props: CaptureVipLandingProps) {
     promoSectionsEnabled,
     promoTitles,
     promoCards,
+    metaPixelId,
   } = props;
 
   const notifOn = notificationsEnabled !== false;
@@ -297,6 +300,7 @@ export default function CaptureMarketMaster(props: CaptureVipLandingProps) {
                 r={r}
                 g={g}
                 b={b}
+                metaPixelId={metaPixelId}
               />
             </div>
 
@@ -437,6 +441,7 @@ export default function CaptureMarketMaster(props: CaptureVipLandingProps) {
                   r={r}
                   g={g}
                   b={b}
+                  metaPixelId={metaPixelId}
                 />
               </div>
             </div>

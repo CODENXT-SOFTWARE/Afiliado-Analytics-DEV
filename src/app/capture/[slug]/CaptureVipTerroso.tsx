@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Clock, Shield, Star } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
-import { isWhatsAppUrl, useCaptureVipFonts } from "./capture-vip-shared";
+import { isWhatsAppUrl, trackPixelLead, useCaptureVipFonts } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -52,6 +52,7 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
     promoSectionsEnabled,
     promoTitles,
     promoCards,
+    metaPixelId,
   } = props;
 
   const promoOn = promoSectionsEnabled !== false;
@@ -212,6 +213,7 @@ export default function CaptureVipTerroso(props: CaptureVipLandingProps) {
           <div className="w-full">
             <a
               href={ctaHref}
+              onClick={() => trackPixelLead(metaPixelId)}
               className={`capture-vip-terroso-cta-pulse ${CAPTURE_CTA_CLASS} text-lg font-extrabold tracking-wide transition-opacity hover:opacity-95 active:opacity-90`}
               style={{
                 background: `linear-gradient(135deg, ${TERROSO.ctaFrom} 0%, ${TERROSO.ctaTo} 100%)`,

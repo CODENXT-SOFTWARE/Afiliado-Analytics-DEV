@@ -25,3 +25,15 @@ export function isWhatsAppUrl(raw: string) {
     return /whatsapp|wa\.me/i.test(raw);
   }
 }
+
+/**
+ * Dispara o evento de conversão 'Lead' no Meta Pixel se estiver configurado.
+ */
+export function trackPixelLead(pixelId: string | null | undefined) {
+  if (typeof window !== "undefined" && pixelId) {
+    const w = window as any;
+    if (typeof w.fbq === "function") {
+      w.fbq("track", "Lead");
+    }
+  }
+}

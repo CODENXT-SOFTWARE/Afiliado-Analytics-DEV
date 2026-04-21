@@ -6,7 +6,7 @@ import { Check, Flame } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl } from "./capture-vip-shared";
+import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -48,12 +48,14 @@ function CtaBlock(props: {
   r: number;
   g: number;
   b: number;
+  metaPixelId?: string | null;
 }) {
-  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b } = props;
+  const { ctaHref, buttonColor, safeBtn, showWa, r, g, b, metaPixelId } = props;
   return (
     <>
       <a
         href={ctaHref}
+        onClick={() => trackPixelLead(metaPixelId)}
         className={`capture-vinho-rose-cta-pulse ${CAPTURE_CTA_CLASS_UPPER} font-black shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]`}
         style={{
           backgroundColor: buttonColor,
@@ -86,6 +88,7 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
     promoSectionsEnabled,
     promoTitles,
     promoCards,
+    metaPixelId,
   } = props;
 
   const promoOn = promoSectionsEnabled !== false;
@@ -190,6 +193,7 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
             r={r}
             g={g}
             b={b}
+            metaPixelId={metaPixelId}
           />
 
           <CaptureOfertCarouselIf {...props} slot="below_cta" variant="light" eyebrow="Destaques" />
@@ -278,6 +282,7 @@ export default function CaptureVipVinhoRose(props: CaptureVipLandingProps) {
               r={r}
               g={g}
               b={b}
+              metaPixelId={metaPixelId}
             />
           </div>
 

@@ -44,4 +44,7 @@ export type CaptureVipLandingProps = {
   promoRosaCardImageUrls?: (string | null)[];
   /** URLs públicas das fotos dos depoimentos Aurora (alinhadas ao array normalizado). */
   promoAuroraAvatarUrls?: (string | null)[];
+
+  /** Meta Pixel ID para tracking de cliques (dispara 'Lead'). */
+  metaPixelId?: string | null;
 };

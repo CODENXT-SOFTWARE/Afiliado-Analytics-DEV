@@ -6,7 +6,7 @@ import { Clock } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl } from "./capture-vip-shared";
+import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -35,11 +35,13 @@ function CtaButton(props: {
   g: number;
   b: number;
   className?: string;
+  metaPixelId?: string | null;
 }) {
-  const { href, children, r, g, b, className = "" } = props;
+  const { href, children, r, g, b, className = "", metaPixelId } = props;
   return (
     <a
       href={href}
+      onClick={() => trackPixelLead(metaPixelId)}
       className={`capture-aurora-cta relative ${CAPTURE_CTA_CLASS_UPPER} overflow-hidden font-black tracking-[0.12em] transition-transform hover:scale-[1.02] active:scale-[0.98] ${className}`}
       style={{
         backgroundColor: `rgb(${r},${g},${b})`,
@@ -78,6 +80,7 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
     promoTitles,
     promoCards,
     promoAuroraAvatarUrls,
+    metaPixelId,
   } = props;
 
   const promoOn = promoSectionsEnabled !== false;
@@ -234,7 +237,7 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
             />
 
             <div className="mt-6">
-              <CtaButton href={ctaHref} r={r} g={g} b={b}>
+              <CtaButton href={ctaHref} r={r} g={g} b={b} metaPixelId={metaPixelId}>
                 {showWa ? <FaWhatsapp className="text-2xl shrink-0" aria-hidden /> : null}
                 <span className={CAPTURE_CTA_LABEL}>{safeBtn}</span>
               </CtaButton>
@@ -342,7 +345,7 @@ export default function CaptureAuroraLedger(props: CaptureVipLandingProps) {
             ) : null}
 
             <div className="mt-8">
-              <CtaButton href={ctaHref} r={r} g={g} b={b}>
+              <CtaButton href={ctaHref} r={r} g={g} b={b} metaPixelId={metaPixelId}>
                 {showWa ? <FaWhatsapp className="text-2xl shrink-0" aria-hidden /> : null}
                 <span className={CAPTURE_CTA_LABEL}>{safeBtn}</span>
               </CtaButton>
