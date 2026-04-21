@@ -31,6 +31,25 @@ export function formatBRPhone(input: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
+/** Remove prefixo "55" se o valor salvo já estiver com ele (12 ou 13 dígitos).
+ * Útil pra hidratar o input com valores do DB que vieram no formato E.164 sem `+`.
+ */
+export function stripBRPrefix(input: string): string {
+  const d = input.replace(/\D/g, '')
+  if (d.startsWith('55') && d.length >= 12 && d.length <= 13) return d.slice(2)
+  return d
+}
+
+/** Converte input BR (formatado ou não) em "55" + dígitos — sem `+` nem formatação.
+ * Formato esperado pelo backend (n8n / Evolution API / Supabase). Ex.: 5579999062401.
+ */
+export function toBRWhatsappWithPrefix(input: string): string {
+  const d = input.replace(/\D/g, '')
+  if (d.length === 0) return ''
+  if (d.startsWith('55') && d.length >= 12 && d.length <= 13) return d
+  return `55${d}`
+}
+
 type InputStyle = {
   background?: string
   borderColor?: string

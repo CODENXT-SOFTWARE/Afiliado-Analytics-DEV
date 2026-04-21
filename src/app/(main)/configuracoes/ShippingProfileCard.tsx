@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { MapPin, Loader2, Trash2, MessageCircle } from "lucide-react";
 import Toolist from "@/app/components/ui/Toolist";
+import WhatsAppInputBR, {
+  stripBRPrefix,
+  toBRWhatsappWithPrefix,
+} from "@/app/components/ui/WhatsAppInputBR";
 
 type ShippingProfile = {
   shipping_sender_name: string;
@@ -58,7 +62,13 @@ export default function ShippingProfileCard() {
       try {
         const res = await fetch("/api/settings/shipping-profile");
         const json = await res.json();
-        if (res.ok) setForm({ ...EMPTY, ...json });
+        if (res.ok) {
+          // Remove prefixo "55" do WhatsApp salvo pra exibir só o número nacional no input.
+          const loadedWhatsapp = typeof json.shipping_sender_whatsapp === "string"
+            ? stripBRPrefix(json.shipping_sender_whatsapp)
+            : "";
+          setForm({ ...EMPTY, ...json, shipping_sender_whatsapp: loadedWhatsapp });
+        }
       } catch {
         /* silêncio — perfil vazio */
       } finally {
@@ -106,10 +116,19 @@ export default function ShippingProfileCard() {
       return;
     }
     try {
+      // WhatsApp salvo no Supabase no formato "55" + DDD + número (sem + nem máscara).
+      // Backend/n8n recebe 5579999062401, ex. Se o usuário esvaziou o campo, envia vazio.
+      const whatsappDigits = form.shipping_sender_whatsapp.trim()
+        ? toBRWhatsappWithPrefix(form.shipping_sender_whatsapp)
+        : "";
       const res = await fetch("/api/settings/shipping-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, shipping_sender_cep: cepDigits }),
+        body: JSON.stringify({
+          ...form,
+          shipping_sender_cep: cepDigits,
+          shipping_sender_whatsapp: whatsappDigits,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Erro ao salvar");
@@ -260,12 +279,12 @@ export default function ShippingProfileCard() {
               text="Aparece no checkout Stripe como link clicável e na tela de confirmação após o pagamento. Ao salvar, todos os seus Payment Links são atualizados automaticamente na Stripe."
             />
           </label>
-          <input
-            value={form.shipping_sender_whatsapp}
-            onChange={(e) => set("shipping_sender_whatsapp", e.target.value)}
-            placeholder="(11) 99999-0000"
-            className={`mt-1 ${inputCls}`}
-          />
+          <div className="mt-1">
+            <WhatsAppInputBR
+              value={form.shipping_sender_whatsapp}
+              onChange={(v) => set("shipping_sender_whatsapp", v)}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px] gap-3">
