@@ -7,7 +7,7 @@ import {
 import { createPortal } from "react-dom";
 import {
   Link as LinkIcon, Search, TrendingUp, MousePointer2,
-  Copy, ExternalLink, Trash2, ChevronLeft, ChevronRight,
+  Copy, ExternalLink, Trash2, ChevronRight,
   CheckCircle2, X, Hash, Zap, ListPlus,
   Plus, Info, Loader2, AlertCircle, ImageIcon, Check,
 } from "lucide-react";
@@ -331,7 +331,6 @@ export default function GeradorLinksShopeePage() {
   const [subId3, setSubId3] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [lastGeneratedLink, setLastGeneratedLink] = useState("");
-  const [linkCopied, setLinkCopied] = useState(false);
   const [convertLoading, setConvertLoading] = useState(false);
   const [products, setProducts] = useState<ProductOffer[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductOffer | null>(null);
@@ -992,7 +991,7 @@ export default function GeradorLinksShopeePage() {
                     <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
                       <Check className="w-3.5 h-3.5" />
                     </div>
-                    <span>Pronto! O link já está disponível em "Links Gerados".</span>
+                    <span>Pronto! O link já está disponível em &quot;Links Gerados&quot;.</span>
                   </div>
                 )}
               </div>
