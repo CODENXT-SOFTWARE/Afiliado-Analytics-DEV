@@ -6,7 +6,7 @@ import { Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
+import { handlePixelCTAClick, isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -85,7 +85,7 @@ function CtaLux(props: {
   return (
     <a
       href={ctaHref}
-      onClick={() => trackPixelLead(metaPixelId)}
+      onClick={(e) => handlePixelCTAClick(e, metaPixelId)}
       className={`lux-cta-pulse ${CAPTURE_CTA_CLASS} rounded-full border-2 font-semibold tracking-wide`}
       style={{
         background: `linear-gradient(165deg, rgba(${r},${g},${b},0.95) 0%, rgb(${Math.max(0, r - 35)},${Math.max(0, g - 35)},${Math.max(0, b - 35)}) 100%)`,

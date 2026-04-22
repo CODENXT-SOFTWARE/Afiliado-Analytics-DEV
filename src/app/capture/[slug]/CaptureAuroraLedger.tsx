@@ -6,7 +6,7 @@ import { Clock } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
+import { handlePixelCTAClick, isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -41,7 +41,7 @@ function CtaButton(props: {
   return (
     <a
       href={href}
-      onClick={() => trackPixelLead(metaPixelId)}
+      onClick={(e) => handlePixelCTAClick(e, metaPixelId)}
       className={`capture-aurora-cta relative ${CAPTURE_CTA_CLASS_UPPER} overflow-hidden font-black tracking-[0.12em] transition-transform hover:scale-[1.02] active:scale-[0.98] ${className}`}
       style={{
         backgroundColor: `rgb(${r},${g},${b})`,

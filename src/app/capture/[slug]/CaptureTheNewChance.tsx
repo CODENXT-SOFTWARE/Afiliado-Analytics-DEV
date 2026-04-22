@@ -6,7 +6,7 @@ import { Check, Flame } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { CaptureVipLandingProps } from "./capture-vip-types";
 import { parseColorToRgb } from "@/app/(main)/dashboard/captura/_lib/captureUtils";
-import { isWhatsAppUrl, trackPixelLead } from "./capture-vip-shared";
+import { handlePixelCTAClick, isWhatsAppUrl } from "./capture-vip-shared";
 import CaptureVipEntradaToasts from "./CaptureVipEntradaToasts";
 import { CaptureYoutubeAtSlot } from "./CaptureYoutubeAtSlot";
 import {
@@ -129,7 +129,7 @@ function CtaBlock(props: {
     <>
       <a
         href={ctaHref}
-        onClick={() => trackPixelLead(metaPixelId)}
+        onClick={(e) => handlePixelCTAClick(e, metaPixelId)}
         className={`newchance-cta-pulse ${CAPTURE_CTA_CLASS_UPPER} font-black shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] ${className}`}
         style={{
           backgroundColor: buttonColor,

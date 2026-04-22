@@ -14,7 +14,7 @@ import {
   emBrancoShowsAfterCta,
   type EmBrancoCardMediaBundle,
 } from "./CaptureEmBrancoExtraBlocks";
-import { trackPixelLead } from "./capture-vip-shared";
+import { handlePixelCTAClick, trackPixelLead } from "./capture-vip-shared";
 
 export type CaptureBlankCanvasProps = {
   config: BlankCanvasConfig;
@@ -244,7 +244,7 @@ export default function CaptureBlankCanvas({
       href={ctaHref}
       target={previewMode ? "_self" : "_blank"}
       rel={previewMode ? undefined : "noopener noreferrer"}
-      onClick={() => trackPixelLead(metaPixelId)}
+      onClick={(e) => handlePixelCTAClick(e, metaPixelId)}
       className={`inline-flex items-center justify-center gap-2 font-semibold transition-transform hover:scale-[1.02] active:scale-[0.98] ${
         config.btnFullWidth ? "w-full" : "min-w-[200px]"
       } ${config.btnPulse ? "blank-cta-pulse" : ""}`}
