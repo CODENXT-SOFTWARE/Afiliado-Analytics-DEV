@@ -26,6 +26,11 @@ export function isWhatsAppUrl(raw: string) {
   }
 }
 
+/** Interface mínima do fbq para evitar `any` e satisfazer o ESLint. */
+interface WindowWithFbq extends Window {
+  fbq?: (...args: unknown[]) => void;
+}
+
 /**
  * Handler de clique para botões CTA com rastreamento do Meta Pixel.
  *
@@ -43,7 +48,7 @@ export function handlePixelCTAClick(
   pixelId: string | null | undefined,
 ) {
   if (typeof window === "undefined" || !pixelId) return;
-  const w = window as any;
+  const w = window as WindowWithFbq;
   if (typeof w.fbq !== "function") return;
 
   const href = (e.currentTarget as HTMLAnchorElement).href;
@@ -70,9 +75,10 @@ export function handlePixelCTAClick(
  */
 export function trackPixelLead(pixelId: string | null | undefined) {
   if (typeof window !== "undefined" && pixelId) {
-    const w = window as any;
+    const w = window as WindowWithFbq;
     if (typeof w.fbq === "function") {
       w.fbq("track", "Lead");
     }
   }
 }
+
