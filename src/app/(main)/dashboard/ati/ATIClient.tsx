@@ -32,6 +32,7 @@ import {
   Loader2,
   RefreshCw,
   CreditCard,
+  PauseCircle,
 } from "lucide-react";
 
 const ATI_CAMPAIGNS_PER_PAGE = 6;
@@ -814,6 +815,8 @@ export default function ATIClient() {
   const [adDuplicateCount, setAdDuplicateCount] = useState("5");
   const [adDuplicateSaving, setAdDuplicateSaving] = useState(false);
   const [shopeeWarning, setShopeeWarning] = useState<string | null>(null);
+  const [pauseConfirm, setPauseConfirm] = useState<{ type: "campaign" | "adset" | "ad"; id: string; name: string } | null>(null);
+  const [pauseConfirmLoading, setPauseConfirmLoading] = useState(false);
 
   const applyAtiPayload = useCallback((data: ATIDashboardSessionPayload) => {
     setCreatives(data.creatives);
@@ -1015,20 +1018,73 @@ export default function ATIClient() {
     }
   };
 
+  const handleConfirmPause = async () => {
+    if (!pauseConfirm) return;
+    const { type, id } = pauseConfirm;
+    setPauseConfirmLoading(true);
+    try {
+      if (type === "campaign") {
+        setCampaignTogglingId(id);
+        const res = await fetch("/api/meta/campaigns/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaign_id: id, status: "PAUSED" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error ?? "Erro ao pausar");
+        setCampaignStatus((prev) => ({ ...prev, [id]: "PAUSED" }));
+        setCampaignTogglingId(null);
+      } else if (type === "adset") {
+        setAdSetTogglingId(id);
+        const res = await fetch("/api/meta/adsets/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adset_id: id, status: "PAUSED" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error ?? "Erro ao pausar");
+        setAdSetStatusMap((prev) => ({ ...prev, [id]: "PAUSED" }));
+        setAdSetTogglingId(null);
+      } else {
+        setAdTogglingId(id);
+        const res = await fetch("/api/meta/ads/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ad_id: id, status: "PAUSED" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error ?? "Erro ao pausar");
+        setAdStatusMap((prev) => ({ ...prev, [id]: "PAUSED" }));
+        setAdTogglingId(null);
+      }
+      setPauseConfirm(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao pausar");
+      setCampaignTogglingId(null);
+      setAdSetTogglingId(null);
+      setAdTogglingId(null);
+    } finally {
+      setPauseConfirmLoading(false);
+    }
+  };
+
   const handleCampaignStatusToggle = async (campaignId: string) => {
-    const current = campaignStatus[campaignId];
-    const isActive = current === "ACTIVE";
-    const nextStatus = isActive ? "PAUSED" : "ACTIVE";
+    const isActive = campaignStatus[campaignId] === "ACTIVE";
+    if (isActive) {
+      const name = campaignsList.find((c) => c.id === campaignId)?.name ?? campaignId;
+      setPauseConfirm({ type: "campaign", id: campaignId, name });
+      return;
+    }
     setCampaignTogglingId(campaignId);
     try {
       const res = await fetch("/api/meta/campaigns/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaign_id: campaignId, status: nextStatus }),
+        body: JSON.stringify({ campaign_id: campaignId, status: "ACTIVE" }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Erro ao atualizar campanha");
-      setCampaignStatus((prev) => ({ ...prev, [campaignId]: nextStatus }));
+      setCampaignStatus((prev) => ({ ...prev, [campaignId]: "ACTIVE" }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao alterar status");
     } finally {
@@ -1112,19 +1168,22 @@ export default function ATIClient() {
   };
 
   const handleAdSetStatusToggle = async (adSetId: string) => {
-    const current = adSetStatusMap[adSetId];
-    const isActive = current === "ACTIVE";
-    const nextStatus = isActive ? "PAUSED" : "ACTIVE";
+    const isActive = adSetStatusMap[adSetId] === "ACTIVE";
+    if (isActive) {
+      const name = adSetList.find((s) => s.id === adSetId)?.name ?? adSetId;
+      setPauseConfirm({ type: "adset", id: adSetId, name });
+      return;
+    }
     setAdSetTogglingId(adSetId);
     try {
       const res = await fetch("/api/meta/adsets/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adset_id: adSetId, status: nextStatus }),
+        body: JSON.stringify({ adset_id: adSetId, status: "ACTIVE" }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Erro ao atualizar conjunto");
-      setAdSetStatusMap((prev) => ({ ...prev, [adSetId]: nextStatus }));
+      setAdSetStatusMap((prev) => ({ ...prev, [adSetId]: "ACTIVE" }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao alterar status do conjunto");
     } finally {
@@ -1133,19 +1192,22 @@ export default function ATIClient() {
   };
 
   const handleAdStatusToggle = async (adId: string) => {
-    const current = adStatusMap[adId];
-    const isActive = current === "ACTIVE";
-    const nextStatus = isActive ? "PAUSED" : "ACTIVE";
+    const isActive = adStatusMap[adId] === "ACTIVE";
+    if (isActive) {
+      const name = creatives.find((c) => c.adId === adId)?.adName ?? adId;
+      setPauseConfirm({ type: "ad", id: adId, name });
+      return;
+    }
     setAdTogglingId(adId);
     try {
       const res = await fetch("/api/meta/ads/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ad_id: adId, status: nextStatus }),
+        body: JSON.stringify({ ad_id: adId, status: "ACTIVE" }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Erro ao atualizar anúncio");
-      setAdStatusMap((prev) => ({ ...prev, [adId]: nextStatus }));
+      setAdStatusMap((prev) => ({ ...prev, [adId]: "ACTIVE" }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao alterar status do anúncio");
     } finally {
@@ -2379,6 +2441,74 @@ export default function ATIClient() {
             <div className="flex gap-2 justify-end">
               <button type="button" onClick={() => setAdDuplicateModal(null)} className="rounded-md border border-dark-border py-2 px-4 text-sm font-medium text-text-secondary hover:bg-dark-bg">Cancelar</button>
               <button type="button" disabled={adDuplicateSaving} onClick={handleAdDuplicateSave} className="rounded-md bg-shopee-orange py-2 px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">{adDuplicateSaving ? "Duplicando…" : "Duplicar"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de confirmação de pausa (campanha / conjunto / anúncio) ── */}
+      {pauseConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-[2px]"
+          onClick={() => { if (!pauseConfirmLoading) setPauseConfirm(null); }}
+        >
+          <div
+            className="w-full max-w-sm bg-dark-card border border-amber-500/25 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+
+            {/* Ícone + Título */}
+            <div className="flex flex-col items-center px-6 pt-6 pb-3 gap-3">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+                <PauseCircle className="h-7 w-7 text-amber-400" aria-hidden="true" />
+              </div>
+              <div className="text-center">
+                <h2 className="text-base font-bold text-text-primary">
+                  Pausar {pauseConfirm.type === "campaign" ? "Campanha" : pauseConfirm.type === "adset" ? "Conjunto" : "Anúncio"}?
+                </h2>
+                <p className="text-xs text-text-secondary mt-1 line-clamp-2 max-w-[260px] mx-auto">
+                  &ldquo;{pauseConfirm.name}&rdquo;
+                </p>
+              </div>
+            </div>
+
+            {/* Aviso */}
+            <div className="mx-5 mb-4 rounded-xl bg-amber-500/8 border border-amber-500/20 px-3 py-2.5 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+              <p className="text-xs text-amber-200/80 leading-relaxed">
+                Este item será pausado no Meta imediatamente. Você pode reativar a qualquer momento.
+              </p>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-2.5 px-5 pt-1 pb-6">
+              <button
+                type="button"
+                disabled={pauseConfirmLoading}
+                onClick={() => setPauseConfirm(null)}
+                className="flex-1 rounded-xl border border-dark-border py-3 text-sm font-semibold text-text-secondary hover:bg-dark-bg hover:text-text-primary transition-all disabled:opacity-40 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={pauseConfirmLoading}
+                onClick={handleConfirmPause}
+                className="flex-1 rounded-xl bg-amber-500 py-3 text-sm font-semibold text-white hover:bg-amber-400 disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {pauseConfirmLoading ? (
+                  <>
+                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    Pausando&hellip;
+                  </>
+                ) : (
+                  <>
+                    <PauseCircle className="h-4 w-4" aria-hidden="true" />
+                    Confirmar pausa
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
