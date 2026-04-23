@@ -218,7 +218,6 @@ function AdAccordionItem({
   onEditAd,
   onReloadAti,
   campaignIsInfoP = false,
-  campaignIsGrupos = false,
 }: {
   row: ATICreativeRow;
   dateLabel: string;
@@ -238,8 +237,6 @@ function AdAccordionItem({
   onReloadAti: () => Promise<void>;
   /** Se a campanha-pai está marcada como InfoP, exibimos o bloco de SubId InfoP. */
   campaignIsInfoP?: boolean;
-  /** Se a campanha-pai está marcada como Grupos, exibimos o bloco de Sub ID Shopee. */
-  campaignIsGrupos?: boolean;
 }) {
   const isOpen = expandedId === row.adId;
   const [shopeeSubDraft, setShopeeSubDraft] = useState(() => row.shopeeSubId ?? row.subId ?? "");
@@ -358,8 +355,7 @@ function AdAccordionItem({
 
       {isOpen && (
         <div className="border-t border-dark-border bg-dark-bg/30 p-4 space-y-4">
-          {/* Shopee SubId: só renderiza se a campanha-pai está marcada como Grupos (dados permanecem salvos no banco independente disso). */}
-          {campaignIsGrupos ? (
+          {/* Shopee SubId: cruzamento com vendas Shopee */}
           <div className="rounded-lg border border-dark-border/80 bg-dark-card/50 p-3 space-y-2">
             <p className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
               <ShoppingBag className="h-3.5 w-3.5 text-shopee-orange" />
@@ -437,7 +433,6 @@ function AdAccordionItem({
               </p>
             )}
           </div>
-          ) : null}
 
           {/* ── SubId InfoP (cruzamento com produtos Stripe) — só aparece em campanhas marcadas como InfoP ── */}
           {campaignIsInfoP ? (
@@ -2037,7 +2032,6 @@ export default function ATIClient() {
                                     }}
                                     onReloadAti={load}
                                     campaignIsInfoP={campaignIdsInfoP.includes(camp.campaignId)}
-                                    campaignIsGrupos={campaignIdsTraficoGrupos.includes(camp.campaignId)}
                                   />
                                 ))}
                               </div>
