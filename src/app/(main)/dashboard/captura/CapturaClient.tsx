@@ -824,7 +824,7 @@ export default function CapturaClient() {
     setDescription("");
     setButtonText("");
     setWhatsappUrl("");
-    setButtonColor("#25D366");
+    setButtonColor(t === "vip_terroso" ? "#BE9069" : "#25D366");
     setLayoutVariant(t === "classic" ? "icons" : "scarcity");
     setMetaPixelId("");
     setYoutubeUrl("");
@@ -1784,6 +1784,14 @@ export default function CapturaClient() {
 
   if (saving && (mode === "create" || mode === "edit")) return <LoadingOverlay message="Salvando..." />;
 
+  function handleCloseWizard() {
+    setMode(sites.length > 0 ? "view" : "empty");
+    setStep(1);
+    setEditingSite(null);
+    setIsCreating(false);
+    setError(null);
+  }
+
   const isVipPreview =
     pageTemplate === "vip_rosa" ||
     pageTemplate === "vip_terroso" ||
@@ -1834,6 +1842,20 @@ export default function CapturaClient() {
             >
               <Plus className="h-5 w-5" />
               Criar outro site
+            </button>
+          )}
+
+          {(mode === "create" || mode === "edit") && (
+            <button
+              onClick={handleCloseWizard}
+              className="relative flex items-center gap-2 px-5 py-2 rounded-full border border-red-500/20 bg-red-500/90 text-white hover:bg-red-500 transition-all duration-500 group shadow-lg shadow-red-500/20 ml-auto overflow-hidden"
+              type="button"
+            >
+              {/* Shine effect */}
+              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              
+              <span className="relative text-[10px] font-black uppercase tracking-[0.2em]">Fechar</span>
+              <X className="relative h-3.5 w-3.5 transition-all duration-500 group-hover:rotate-180" strokeWidth={3} />
             </button>
           )}
         </div>
@@ -2108,9 +2130,16 @@ export default function CapturaClient() {
           {/* Form */}
           <div className="bg-dark-card p-4 sm:p-6 rounded-lg border border-dark-border">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
-                {mode === "create" ? "Criar Site de Captura" : "Editar Site de Captura"}
-              </h2>
+              <div className="flex flex-col">
+                <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
+                  {mode === "create" ? "Criar Site de Captura" : "Editar Site de Captura"}
+                </h2>
+                {mode === "edit" && (
+                  <p className="text-xs text-text-secondary/80 mt-1">
+                    Slug: <span className="font-mono">{site?.slug}</span>
+                  </p>
+                )}
+              </div>
 
               {mode === "edit" && (
                 <button
@@ -2123,7 +2152,7 @@ export default function CapturaClient() {
                   title="Apagar para poder mudar o slug"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Apagar site
+                  <span className="hidden sm:inline">Apagar site</span>
                 </button>
               )}
             </div>

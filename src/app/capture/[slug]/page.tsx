@@ -319,26 +319,26 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
   const promoAuroraAvatarUrls =
     pageTemplate === "aurora_ledger" && Array.isArray(promoCards)
       ? (
-          promoCards as {
-            avatar_path?: string | null;
-          }[]
-        ).map((row) => {
-          const p = row.avatar_path?.trim();
-          if (!p) return null;
-          const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
-          return data.publicUrl ?? null;
-        })
+        promoCards as {
+          avatar_path?: string | null;
+        }[]
+      ).map((row) => {
+        const p = row.avatar_path?.trim();
+        if (!p) return null;
+        const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
+        return data.publicUrl ?? null;
+      })
       : undefined;
 
   const promoRosaUi = (site as { promo_rosa_ui?: unknown }).promo_rosa_ui;
   const promoRosaCardImageUrls =
     pageTemplate === "vip_rosa" || pageTemplate === "em_branco"
       ? normalizeVipRosaCardsFromDb(site.promo_section_cards).map((row) => {
-          const p = row.image_path?.trim();
-          if (!p) return null;
-          const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
-          return data.publicUrl ?? null;
-        })
+        const p = row.image_path?.trim();
+        if (!p) return null;
+        const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(p);
+        return data.publicUrl ?? null;
+      })
       : undefined;
 
   return (
@@ -436,15 +436,15 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
       ) : null}
 
       {!isVipTemplate && !isEmBranco ? (
-      <main
-        className="min-h-screen flex flex-col px-4 pt-10 pb-6 sm:pt-8 sm:pb-12"
-        style={{
-          background: "linear-gradient(135deg, rgb(255, 238, 232) 0%, rgb(232, 240, 255) 100%)",
-        }}
-      >
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
+        <main
+          className="min-h-screen flex flex-col px-4 pt-10 pb-6 sm:pt-8 sm:pb-12"
+          style={{
+            background: "linear-gradient(135deg, rgb(255, 238, 232) 0%, rgb(232, 240, 255) 100%)",
+          }}
+        >
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
             @keyframes cta-ring {
               0%   { box-shadow: 0 0 0 0 rgba(${r},${g},${b},.55), 0 0 22px rgba(${r},${g},${b},.35); opacity: .95; }
               70%  { box-shadow: 0 0 0 18px rgba(${r},${g},${b},0), 0 0 44px rgba(${r},${g},${b},0); opacity: .85; }
@@ -475,183 +475,183 @@ export default async function CapturePage(props: { params: Promise<{ slug: strin
               transform: translateY(-1px);
             }
           `,
-          }}
-        />
-
-        <div className="flex-1 flex items-center justify-center">
-          <div
-            className="w-full max-w-[504px] px-4 sm:px-9 pt-9 sm:pt-11 pb-5 sm:pb-5"
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.85)",
-              border: "1px solid rgba(255, 255, 255, 0.5)",
-              borderRadius: "32px",
-              boxShadow: "rgba(31, 38, 135, 0.15) 0px 8px 32px 0px",
-              backdropFilter: "blur(6px)",
             }}
-          >
-            {logoUrl && (
-              <div className="flex justify-center mb-6">
-                <div
-                  className="h-[130px] w-[130px] rounded-2xl flex items-center justify-center overflow-hidden"
-                  style={{ backgroundColor: "rgb(255, 255, 255)" }}
-                  aria-label="Logo"
-                >
-                  <Image
-                    src={logoUrl}
-                    alt="Logo"
-                    width={130}
-                    height={130}
-                    priority
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-              </div>
-            )}
+          />
 
-            <h1 className={CAPTURE_TITLE_HERO} style={{ color: "rgb(31, 31, 31)" }}>
-              {title}
-            </h1>
-
-            <OfertCarouselAtSlot
-              enabled={ofertCarouselEnabled}
-              imageUrls={ofertCarouselImageUrls}
-              position={ofertCarouselPosition}
-              slot="below_title"
-              variant="classic"
-              eyebrow="Destaques"
-            />
-
-            <CaptureYoutubeAtSlot
-              url={youtubeUrl}
-              position={youtubePosition}
-              slot="below_title"
-              className="mt-4 sm:mt-5 w-full"
-            />
-
-            <p
-              className={`${CAPTURE_BODY} mt-4 max-w-sm mx-auto font-semibold`}
-              style={{ color: "rgb(60, 60, 60)" }}
+          <div className="flex-1 flex items-center justify-center">
+            <div
+              className="w-full max-w-[504px] px-4 sm:px-9 pt-9 sm:pt-11 pb-5 sm:pb-5"
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.85)",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
+                borderRadius: "32px",
+                boxShadow: "rgba(31, 38, 135, 0.15) 0px 8px 32px 0px",
+                backdropFilter: "blur(6px)",
+              }}
             >
-              {desc}
-            </p>
-
-            {layoutVariant === "scarcity" ? (
-              <ScarcityBlock accentRgb={{ r, g, b }} />
-            ) : (
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7">
-                <div className="benefit flex flex-col items-center text-center gap-2">
-                  <div className="benefit-icon h-11 w-11 rounded-full flex items-center justify-center">
-                    <Zap size={20} color="rgb(238, 77, 45)" />
-                  </div>
-                  <span
-                    className="text-[12px] sm:text-[12.8px] font-semibold"
-                    style={{ color: "rgb(102, 102, 102)" }}
+              {logoUrl && (
+                <div className="flex justify-center mb-6">
+                  <div
+                    className="h-[130px] w-[130px] rounded-2xl flex items-center justify-center overflow-hidden"
+                    style={{ backgroundColor: "rgb(255, 255, 255)" }}
+                    aria-label="Logo"
                   >
-                    Ofertas Relâmpago
-                  </span>
-                </div>
-
-                <div className="benefit flex flex-col items-center text-center gap-2">
-                  <div className="benefit-icon h-11 w-11 rounded-full flex items-center justify-center">
-                    <Tag size={20} color="rgb(238, 77, 45)" />
+                    <Image
+                      src={logoUrl}
+                      alt="Logo"
+                      width={130}
+                      height={130}
+                      priority
+                      className="h-full w-full object-contain"
+                    />
                   </div>
-                  <span style={{ color: "rgb(102, 102, 102)", fontSize: "12.8px", fontWeight: 600 }}>
-                    Descontos Reais
-                  </span>
                 </div>
+              )}
 
-                <div className="benefit flex flex-col items-center text-center gap-2">
-                  <div className="benefit-icon h-11 w-11 rounded-full flex items-center justify-center">
-                    <Gift size={20} color="rgb(238, 77, 45)" />
+              <h1 className={CAPTURE_TITLE_HERO} style={{ color: "rgb(31, 31, 31)" }}>
+                {title}
+              </h1>
+
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled}
+                imageUrls={ofertCarouselImageUrls}
+                position={ofertCarouselPosition}
+                slot="below_title"
+                variant="classic"
+                eyebrow="Destaques"
+              />
+
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="below_title"
+                className="mt-4 sm:mt-5 w-full"
+              />
+
+              <p
+                className={`${CAPTURE_BODY} mt-4 max-w-sm mx-auto font-semibold`}
+                style={{ color: "rgb(60, 60, 60)" }}
+              >
+                {desc}
+              </p>
+
+              {layoutVariant === "scarcity" ? (
+                <ScarcityBlock accentRgb={{ r, g, b }} />
+              ) : (
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7">
+                  <div className="benefit flex flex-col items-center text-center gap-2">
+                    <div className="benefit-icon h-11 w-11 rounded-full flex items-center justify-center">
+                      <Zap size={20} color="rgb(238, 77, 45)" />
+                    </div>
+                    <span
+                      className="text-[12px] sm:text-[12.8px] font-semibold"
+                      style={{ color: "rgb(102, 102, 102)" }}
+                    >
+                      Ofertas Relâmpago
+                    </span>
                   </div>
-                  <span style={{ color: "rgb(102, 102, 102)", fontSize: "12.8px", fontWeight: 600 }}>
-                    Cupons Diários
-                  </span>
+
+                  <div className="benefit flex flex-col items-center text-center gap-2">
+                    <div className="benefit-icon h-11 w-11 rounded-full flex items-center justify-center">
+                      <Tag size={20} color="rgb(238, 77, 45)" />
+                    </div>
+                    <span style={{ color: "rgb(102, 102, 102)", fontSize: "12.8px", fontWeight: 600 }}>
+                      Descontos Reais
+                    </span>
+                  </div>
+
+                  <div className="benefit flex flex-col items-center text-center gap-2">
+                    <div className="benefit-icon h-11 w-11 rounded-full flex items-center justify-center">
+                      <Gift size={20} color="rgb(238, 77, 45)" />
+                    </div>
+                    <span style={{ color: "rgb(102, 102, 102)", fontSize: "12.8px", fontWeight: 600 }}>
+                      Cupons Diários
+                    </span>
+                  </div>
                 </div>
+              )}
+
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="above_cta"
+                className="mt-6 sm:mt-7 w-full"
+              />
+
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled}
+                imageUrls={ofertCarouselImageUrls}
+                position={ofertCarouselPosition}
+                slot="above_cta"
+                variant="classic"
+                eyebrow="Destaques"
+              />
+
+              {/* ✅ CORRIGIDO: removida div duplicada */}
+              <div className="flex justify-center mt-7 sm:mt-8">
+                <CTAButton
+                  href={`${slug}/go`}
+                  buttonColor={buttonColor}
+                  hasPixel={!!metaPixelId}
+                  text={buttonText}
+                  isWhatsApp={isWhatsApp}
+                />
               </div>
-            )}
 
-            <CaptureYoutubeAtSlot
-              url={youtubeUrl}
-              position={youtubePosition}
-              slot="above_cta"
-              className="mt-6 sm:mt-7 w-full"
-            />
+              <p
+                className="text-center mt-4 leading-relaxed"
+                style={{ color: "rgb(102, 102, 102)", fontSize: "14px" }}
+              >
+                Após clicar no botão acima, clique na opção &quot;CONTINUAR&quot;
+              </p>
 
-            <OfertCarouselAtSlot
-              enabled={ofertCarouselEnabled}
-              imageUrls={ofertCarouselImageUrls}
-              position={ofertCarouselPosition}
-              slot="above_cta"
-              variant="classic"
-              eyebrow="Destaques"
-            />
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled}
+                imageUrls={ofertCarouselImageUrls}
+                position={ofertCarouselPosition}
+                slot="below_cta"
+                variant="classic"
+                eyebrow="Destaques"
+              />
 
-            {/* ✅ CORRIGIDO: removida div duplicada */}
-            <div className="flex justify-center mt-7 sm:mt-8">
-              <CTAButton
-                href={`${slug}/go`}
-                buttonColor={buttonColor}
-                hasPixel={!!metaPixelId}
-                text={buttonText}
-                isWhatsApp={isWhatsApp}
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="below_cta"
+                className="mt-5 sm:mt-6 w-full"
+              />
+
+              <div className="flex justify-center items-center gap-2 mt-6">
+                <Lock size={16} color="rgb(34, 197, 94)" />
+                <span className="font-semibold" style={{ color: "rgb(34, 197, 94)", fontSize: "15px" }}>
+                  Site seguro
+                </span>
+              </div>
+
+              <OfertCarouselAtSlot
+                enabled={ofertCarouselEnabled}
+                imageUrls={ofertCarouselImageUrls}
+                position={ofertCarouselPosition}
+                slot="card_end"
+                variant="classic"
+                eyebrow="Destaques"
+              />
+
+              <CaptureYoutubeAtSlot
+                url={youtubeUrl}
+                position={youtubePosition}
+                slot="card_end"
+                className="mt-6 sm:mt-7 w-full"
               />
             </div>
-
-            <p
-              className="text-center mt-4 leading-relaxed"
-              style={{ color: "rgb(102, 102, 102)", fontSize: "14px" }}
-            >
-              Após clicar no botão acima, clique na opção &quot;CONTINUAR&quot;
-            </p>
-
-            <OfertCarouselAtSlot
-              enabled={ofertCarouselEnabled}
-              imageUrls={ofertCarouselImageUrls}
-              position={ofertCarouselPosition}
-              slot="below_cta"
-              variant="classic"
-              eyebrow="Destaques"
-            />
-
-            <CaptureYoutubeAtSlot
-              url={youtubeUrl}
-              position={youtubePosition}
-              slot="below_cta"
-              className="mt-5 sm:mt-6 w-full"
-            />
-
-            <div className="flex justify-center items-center gap-2 mt-6">
-              <Lock size={16} color="rgb(34, 197, 94)" />
-              <span className="font-semibold" style={{ color: "rgb(34, 197, 94)", fontSize: "15px" }}>
-                Site seguro
-              </span>
-            </div>
-
-            <OfertCarouselAtSlot
-              enabled={ofertCarouselEnabled}
-              imageUrls={ofertCarouselImageUrls}
-              position={ofertCarouselPosition}
-              slot="card_end"
-              variant="classic"
-              eyebrow="Destaques"
-            />
-
-            <CaptureYoutubeAtSlot
-              url={youtubeUrl}
-              position={youtubePosition}
-              slot="card_end"
-              className="mt-6 sm:mt-7 w-full"
-            />
           </div>
-        </div>
 
-        <footer className="pt-16 sm:pt-24 text-center" style={{ color: "rgb(153, 153, 153)", fontSize: "12px" }}>
-          © 2026{" "}
-          <CaptureFooterAfiliadoAnalyticsLink className="text-inherit underline-offset-2 hover:underline" />. Todos os
-          direitos reservados.
-        </footer>
-      </main>
+          <footer className="pt-16 sm:pt-24 text-center" style={{ color: "rgb(153, 153, 153)", fontSize: "12px" }}>
+            © 2026{" "}
+            <CaptureFooterAfiliadoAnalyticsLink className="text-inherit underline-offset-2 hover:underline" />. Todos os
+            direitos reservados.
+          </footer>
+        </main>
       ) : null}
     </>
   );
