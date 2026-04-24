@@ -190,8 +190,19 @@ function MostSoldCard({ product, onClick, compact = false, selected = false }: {
             {((product.commissionRate ?? 0) * 100).toFixed(1)}% comissão
           </p>
         </div>
-        <ExternalLink className={cn("text-[#e24c30] shrink-0 opacity-100 min-[420px]:opacity-50 min-[420px]:group-hover:opacity-100 transition-opacity mt-0.5 min-[420px]:mt-0",
-          compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(product.productLink || product.offerLink, "_blank", "noopener,noreferrer");
+          }}
+          title="Ver na Shopee"
+          className="shrink-0 cursor-pointer group/link"
+        >
+          <ExternalLink
+            className={cn("text-[#e24c30] transition-colors mt-0.5 min-[420px]:mt-0 group-hover/link:text-white",
+              compact ? "w-[15px] h-[15px]" : "w-[18px] h-[18px]")}
+          />
+        </span>
       </div>
     </button>
   );
@@ -982,10 +993,10 @@ export default function GeradorLinksShopeePage() {
               <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full min-w-0">
                 <button type="button" onClick={handleConvertLink} disabled={!canConvert}
                   className="w-full lg:w-auto lg:px-8 flex items-center justify-center gap-2 bg-[#e24c30] text-white rounded-xl py-2.5 text-[12px] font-semibold hover:bg-[#c94028] disabled:opacity-40 transition shadow-lg shadow-[#e24c30]/20 shrink-0">
-                  {convertLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} 
+                  {convertLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                   Converter link
                 </button>
-                
+
                 {lastGeneratedLink && (
                   <div className="hidden lg:flex items-center gap-2 text-amber-300 text-[11px] font-bold animate-in fade-in slide-in-from-left-3 duration-500">
                     <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -1016,7 +1027,7 @@ export default function GeradorLinksShopeePage() {
                 </div>
               )}
 
-              </div>
+            </div>
           )}
         </main>
       </div>
