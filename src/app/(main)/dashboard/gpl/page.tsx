@@ -354,6 +354,20 @@ export default function GplCalculatorPage() {
   }, [isApiRowsCacheLoading, isApiRangeCacheLoading]);
 
   useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        metaPeriodPopoverOpen &&
+        metaPeriodPopoverRef.current &&
+        !metaPeriodPopoverRef.current.contains(event.target as Node)
+      ) {
+        setMetaPeriodPopoverOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [metaPeriodPopoverOpen]);
+
+  useEffect(() => {
     if (hasShopeeKeys) return;
     setStartDateApplied(startDateDraft); setEndDateApplied(endDateDraft);
   }, [hasShopeeKeys, startDateDraft, endDateDraft]);
@@ -490,8 +504,8 @@ export default function GplCalculatorPage() {
   useEffect(() => {
     let alive = true;
     fetch("/api/evolution/instances").then((r) => r.json()).then((data) => {
-        if (alive && Array.isArray(data.instances)) setEvolutionInstances(data.instances);
-    }).catch(() => {});
+      if (alive && Array.isArray(data.instances)) setEvolutionInstances(data.instances);
+    }).catch(() => { });
     return () => { alive = false; };
   }, []);
 
@@ -522,14 +536,14 @@ export default function GplCalculatorPage() {
         const params = new URLSearchParams({ instance_id: instanceId });
         if (start && end) { params.set("start", start); params.set("end", end); }
         fetch(`/api/gpl/group-snapshots?${params.toString()}`, { cache: "no-store" }).then((r) => r.json()).then((data) => {
-            const baseRaw = data.base?.groups;
+          const baseRaw = data.base?.groups;
           const baseNorm = Array.isArray(baseRaw) ? (baseRaw as Array<{ id?: string; nome?: string; qtdMembros?: number }>).map((g) => ({ id: String(g?.id ?? ""), nome: String(g?.nome ?? ""), qtdMembros: Number(g?.qtdMembros ?? 0) })) : [];
-            setBaseGroups(baseNorm.length > 0 ? baseNorm : null);
-            const cum = data.cumulative ?? [];
-            const cumMap: Record<string, { total_novos: number; total_saidas: number }> = {};
+          setBaseGroups(baseNorm.length > 0 ? baseNorm : null);
+          const cum = data.cumulative ?? [];
+          const cumMap: Record<string, { total_novos: number; total_saidas: number }> = {};
           for (const c of cum) { if (c?.group_id) cumMap[c.group_id] = { total_novos: Number(c.total_novos ?? 0), total_saidas: Number(c.total_saidas ?? 0) }; }
-            setGroupCumulative(cumMap);
-        }).catch(() => {});
+          setGroupCumulative(cumMap);
+        }).catch(() => { });
       } else {
         setGroupsLastFetchedAt(new Date().toISOString());
         setGroupSnapshots([{ date: new Date().toISOString().slice(0, 10), groups: normalized }]);
@@ -775,6 +789,10 @@ export default function GplCalculatorPage() {
     : "Selecione campanhas para somar o custo de tráfego. O período do gasto Meta pode ser alterado pelo calendário ao lado (independente do período da Shopee). Marque a tag no ATI para as campanhas aparecerem aqui.";
 
   const openMetaPeriodPopover = () => {
+    if (metaPeriodPopoverOpen) {
+      setMetaPeriodPopoverOpen(false);
+      return;
+    }
     const s = metaTraficoStartResolved || getYesterday();
     const e = metaTraficoEndResolved || getYesterday();
     setMetaTraficoStartDraft(s);
@@ -839,10 +857,10 @@ export default function GplCalculatorPage() {
               <span className="ml-2 text-text-secondary/70">· {formatDateBR(startDateApplied)} a {formatDateBR(endDateApplied)}{daysInPeriod > 0 && <span className="text-[#e24c30]/80"> ({daysInPeriod}d)</span>}</span>
             )}
           </p>
-            </div>
+        </div>
         <div className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border ${hasShopeeKeys ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"}`}>
           {hasShopeeKeys ? <><CheckCircle2 className="h-3 w-3" /> API Shopee</> : <><BarChart3 className="h-3 w-3" /> Relatório local</>}
-          </div>
+        </div>
       </div>
 
       {/* Erro de API */}
@@ -852,7 +870,7 @@ export default function GplCalculatorPage() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-red-300">Erro ao buscar dados da Shopee</p>
             <p className="text-xs text-red-400/80 mt-0.5">{apiError}</p>
-              </div>
+          </div>
           <div className="flex gap-2 shrink-0">
             <Link href="/configuracoes" className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-colors">Configurações</Link>
             <button onClick={() => { setApiError(null); setApiFetchTick((t) => t + 1); }} className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-medium transition-colors">Tentar novamente</button>
@@ -864,12 +882,12 @@ export default function GplCalculatorPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="p-5 rounded-2xl bg-dark-card border border-dark-border mb-4">
             <Calculator className="h-12 w-12 text-text-secondary/40" />
-              </div>
+          </div>
           <h2 className="text-lg font-semibold text-text-primary mb-2">Nenhum dado disponível</h2>
           <p className="text-sm text-text-secondary max-w-xs mb-6">Faça upload do relatório na seção &quot;Análise de Comissões&quot; ou cadastre suas chaves da Shopee.</p>
           <Link href="/dashboard" className="inline-flex items-center gap-2 px-5 py-2.5 bg-shopee-orange hover:bg-shopee-orange/90 text-white font-semibold rounded-xl text-sm transition-colors">
             Ir para Análise <ArrowRight className="h-4 w-4" />
-            </Link>
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0">
@@ -878,7 +896,7 @@ export default function GplCalculatorPage() {
           <div className="md:col-span-4 lg:col-span-3 bg-[#27272a] rounded-xl border border-[#2c2c32] p-4 flex flex-col gap-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
             <div className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-2 py-1.5 rounded border border-emerald-500/20 text-[11px] font-semibold">
               <CheckSquare className="w-3 h-3 shrink-0" /> {hasShopeeKeys ? "API Shopee Conectada" : "Relatório local carregado"}
-                    </div>
+            </div>
 
             <div className="space-y-3 border-b border-dark-border pb-4">
               <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Parâmetros</h3>
@@ -917,9 +935,9 @@ export default function GplCalculatorPage() {
                   className="w-full bg-[#e24c30] text-white text-[11px] py-1.5 rounded font-semibold hover:opacity-90 disabled:opacity-40 transition flex items-center justify-center gap-1.5">
                   {isApiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                   Aplicar Filtro
-                  </button>
+                </button>
+              </div>
             </div>
-          </div>
 
             <div className="space-y-3">
               <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Valores</h3>
@@ -931,30 +949,30 @@ export default function GplCalculatorPage() {
                 inputClass="text-red-400"
                 tooltip="Soma total do valor investido para atrair os leads no mesmo período." />
             </div>
-                </div>
+          </div>
 
           {/* ── Centro: Resumo + Grupos/Campanhas ── */}
           <div className="md:col-span-8 lg:col-span-6 flex flex-col gap-4 min-h-0">
             {/* Cards resumo */}
             {showSummaryCards ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0">
-              {summaryCards.map((card) => (
-                <div key={card.label} className="bg-[#27272a] border border-[#2c2c32] rounded-lg p-2.5 flex flex-col justify-center">
-                  <div className="flex items-center gap-1">
-                    <p className="text-[9px] text-text-secondary uppercase tracking-wider leading-tight">{card.label}</p>
-                    {card.tooltip && (
-                      <div className="group relative flex items-center shrink-0">
-                        <Info className="w-3 h-3 text-text-secondary cursor-help" />
-                        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-max max-w-[180px] bg-[#232328] border border-dark-border text-[10px] text-white px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center shadow-lg whitespace-normal leading-tight">
-                          {card.tooltip}
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0">
+                {summaryCards.map((card) => (
+                  <div key={card.label} className="bg-[#27272a] border border-[#2c2c32] rounded-lg p-2.5 flex flex-col justify-center">
+                    <div className="flex items-center gap-1">
+                      <p className="text-[9px] text-text-secondary uppercase tracking-wider leading-tight">{card.label}</p>
+                      {card.tooltip && (
+                        <div className="group relative flex items-center shrink-0">
+                          <Info className="w-3 h-3 text-text-secondary cursor-help" />
+                          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-max max-w-[180px] bg-[#232328] border border-dark-border text-[10px] text-white px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center shadow-lg whitespace-normal leading-tight">
+                            {card.tooltip}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className={cn("mt-0.5 text-sm font-bold break-words leading-tight", card.tone)}>{card.value}</p>
                   </div>
-                )}
+                ))}
               </div>
-                  <p className={cn("mt-0.5 text-sm font-bold break-words leading-tight", card.tone)}>{card.value}</p>
-                </div>
-              ))}
-        </div>
             ) : (
               <div className="bg-dark-card border border-dark-border rounded-xl p-4 text-center text-sm text-text-secondary shrink-0">
                 Cards de resumo disponíveis no Plano Pro.
@@ -963,383 +981,390 @@ export default function GplCalculatorPage() {
 
             {/* Panel grupos/campanhas */}
             {showGroupsCampaignsInstance ? (
-            <div className=" rounded-xl  flex-1 relative min-h-[400px] lg:min-h-0">
-              <div className="absolute inset-0 flex flex-col p-4">
-                {/* Mobile: abas | (busca + instância na mesma linha). Desktop lg+: abas + instância | busca full width. */}
-                <div className="flex flex-col gap-2 mb-2 shrink-0">
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 w-full min-w-0">
-                    <div className="flex bg-[#27272a] p-1 rounded-lg border border-dark-border shrink-0">
-                      <button type="button" onClick={() => setActiveTab("grupos")}
-                        className={cn("px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-2",
-                          activeTab === "grupos" ? "bg-[#e24c30] text-white" : "text-text-secondary hover:text-white")}>
-                        <Users className="w-3 h-3" /> Grupos
-                </button>
-                      <button type="button" onClick={() => setActiveTab("campanhas")}
-                        className={cn("px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-2",
-                          activeTab === "campanhas" ? "bg-[#e24c30] text-white" : "text-text-secondary hover:text-white")}>
-                        <Activity className="w-3 h-3" /> Campanhas
-                </button>
-            </div>
-                    <div className="hidden lg:flex items-center justify-end gap-2 shrink-0 min-w-0 max-w-full sm:max-w-[min(100%,380px)] ml-auto">
-                      <MetaSearchablePicker
-                        value={selectedInstanceId}
-                        onChange={handleInstancePickerChange}
-                        options={instancePickerOptions}
-                        modalTitle="Instância WhatsApp"
-                        modalDescription="Escolha a instância Evolution para listar os grupos. Os grupos são atualizados automaticamente ao confirmar."
-                        searchPlaceholder="Buscar instância…"
-                        emptyButtonLabel="Selecionar instância"
-                        emptyAsTag
-                        emptyTagLabel="Instância"
-                        className="flex justify-end items-center min-w-0 [&>div]:justify-end"
-                        emptyOptionsMessage="Nenhuma instância disponível. Conecte o WhatsApp nas configurações."
-                      />
-                      {activeTab === "campanhas" ? (
-                        <button
-                          type="button"
-                          onClick={() => void fetchTraficoGrupos()}
-                          disabled={traficoGruposLoading}
-                          className="text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Atualizar campanhas"
-                        >
-                          <RefreshCcw className={cn("w-3 h-3", traficoGruposLoading && "animate-spin")} />
+              <div className=" rounded-xl  flex-1 relative min-h-[400px] lg:min-h-0">
+                <div className="absolute inset-0 flex flex-col py-4 px-1">
+                  {/* Mobile: abas | (busca + instância na mesma linha). Desktop lg+: abas + instância | busca full width. */}
+                  <div className="flex flex-col gap-2 mb-2 shrink-0">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 w-full min-w-0">
+                      <div className="flex bg-[#27272a] p-1 rounded-lg border border-dark-border shrink-0">
+                        <button type="button" onClick={() => setActiveTab("grupos")}
+                          className={cn("px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-2",
+                            activeTab === "grupos" ? "bg-[#e24c30] text-white" : "text-text-secondary hover:text-white")}>
+                          <Users className="w-3 h-3" /> Grupos
                         </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (selectedInstanceId && selectedInstanceName) {
-                              void fetchGroupsForInstance(selectedInstanceId, selectedInstanceName);
-                            }
+                        <button type="button" onClick={() => setActiveTab("campanhas")}
+                          className={cn("px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-2",
+                            activeTab === "campanhas" ? "bg-[#e24c30] text-white" : "text-text-secondary hover:text-white")}>
+                          <Activity className="w-3 h-3" /> Campanhas
+                        </button>
+                      </div>
+                      <div className="hidden lg:flex items-center justify-end gap-2 shrink-0 min-w-0 max-w-full sm:max-w-[min(100%,380px)] ml-auto">
+                        {activeTab === "grupos" && (
+                          <MetaSearchablePicker
+                            value={selectedInstanceId}
+                            onChange={handleInstancePickerChange}
+                            options={instancePickerOptions}
+                            modalTitle="Instância WhatsApp"
+                            modalDescription="Escolha a instância Evolution para listar os grupos. Os grupos são atualizados automaticamente ao confirmar."
+                            searchPlaceholder="Buscar instância…"
+                            emptyButtonLabel="Selecionar instância"
+                            emptyAsTag
+                            emptyTagLabel="Instância"
+                            className="flex justify-end items-center min-w-0 [&>div]:justify-end"
+                            emptyOptionsMessage="Nenhuma instância disponível. Conecte o WhatsApp nas configurações."
+                          />
+                        )}
+                        {activeTab === "campanhas" ? (
+                          <button
+                            type="button"
+                            onClick={() => void fetchTraficoGrupos()}
+                            disabled={traficoGruposLoading}
+                            className="w-9 h-9 flex items-center justify-center text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 rounded-lg transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Atualizar campanhas"
+                          >
+                            <RefreshCcw className={cn("w-4 h-4", traficoGruposLoading && "animate-spin")} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedInstanceId && selectedInstanceName) {
+                                void fetchGroupsForInstance(selectedInstanceId, selectedInstanceName);
+                              }
+                            }}
+                            disabled={!selectedInstanceId || groupsLoading}
+                            className="w-9 h-9 flex items-center justify-center text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/25 rounded-lg transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Atualizar grupos"
+                          >
+                            <RefreshCcw className={cn("w-4 h-4", groupsLoading && "animate-spin")} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-row items-center gap-2 w-full min-w-0 lg:flex-col lg:items-stretch lg:gap-2">
+                      <div className="relative flex-1 min-w-0 lg:w-full">
+                        <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder={activeTab === "grupos" ? "Buscar grupo…" : "Buscar campanha…"}
+                          value={activeTab === "grupos" ? groupSearchFilter : campaignSearchFilter}
+                          onChange={(e) => {
+                            if (activeTab === "grupos") setGroupSearchFilter(e.target.value);
+                            else setCampaignSearchFilter(e.target.value);
                           }}
-                          disabled={!selectedInstanceId || groupsLoading}
-                          className="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Atualizar grupos"
-                        >
-                          <RefreshCcw className={cn("w-3 h-3", groupsLoading && "animate-spin")} />
-                        </button>
-                      )}
-            </div>
+                          className="w-full bg-[#1c1c1f] border border-[#2c2c32] rounded-md py-2 pl-8 pr-3 text-xs focus:border-[#e24c30] outline-none min-w-0"
+                        />
+                      </div>
+                      <div className="flex lg:hidden shrink-0 items-center justify-end gap-2 min-w-0">
+                        {activeTab === "grupos" && (
+                          <MetaSearchablePicker
+                            value={selectedInstanceId}
+                            onChange={handleInstancePickerChange}
+                            options={instancePickerOptions}
+                            modalTitle="Instância WhatsApp"
+                            modalDescription="Escolha a instância Evolution para listar os grupos. Os grupos são atualizados automaticamente ao confirmar."
+                            searchPlaceholder="Buscar instância…"
+                            emptyButtonLabel="Selecionar instância"
+                            emptyAsTag
+                            emptyTagLabel="Instância"
+                            className="flex justify-end items-center min-w-0 max-w-[min(100vw-8rem,200px)] [&>div]:justify-end"
+                            emptyOptionsMessage="Nenhuma instância disponível. Conecte o WhatsApp nas configurações."
+                          />
+                        )}
+                        {activeTab === "campanhas" ? (
+                          <button
+                            type="button"
+                            onClick={() => void fetchTraficoGrupos()}
+                            disabled={traficoGruposLoading}
+                            className="w-9 h-9 flex items-center justify-center text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 rounded-lg transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Atualizar campanhas"
+                          >
+                            <RefreshCcw className={cn("w-4 h-4", traficoGruposLoading && "animate-spin")} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedInstanceId && selectedInstanceName) {
+                                void fetchGroupsForInstance(selectedInstanceId, selectedInstanceName);
+                              }
+                            }}
+                            disabled={!selectedInstanceId || groupsLoading}
+                            className="w-9 h-9 flex items-center justify-center text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/25 rounded-lg transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Atualizar grupos"
+                          >
+                            <RefreshCcw className={cn("w-4 h-4", groupsLoading && "animate-spin")} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-row items-center gap-2 w-full min-w-0 lg:flex-col lg:items-stretch lg:gap-2">
-                    <div className="relative flex-1 min-w-0 lg:w-full">
-                      <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
-                <input
-                  type="text"
-                        placeholder={activeTab === "grupos" ? "Buscar grupo…" : "Buscar campanha…"}
-                        value={activeTab === "grupos" ? groupSearchFilter : campaignSearchFilter}
-                        onChange={(e) => {
-                          if (activeTab === "grupos") setGroupSearchFilter(e.target.value);
-                          else setCampaignSearchFilter(e.target.value);
-                        }}
-                        className="w-full bg-[#1c1c1f] border border-[#2c2c32] rounded-md py-2 pl-8 pr-3 text-xs focus:border-[#e24c30] outline-none min-w-0"
-                />
-              </div>
-                    <div className="flex lg:hidden shrink-0 items-center justify-end gap-2 min-w-0">
-                      <MetaSearchablePicker
-                        value={selectedInstanceId}
-                        onChange={handleInstancePickerChange}
-                        options={instancePickerOptions}
-                        modalTitle="Instância WhatsApp"
-                        modalDescription="Escolha a instância Evolution para listar os grupos. Os grupos são atualizados automaticamente ao confirmar."
-                        searchPlaceholder="Buscar instância…"
-                        emptyButtonLabel="Selecionar instância"
-                        emptyAsTag
-                        emptyTagLabel="Instância"
-                        className="flex justify-end items-center min-w-0 max-w-[min(100vw-8rem,200px)] [&>div]:justify-end"
-                        emptyOptionsMessage="Nenhuma instância disponível. Conecte o WhatsApp nas configurações."
-                      />
-                      {activeTab === "campanhas" ? (
-                        <button
-                          type="button"
-                          onClick={() => void fetchTraficoGrupos()}
-                          disabled={traficoGruposLoading}
-                          className="text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Atualizar campanhas"
-                        >
-                          <RefreshCcw className={cn("w-3 h-3", traficoGruposLoading && "animate-spin")} />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (selectedInstanceId && selectedInstanceName) {
-                              void fetchGroupsForInstance(selectedInstanceId, selectedInstanceName);
-                            }
-                          }}
-                          disabled={!selectedInstanceId || groupsLoading}
-                          className="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Atualizar grupos"
-                        >
-                          <RefreshCcw className={cn("w-3 h-3", groupsLoading && "animate-spin")} />
-                        </button>
-                      )}
-            </div>
-                  </div>
-                </div>
 
-                {/* Info linha */}
-                <div className="mb-3 px-1 shrink-0 flex items-center justify-between gap-3">
-                  {activeTab === "grupos" ? (
-                    <p className="text-[11px] text-emerald-400 flex items-center gap-1.5 font-semibold min-w-0">
-                      <Clock className="w-3.5 h-3.5 shrink-0" />
-                      {groupsLastFetchedAt ? `Atualizado: ${new Date(groupsLastFetchedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : "Selecione uma instância para carregar os grupos"}
-                    </p>
-                  ) : (
-                    <div ref={metaPeriodPopoverRef} className="relative flex flex-wrap items-center gap-1.5 min-w-0">
-                      <button
-                        type="button"
-                        onClick={openMetaPeriodPopover}
-                        className="inline-flex items-center justify-center rounded-md p-1 text-sky-300 hover:bg-sky-500/15 hover:text-sky-200 border border-transparent hover:border-sky-500/25 transition shrink-0"
-                        title="Alterar período do gasto Meta (ATI)"
-                        aria-expanded={metaPeriodPopoverOpen}
-                        aria-haspopup="dialog"
-                      >
-                        <Calendar className="w-3.5 h-3.5 shrink-0" />
-                      </button>
-                      <p className="text-[11px] text-sky-300 font-semibold min-w-0">
-                        Período Meta: {formatDateBR(metaTraficoStartResolved)} a {formatDateBR(metaTraficoEndResolved)}
-                        {metaTraficoStartApplied && metaTraficoEndApplied ? (
-                          <span className="ml-1.5 text-[9px] font-medium text-sky-400/80 normal-case">(Facebook)</span>
-                        ) : null}
+                  {/* Info linha */}
+                  <div className="mb-3 px-1 shrink-0 flex items-center justify-between gap-3">
+                    {activeTab === "grupos" ? (
+                      <p className="text-[11px] text-emerald-400 flex items-center gap-1.5 font-semibold min-w-0">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        {groupsLastFetchedAt ? `Atualizado: ${new Date(groupsLastFetchedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : "Selecione uma instância para carregar os grupos"}
                       </p>
-                      {metaPeriodPopoverOpen ? (
-                        <div
-                          className="absolute left-0 top-full z-[80] mt-1 w-[min(100vw-2rem,280px)] rounded-lg border border-[#2c2c32] bg-[#1c1c1f] p-3 shadow-xl space-y-2"
-                          role="dialog"
-                          aria-label="Período Meta"
+                    ) : (
+                      <div ref={metaPeriodPopoverRef} className="relative flex flex-wrap items-center min-w-0">
+                        <button
+                          type="button"
+                          onClick={openMetaPeriodPopover}
+                          className="group flex items-center gap-2.5 rounded-md bg-sky-500/5 hover:bg-sky-500/10 border border-sky-500/20 px-2.5 py-1.5 transition-all shrink-0 text-left cursor-pointer"
+                          title="Alterar período do gasto Meta (ATI)"
+                          aria-expanded={metaPeriodPopoverOpen}
+                          aria-haspopup="dialog"
                         >
-                          
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[9px] text-text-secondary">Início</span>
-                            <input
-                              type="date"
-                              value={metaTraficoStartDraft}
-                              min={effectiveRange?.min}
-                              onChange={(e) => setMetaTraficoStartDraft(e.target.value)}
-                              className="w-full bg-[#27272a] border border-[#2c2c32] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#e24c30]"
-                            />
-                            <span className="text-[9px] text-text-secondary pt-1">Fim</span>
-                            <input
-                              type="date"
-                              value={metaTraficoEndDraft}
-                              min={metaTraficoStartDraft || effectiveRange?.min}
-                              disabled={!metaTraficoStartDraft}
-                              onChange={(e) => setMetaTraficoEndDraft(e.target.value)}
-                              className="w-full bg-[#27272a] border border-[#2c2c32] rounded-md px-2 py-1.5 text-xs text-white outline-none focus:border-[#e24c30] disabled:opacity-40"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1.5 pt-1">
-                            <button
-                              type="button"
-                              onClick={applyMetaTraficoPeriod}
-                              disabled={metaDraftDays <= 0}
-                              className="w-full py-1.5 rounded-md bg-[#e24c30] text-white text-[11px] font-semibold hover:opacity-90 disabled:opacity-40"
-                            >
-                              Aplicar e carregar Meta
-                            </button>
-                            <button
-                              type="button"
-                              onClick={resetMetaTraficoPeriod}
-                              disabled={!metaTraficoStartApplied && !metaTraficoEndApplied}
-                              className="w-full py-1.5 rounded-md border border-[#3e3e46] text-[10px] text-text-secondary hover:text-white hover:border-[#585858] disabled:opacity-40"
-                            >
-                              Usar mesmo período da Shopee
-                            </button>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
-                  <InlineInfoTooltip text={tabInfoTooltip} iconClassName={activeTab === "grupos" ? "text-emerald-400" : "text-sky-300"} />
-              </div>
-
-                {/* Seleção resumo */}
-                {activeTab === "grupos" && selectedGroupIds.size > 0 && (
-                  <div className="mb-2 px-2 py-1.5 bg-shopee-orange/8 border border-shopee-orange/20 rounded-lg flex flex-wrap items-center gap-x-3 gap-y-1 text-xs shrink-0">
-                    <span className="text-shopee-orange font-medium">{selectedGroupIds.size} grupo{selectedGroupIds.size !== 1 ? "s" : ""} · {totalMembersSelected.toLocaleString("pt-BR")} membros</span>
-                    <button onClick={() => { setSelectedGroupIds(new Set()); setGroupSize(""); }} className="ml-auto text-text-secondary/60 hover:text-red-400 transition-colors text-[10px]">limpar</button>
-                  </div>
-                )}
-
-                {/* Lista */}
-                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
-                  {activeTab === "grupos" ? (
-                    groupsLoading ? (
-                      <div className="flex items-center justify-center gap-2 py-8 text-text-secondary text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Carregando grupos...</div>
-                    ) : groupsError ? (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-red-500/8 border border-red-500/20 rounded-lg"><AlertCircle className="h-4 w-4 text-red-400 shrink-0" /><p className="text-xs text-red-400">{groupsError}</p></div>
-                    ) : !selectedInstanceId ? (
-                      <div className="flex flex-col items-center justify-center py-10 text-center"><MessageCircle className="w-8 h-8 text-[#2c2c32] mb-2" /><p className="text-xs text-text-secondary">Selecione uma instância no canto superior direito para carregar os grupos</p></div>
-            ) : filteredGroups.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-10 text-center"><p className="text-xs text-text-secondary">{groups.length === 0 ? "Nenhum grupo retornado para esta instância." : "Nenhum grupo encontrado na busca."}</p></div>
-            ) : (
-                      <>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                        {pagedGroups.map((g) => {
-                  const cum = groupCumulative[g.id];
-                  const delta = groupMemberDelta.get(g.id);
-                  const novosValor = cum ? cum.total_novos : (delta !== undefined && delta.delta > 0 ? delta.delta : 0);
-                  const sairamValor = cum ? cum.total_saidas : (delta !== undefined && delta.delta < 0 ? Math.abs(delta.delta) : 0);
-                  const temComparacao = cum !== undefined || delta !== undefined;
-                  const evasao = sairamValor > 0;
-                          const isSelected = selectedGroupIds.has(g.id);
-                  return (
-                            <div key={g.id}
-                              className={cn("relative bg-[#1c1c1f] border p-3 rounded-lg flex flex-col hover:border-text-secondary transition cursor-pointer",
-                                evasao ? "border-[#5c3429]" : isSelected ? "border-shopee-orange/40 bg-shopee-orange/5" : "border-dark-border")}
-                              onClick={() => toggleGroupSelection(g.id)}>
-                              <div className="flex items-center justify-between w-full gap-2">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <div onClick={(e) => e.stopPropagation()}>
-                                    <OrangeCheckbox checked={isSelected} onChange={() => toggleGroupSelection(g.id)} />
-                                  </div>
-                                  <span className="text-xs font-bold break-words">{g.nome}</span>
-                    </div>
-                                <span className="text-[10px] text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded font-medium shrink-0 whitespace-nowrap">{g.qtdMembros} membros</span>
-                              </div>
-                              {temComparacao && (
-                                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mt-1.5 text-[10px] w-full">
-                                  <div className="flex flex-wrap items-center gap-4 min-w-0">
-                                    <span className="text-emerald-400 flex items-center gap-1"><ArrowUpRight className="w-3 h-3 shrink-0" /> {novosValor} Entradas</span>
-                                    <span className="text-red-400 flex items-center gap-1"><ArrowDownRight className="w-3 h-3 shrink-0" /> {sairamValor} Saídas</span>
-                                    {evasao && <span className="text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3 shrink-0" /> Alta evasão</span>}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="text-white font-medium shrink-0 ml-auto hover:underline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setGplActionsGroup(g);
-                                    }}
-                                  >
-                                    Ações
-                                  </button>
-                                </div>
+                          <Calendar className="w-3.5 h-3.5 shrink-0 text-sky-400" />
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-medium text-sky-400 whitespace-nowrap">Período Meta:</span>
+                            <div className="bg-sky-950/80 text-sky-50 px-2 py-0.5 rounded border border-sky-500/20 text-[11px] font-bold tracking-tight shadow-inner flex items-center gap-1.5">
+                              {formatDateBR(metaTraficoStartResolved)} a {formatDateBR(metaTraficoEndResolved)}
+                              {metaTraficoStartApplied && metaTraficoEndApplied && (
+                                <span className="text-[9px] text-sky-300/60 font-medium normal-case border-l border-sky-500/20 pl-1.5 ml-0.5">Facebook</span>
                               )}
                             </div>
-                  );
-                })}
-              </div>
-                      {groupTotalPages > 1 && (
-                        <div className="mt-3 pt-2 border-t border-[#2c2c32] flex flex-col items-center justify-center gap-2 text-[10px] text-text-secondary">
-                          <div className="flex items-center justify-center gap-2 flex-wrap">
-                            <button type="button" onClick={() => setGroupListPage((p) => Math.max(1, p - 1))} disabled={safeGroupPage <= 1} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Anterior</button>
-                            <span className="text-text-primary/90 font-semibold tabular-nums px-2 shrink-0">Pág. {safeGroupPage}/{groupTotalPages}</span>
-                            <button type="button" onClick={() => setGroupListPage((p) => Math.min(groupTotalPages, p + 1))} disabled={safeGroupPage >= groupTotalPages} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Próxima</button>
                           </div>
-                          <p className="text-center text-text-secondary/85 leading-relaxed max-w-md">
-                            {(safeGroupPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(safeGroupPage * LIST_PAGE_SIZE, sortedFilteredGroups.length)} de {sortedFilteredGroups.length} grupos
-                          </p>
-                        </div>
-                      )}
-                      </>
-                    )
-                  ) : (
-                    /* Campanhas */
-                    traficoGruposLoading ? (
-                      <div className="flex items-center justify-center gap-2 py-8 text-text-secondary text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Carregando campanhas...</div>
-                    ) : traficoGruposError ? (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-red-500/8 border border-red-500/20 rounded-lg"><XCircle className="h-4 w-4 text-red-400 shrink-0" /><p className="text-xs text-red-400">{traficoGruposError}</p></div>
-                    ) : traficoGruposCampaigns.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-10 text-center">
-                        <p className="text-sm text-text-secondary">Nenhuma campanha no cache para este período.</p>
-                        <p className="text-xs text-text-secondary/60 mt-1">Use o botão de atualizar (ícone) ao lado da instância, no topo, para buscar na API.</p>
-            </div>
-                    ) : filteredCampaigns.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-10 text-center">
-                        <p className="text-xs text-text-secondary">Nenhuma campanha encontrada na busca.</p>
-              </div>
-                    ) : (
-                      <>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                        {pagedCampaigns.map((c) => {
-                          const isSelected = selectedTraficoCampaignIds.has(c.id);
-                          const isOpen = expandedTraficoCampaigns[c.id];
-                  return (
-                            <div
-                              key={c.id}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleTraficoCampaignSelection(c.id); } }}
-                              className={cn("bg-[#1c1c1f] border p-3 rounded-lg flex flex-col hover:border-text-secondary transition cursor-pointer",
-                                isSelected ? "border-shopee-orange/40 bg-shopee-orange/5" : "border-dark-border")}
-                              onClick={() => toggleTraficoCampaignSelection(c.id)}
-                            >
-                              <div className="flex items-start justify-between w-full gap-2">
-                                <div className="flex items-start gap-2 flex-1 min-w-0">
-                                  <div onClick={(e) => e.stopPropagation()}>
-                                    <OrangeCheckbox checked={isSelected} onChange={() => toggleTraficoCampaignSelection(c.id)} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="text-xs font-bold break-words">{c.name}</span>
-                                      <span className={cn("text-[10px] px-2 py-0.5 rounded font-medium shrink-0 whitespace-nowrap",
-                                        c.status === "ACTIVE" ? "text-emerald-400 bg-emerald-500/10" : "text-sky-400 bg-sky-400/10")}>
-                                        {c.status === "ACTIVE" ? "Ativo" : "Pausado"}
-                          </span>
-                      </div>
-                                    <span className="text-[10px] text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded font-medium inline-block mt-1.5 whitespace-nowrap">{formatCurrency(c.spend)} gasto</span>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  type="button"
-                                    onClick={() => toggleTraficoCampaign(c.id)}
-                                    className="p-1 rounded-md hover:bg-white/5 text-text-secondary"
-                                    aria-expanded={isOpen}
-                                  >
-                                    {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                </button>
-                                  <Link href="/dashboard/ati" className="text-[10px] font-semibold text-red-500 hover:text-red-400 transition whitespace-nowrap">Ver no ATI</Link>
-                                        </div>
-                              </div>
-                              {isOpen && c.adSets.map((aset) => {
-                                const adSetOpen = expandedTraficoAdSets[aset.id];
-                                return (
-                                  <div key={aset.id} className="mt-2 pl-2 border-l border-dark-border/50" onClick={(e) => e.stopPropagation()}>
-                                    <button type="button" onClick={() => toggleTraficoAdSet(aset.id)} className="w-full flex items-center gap-2 text-left py-1">
-                                      {adSetOpen ? <ChevronUp className="w-3 h-3 text-text-secondary shrink-0" /> : <ChevronDown className="w-3 h-3 text-text-secondary shrink-0" />}
-                                      <span className="text-xs font-medium text-text-primary truncate flex-1">{aset.name}</span>
-                                      <span className="text-xs text-shopee-orange shrink-0">{formatCurrency(aset.spend)}</span>
-                                    </button>
-                                    {adSetOpen && aset.ads.map((ad) => (
-                                      <div key={ad.id} className="flex items-center gap-2 py-1 pl-4 text-[11px] text-text-secondary flex-wrap">
-                                        <span className="truncate flex-1 min-w-0">{ad.name}</span>
-                                        <span>{formatCurrency(ad.spend)}</span>
-                                        <span className="flex items-center gap-0.5 shrink-0"><MousePointerClick className="h-3 w-3" /> {ad.clicks}</span>
-                                        {(ad.leads ?? 0) > 0 ? (
-                                          <span className="flex items-center gap-0.5 shrink-0 text-violet-300/95" title="Leads (Meta)">
-                                            <Target className="h-3 w-3" /> {ad.leads}
-                                          </span>
-                                        ) : null}
-                                      </div>
-                                    ))}
-                                  </div>
-                                );
-                              })}
-                              </div>
-                            );
-                          })}
-                      </div>
-                      {campaignTotalPages > 1 && (
-                        <div className="mt-3 pt-2 border-t border-[#2c2c32] flex flex-col items-center justify-center gap-2 text-[10px] text-text-secondary">
-                          <div className="flex items-center justify-center gap-2 flex-wrap">
-                            <button type="button" onClick={() => setCampaignListPage((p) => Math.max(1, p - 1))} disabled={safeCampaignPage <= 1} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Anterior</button>
-                            <span className="text-text-primary/90 font-semibold tabular-nums px-2 shrink-0">Pág. {safeCampaignPage}/{campaignTotalPages}</span>
-                            <button type="button" onClick={() => setCampaignListPage((p) => Math.min(campaignTotalPages, p + 1))} disabled={safeCampaignPage >= campaignTotalPages} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Próxima</button>
+                          <ChevronDown className="w-3.5 h-3.5 text-sky-400/50 group-hover:text-sky-400 shrink-0 ml-0.5 transition-transform group-aria-expanded:rotate-180" />
+                        </button>
+                        {metaPeriodPopoverOpen ? (
+                          <div
+                            className="absolute left-0 top-full z-[80] mt-1 w-[min(100vw-2rem,280px)] rounded-lg border border-sky-500/30 bg-[#0c111a] p-4 shadow-2xl space-y-3 backdrop-blur-sm"
+                            role="dialog"
+                            aria-label="Período Meta"
+                          >
+                            <div className="flex flex-col gap-2">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-sky-400/70">Início do Período</span>
+                              <input
+                                type="date"
+                                value={metaTraficoStartDraft}
+                                min={effectiveRange?.min}
+                                onChange={(e) => setMetaTraficoStartDraft(e.target.value)}
+                                className="w-full bg-[#161d2a] border border-sky-500/20 focus:border-sky-500/60 rounded-md px-3 py-2 text-xs text-white outline-none transition-all"
+                              />
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-sky-400/70 pt-1">Fim do Período</span>
+                              <input
+                                type="date"
+                                value={metaTraficoEndDraft}
+                                min={metaTraficoStartDraft || effectiveRange?.min}
+                                disabled={!metaTraficoStartDraft}
+                                onChange={(e) => setMetaTraficoEndDraft(e.target.value)}
+                                className="w-full bg-[#161d2a] border border-sky-500/20 focus:border-sky-500/60 rounded-md px-3 py-2 text-xs text-white outline-none transition-all disabled:opacity-30"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1.5 pt-1">
+                              <button
+                                type="button"
+                                onClick={applyMetaTraficoPeriod}
+                                disabled={metaDraftDays <= 0}
+                                className="w-full py-1.5 rounded-md bg-[#e24c30] text-white text-[11px] font-semibold hover:opacity-90 disabled:opacity-40"
+                              >
+                                Aplicar e carregar Meta
+                              </button>
+                              <button
+                                type="button"
+                                onClick={resetMetaTraficoPeriod}
+                                disabled={!metaTraficoStartApplied && !metaTraficoEndApplied}
+                                className="w-full py-1.5 rounded-md border border-[#e24c30] text-[#e24c30] text-[10px] font-semibold hover:bg-[#e24c30]/10 transition-colors disabled:opacity-50"
+                              >
+                                Usar mesmo período da Shopee
+                              </button>
+                            </div>
                           </div>
-                          <p className="text-center text-text-secondary/85 leading-relaxed max-w-md">
-                            {(safeCampaignPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(safeCampaignPage * LIST_PAGE_SIZE, filteredCampaigns.length)} de {filteredCampaigns.length} campanhas
-                          </p>
-                        </div>
-                      )}
-                      </>
-                    )
-                      )}
+                        ) : null}
+                      </div>
+                    )}
+                    <InlineInfoTooltip text={tabInfoTooltip} iconClassName={activeTab === "grupos" ? "text-emerald-400" : "text-sky-300"} />
+                  </div>
+
+                  {/* Seleção resumo */}
+                  {activeTab === "grupos" && selectedGroupIds.size > 0 && (
+                    <div className="mb-2 px-2 py-1.5 bg-shopee-orange/8 border border-shopee-orange/20 rounded-lg flex flex-wrap items-center gap-x-3 gap-y-1 text-xs shrink-0">
+                      <span className="text-shopee-orange font-medium">{selectedGroupIds.size} grupo{selectedGroupIds.size !== 1 ? "s" : ""} · {totalMembersSelected.toLocaleString("pt-BR")} membros</span>
+                      <button onClick={() => { setSelectedGroupIds(new Set()); setGroupSize(""); }} className="ml-auto text-text-secondary/60 hover:text-red-400 transition-colors text-[10px]">limpar</button>
                     </div>
+                  )}
+
+                  {/* Lista */}
+                  <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
+                    {activeTab === "grupos" ? (
+                      groupsLoading ? (
+                        <div className="flex items-center justify-center gap-2 py-8 text-text-secondary text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Carregando grupos...</div>
+                      ) : groupsError ? (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-red-500/8 border border-red-500/20 rounded-lg"><AlertCircle className="h-4 w-4 text-red-400 shrink-0" /><p className="text-xs text-red-400">{groupsError}</p></div>
+                      ) : !selectedInstanceId ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center"><MessageCircle className="w-8 h-8 text-[#2c2c32] mb-2" /><p className="text-xs text-text-secondary">Selecione uma instância no canto superior direito para carregar os grupos</p></div>
+                      ) : filteredGroups.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center"><p className="text-xs text-text-secondary">{groups.length === 0 ? "Nenhum grupo retornado para esta instância." : "Nenhum grupo encontrado na busca."}</p></div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                            {pagedGroups.map((g) => {
+                              const cum = groupCumulative[g.id];
+                              const delta = groupMemberDelta.get(g.id);
+                              const novosValor = cum ? cum.total_novos : (delta !== undefined && delta.delta > 0 ? delta.delta : 0);
+                              const sairamValor = cum ? cum.total_saidas : (delta !== undefined && delta.delta < 0 ? Math.abs(delta.delta) : 0);
+                              const temComparacao = cum !== undefined || delta !== undefined;
+                              const evasao = sairamValor > 0;
+                              const isSelected = selectedGroupIds.has(g.id);
+                              return (
+                                <div key={g.id}
+                                  className={cn("relative bg-[#1c1c1f] border p-3 rounded-lg flex flex-col hover:border-text-secondary transition cursor-pointer",
+                                    evasao ? "border-[#5c3429]" : isSelected ? "border-shopee-orange/40 bg-shopee-orange/5" : "border-dark-border")}
+                                  onClick={() => toggleGroupSelection(g.id)}>
+                                  <div className="flex items-center justify-between w-full gap-2">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <div onClick={(e) => e.stopPropagation()}>
+                                        <OrangeCheckbox checked={isSelected} onChange={() => toggleGroupSelection(g.id)} />
+                                      </div>
+                                      <span className="text-xs font-bold break-words">{g.nome}</span>
+                                    </div>
+                                    <span className="text-[10px] text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded font-medium shrink-0 whitespace-nowrap">{g.qtdMembros} membros</span>
+                                  </div>
+                                  {temComparacao && (
+                                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mt-1.5 text-[10px] w-full">
+                                      <div className="flex flex-wrap items-center gap-4 min-w-0">
+                                        <span className="text-emerald-400 flex items-center gap-1"><ArrowUpRight className="w-3 h-3 shrink-0" /> {novosValor} Entradas</span>
+                                        <span className="text-red-400 flex items-center gap-1"><ArrowDownRight className="w-3 h-3 shrink-0" /> {sairamValor} Saídas</span>
+                                        {evasao && <span className="text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3 shrink-0" /> Alta evasão</span>}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="text-white font-medium shrink-0 ml-auto hover:underline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setGplActionsGroup(g);
+                                        }}
+                                      >
+                                        Ações
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {groupTotalPages > 1 && (
+                            <div className="mt-3 pt-2 border-t border-[#2c2c32] flex flex-col items-center justify-center gap-2 text-[10px] text-text-secondary">
+                              <div className="flex items-center justify-center gap-2 flex-wrap">
+                                <button type="button" onClick={() => setGroupListPage((p) => Math.max(1, p - 1))} disabled={safeGroupPage <= 1} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Anterior</button>
+                                <span className="text-text-primary/90 font-semibold tabular-nums px-2 shrink-0">Pág. {safeGroupPage}/{groupTotalPages}</span>
+                                <button type="button" onClick={() => setGroupListPage((p) => Math.min(groupTotalPages, p + 1))} disabled={safeGroupPage >= groupTotalPages} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Próxima</button>
+                              </div>
+                              <p className="text-center text-text-secondary/85 leading-relaxed max-w-md">
+                                {(safeGroupPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(safeGroupPage * LIST_PAGE_SIZE, sortedFilteredGroups.length)} de {sortedFilteredGroups.length} grupos
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )
+                    ) : (
+                      /* Campanhas */
+                      traficoGruposLoading ? (
+                        <div className="flex items-center justify-center gap-2 py-8 text-text-secondary text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Carregando campanhas...</div>
+                      ) : traficoGruposError ? (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-red-500/8 border border-red-500/20 rounded-lg"><XCircle className="h-4 w-4 text-red-400 shrink-0" /><p className="text-xs text-red-400">{traficoGruposError}</p></div>
+                      ) : traficoGruposCampaigns.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <p className="text-sm text-text-secondary">Nenhuma campanha no cache para este período.</p>
+                          <p className="text-xs text-text-secondary/60 mt-1">Use o botão de atualizar (ícone) ao lado da instância, no topo, para buscar na API.</p>
+                        </div>
+                      ) : filteredCampaigns.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <p className="text-xs text-text-secondary">Nenhuma campanha encontrada na busca.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                            {pagedCampaigns.map((c) => {
+                              const isSelected = selectedTraficoCampaignIds.has(c.id);
+                              const isOpen = expandedTraficoCampaigns[c.id];
+                              return (
+                                <div
+                                  key={c.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleTraficoCampaignSelection(c.id); } }}
+                                  className={cn("bg-[#1c1c1f] border p-3 rounded-lg flex flex-col hover:border-text-secondary transition cursor-pointer",
+                                    isSelected ? "border-shopee-orange/40 bg-shopee-orange/5" : "border-dark-border")}
+                                  onClick={() => toggleTraficoCampaignSelection(c.id)}
+                                >
+                                  <div className="flex items-start justify-between w-full gap-2">
+                                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                                      <div onClick={(e) => e.stopPropagation()}>
+                                        <OrangeCheckbox checked={isSelected} onChange={() => toggleTraficoCampaignSelection(c.id)} />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-xs font-bold break-words">{c.name}</span>
+                                          <span className={cn("text-[10px] px-2 py-0.5 rounded font-medium shrink-0 whitespace-nowrap",
+                                            c.status === "ACTIVE" ? "text-emerald-400 bg-emerald-500/10" : "text-sky-400 bg-sky-400/10")}>
+                                            {c.status === "ACTIVE" ? "Ativo" : "Pausado"}
+                                          </span>
+                                        </div>
+                                        <span className="text-[10px] text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded font-medium inline-block mt-1.5 whitespace-nowrap">{formatCurrency(c.spend)} gasto</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleTraficoCampaign(c.id)}
+                                        className="p-1 rounded-md hover:bg-white/5 text-text-secondary"
+                                        aria-expanded={isOpen}
+                                      >
+                                        {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                      </button>
+                                      <Link href="/dashboard/ati" className="text-[10px] font-semibold text-red-500 hover:text-red-400 transition whitespace-nowrap">Ver no ATI</Link>
+                                    </div>
+                                  </div>
+                                  {isOpen && c.adSets.map((aset) => {
+                                    const adSetOpen = expandedTraficoAdSets[aset.id];
+                                    return (
+                                      <div key={aset.id} className="mt-2 pl-2 border-l border-dark-border/50" onClick={(e) => e.stopPropagation()}>
+                                        <button type="button" onClick={() => toggleTraficoAdSet(aset.id)} className="w-full flex items-center gap-2 text-left py-1">
+                                          {adSetOpen ? <ChevronUp className="w-3 h-3 text-text-secondary shrink-0" /> : <ChevronDown className="w-3 h-3 text-text-secondary shrink-0" />}
+                                          <span className="text-xs font-medium text-text-primary truncate flex-1">{aset.name}</span>
+                                          <span className="text-xs text-shopee-orange shrink-0">{formatCurrency(aset.spend)}</span>
+                                        </button>
+                                        {adSetOpen && aset.ads.map((ad) => (
+                                          <div key={ad.id} className="flex items-center gap-2 py-1 pl-4 text-[11px] text-text-secondary flex-wrap">
+                                            <span className="truncate flex-1 min-w-0">{ad.name}</span>
+                                            <span>{formatCurrency(ad.spend)}</span>
+                                            <span className="flex items-center gap-0.5 shrink-0"><MousePointerClick className="h-3 w-3" /> {ad.clicks}</span>
+                                            {(ad.leads ?? 0) > 0 ? (
+                                              <span className="flex items-center gap-0.5 shrink-0 text-violet-300/95" title="Leads (Meta)">
+                                                <Target className="h-3 w-3" /> {ad.leads}
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {campaignTotalPages > 1 && (
+                            <div className="mt-3 pt-2 border-t border-[#2c2c32] flex flex-col items-center justify-center gap-2 text-[10px] text-text-secondary">
+                              <div className="flex items-center justify-center gap-2 flex-wrap">
+                                <button type="button" onClick={() => setCampaignListPage((p) => Math.max(1, p - 1))} disabled={safeCampaignPage <= 1} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Anterior</button>
+                                <span className="text-text-primary/90 font-semibold tabular-nums px-2 shrink-0">Pág. {safeCampaignPage}/{campaignTotalPages}</span>
+                                <button type="button" onClick={() => setCampaignListPage((p) => Math.min(campaignTotalPages, p + 1))} disabled={safeCampaignPage >= campaignTotalPages} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Próxima</button>
+                              </div>
+                              <p className="text-center text-text-secondary/85 leading-relaxed max-w-md">
+                                {(safeCampaignPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(safeCampaignPage * LIST_PAGE_SIZE, filteredCampaigns.length)} de {filteredCampaigns.length} campanhas
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
             ) : (
               <div className="bg-dark-card border border-dark-border rounded-xl p-4 text-center text-sm text-text-secondary flex-1 flex items-center justify-center">
                 Painel de grupos e campanhas disponível no Plano Pro.
@@ -1369,16 +1394,16 @@ export default function GplCalculatorPage() {
               ) : (
                 <div className="w-full py-2 rounded-lg text-center text-xs text-text-secondary border border-dark-border bg-[#1c1c1f]">
                   {isApiLoading ? "Carregando dados..." : "Aguardando dados..."}
-              </div>
-            )}
+                </div>
+              )}
               {gplPeriod > 0 && (
                 <div className="mt-3 space-y-1.5 text-[10px] text-text-secondary">
                   <div className="flex justify-between"><span>Comissão</span><span className="text-emerald-400 font-semibold">{formatCurrency(totalProfit)}</span></div>
                   <div className="flex justify-between"><span>Membros</span><span className="text-sky-400 font-semibold">{pessoasNoGrupo > 0 ? pessoasNoGrupo.toLocaleString("pt-BR") : "—"}</span></div>
                   <div className="flex justify-between"><span>Período</span><span className="font-semibold">{daysInPeriod}d</span></div>
-          </div>
+                </div>
               )}
-        </div>
+            </div>
           </div>
         </div>
       )}
