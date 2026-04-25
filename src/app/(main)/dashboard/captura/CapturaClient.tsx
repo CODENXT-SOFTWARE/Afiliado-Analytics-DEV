@@ -2360,8 +2360,8 @@ export default function CapturaClient() {
                               });
                               setLogoFile(compressedFile);
                               setLogoPendingAction("upload");
-                            } catch (err: any) {
-                              setError(err?.message || "Erro ao comprimir imagem.");
+                            } catch (err: unknown) {
+                              setError(err instanceof Error ? err.message : "Erro ao comprimir imagem.");
                               setLogoFile(null);
                             } finally {
                               setCompressingLogo(false);
