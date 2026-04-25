@@ -19,6 +19,7 @@ import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationB
 import { janelaDuracaoMinutos, mensagemErroJanela, MAX_JANELA_MINUTOS } from "@/lib/grupos-venda-janela";
 import { createClient as createBrowserSupabase } from "utils/supabase/client";
 import { isGruposVendaMlOfferBlocked, MERCADOLIVRE_UX_COMING_SOON } from "@/lib/mercadolivre-ux-coming-soon";
+import ChannelTabs from "./ChannelTabs";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ListaGrupos = { id: string; instanceId: string; nomeLista: string; createdAt: string };
@@ -1117,6 +1118,8 @@ export default function GruposVendaPage() {
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #3e3e3e; border-radius: 10px; }
         .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #e24c30; }
       `}</style>
+
+      <ChannelTabs />
 
       {/* Header */}
       <header>
