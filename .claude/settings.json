@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls *)"
+    ],
+    "additionalDirectories": [
+      "d:\\3 - CODENXT DIRECT RESPONSE\\APP AFILIADO MASTER\\Afiliado Analytics\\supabase\\migrations_telegram"
+    ]
+  }
+}
