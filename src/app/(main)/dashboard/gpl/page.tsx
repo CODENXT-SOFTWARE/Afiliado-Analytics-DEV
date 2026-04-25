@@ -981,15 +981,30 @@ export default function GplCalculatorPage() {
                         className="flex justify-end items-center min-w-0 [&>div]:justify-end"
                         emptyOptionsMessage="Nenhuma instância disponível. Conecte o WhatsApp nas configurações."
                       />
-                      {activeTab === "campanhas" && (
+                      {activeTab === "campanhas" ? (
                         <button
                           type="button"
                           onClick={() => void fetchTraficoGrupos()}
-                          className="text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 p-1.5 rounded-md transition-colors shrink-0"
+                          disabled={traficoGruposLoading}
+                          className="text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Atualizar campanhas"
                         >
-                          <RefreshCcw className="w-3 h-3" />
-                </button>
+                          <RefreshCcw className={cn("w-3 h-3", traficoGruposLoading && "animate-spin")} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedInstanceId && selectedInstanceName) {
+                              void fetchGroupsForInstance(selectedInstanceId, selectedInstanceName);
+                            }
+                          }}
+                          disabled={!selectedInstanceId || groupsLoading}
+                          className="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Atualizar grupos"
+                        >
+                          <RefreshCcw className={cn("w-3 h-3", groupsLoading && "animate-spin")} />
+                        </button>
                       )}
             </div>
                   </div>
@@ -1021,16 +1036,31 @@ export default function GplCalculatorPage() {
                         className="flex justify-end items-center min-w-0 max-w-[min(100vw-8rem,200px)] [&>div]:justify-end"
                         emptyOptionsMessage="Nenhuma instância disponível. Conecte o WhatsApp nas configurações."
                       />
-                      {activeTab === "campanhas" && (
-              <button
-                type="button"
+                      {activeTab === "campanhas" ? (
+                        <button
+                          type="button"
                           onClick={() => void fetchTraficoGrupos()}
-                          className="text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 p-1.5 rounded-md transition-colors shrink-0"
+                          disabled={traficoGruposLoading}
+                          className="text-sky-300 hover:text-sky-200 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Atualizar campanhas"
                         >
-                          <RefreshCcw className="w-3 h-3" />
-              </button>
-              )}
+                          <RefreshCcw className={cn("w-3 h-3", traficoGruposLoading && "animate-spin")} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedInstanceId && selectedInstanceName) {
+                              void fetchGroupsForInstance(selectedInstanceId, selectedInstanceName);
+                            }
+                          }}
+                          disabled={!selectedInstanceId || groupsLoading}
+                          className="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/25 p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Atualizar grupos"
+                        >
+                          <RefreshCcw className={cn("w-3 h-3", groupsLoading && "animate-spin")} />
+                        </button>
+                      )}
             </div>
                   </div>
                 </div>
