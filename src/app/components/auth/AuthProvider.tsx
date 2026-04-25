@@ -29,6 +29,16 @@ export default function SupabaseProvider({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'SIGNED_OUT') {
+        try {
+          import('idb-keyval').then(({ clear }) => clear().catch(() => {}))
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('gpl_api_check_state_v1')
+          }
+        } catch (e) {
+          console.error('Failed to clear client caches on sign out', e)
+        }
+      }
       setSession(session)
     })
 
