@@ -265,18 +265,18 @@ export default function GplCalculatorPage() {
   const [showMaxPeriodWarning, setShowMaxPeriodWarning] = useState(false);
 
   const [evolutionInstances, setEvolutionInstances] = useState<EvolutionInstanceItem[]>([]);
-  const [selectedInstanceId, setSelectedInstanceId] = useState<string>("");
-  const [groupsCache, setGroupsCache] = useState<Record<string, WhatsAppGroup[]>>({});
-  const [groups, setGroups] = useState<WhatsAppGroup[]>([]);
+  const [selectedInstanceId, setSelectedInstanceId] = useIdbKeyState<string>("gpl_selected_instance_id", "");
+  const [groupsCache, setGroupsCache] = useIdbKeyState<Record<string, WhatsAppGroup[]>>("gpl_groups_cache_v1", {});
+  const [groups, setGroups] = useIdbKeyState<WhatsAppGroup[]>("gpl_groups_list", []);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
   const [groupNameFilter, setGroupNameFilter] = useState("");
-  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
-  const [groupsLastFetchedAt, setGroupsLastFetchedAt] = useState<string | null>(null);
-  const [groupSnapshots, setGroupSnapshots] = useState<Array<{ date: string; groups: WhatsAppGroup[] }>>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useIdbKeyState<Set<string>>("gpl_selected_group_ids", new Set());
+  const [groupsLastFetchedAt, setGroupsLastFetchedAt] = useIdbKeyState<string | null>("gpl_groups_last_fetched", null);
+  const [groupSnapshots, setGroupSnapshots] = useIdbKeyState<Array<{ date: string; groups: WhatsAppGroup[] }>>("gpl_group_snapshots", []);
   const [previousGroupsForComparison, setPreviousGroupsForComparison] = useState<WhatsAppGroup[] | null>(null);
-  const [baseGroups, setBaseGroups] = useState<WhatsAppGroup[] | null>(null);
-  const [groupCumulative, setGroupCumulative] = useState<Record<string, { total_novos: number; total_saidas: number }>>({});
+  const [baseGroups, setBaseGroups] = useIdbKeyState<WhatsAppGroup[] | null>("gpl_base_groups", null);
+  const [groupCumulative, setGroupCumulative] = useIdbKeyState<Record<string, { total_novos: number; total_saidas: number }>>("gpl_group_cumulative", {});
   const [gplActionsGroup, setGplActionsGroup] = useState<WhatsAppGroup | null>(null);
   const [gplClearing, setGplClearing] = useState(false);
 
@@ -301,8 +301,9 @@ export default function GplCalculatorPage() {
   const [groupSearchFilter, setGroupSearchFilter] = useState("");
   const [campaignSearchFilter, setCampaignSearchFilter] = useState("");
   const [campaignListPage, setCampaignListPage] = useState(1);
+  const [groupListPage, setGroupListPage] = useState(1);
 
-  const LIST_PAGE_SIZE = 10;
+  const LIST_PAGE_SIZE = 40;
 
   const instancePickerOptions = useMemo(
     () =>
@@ -638,6 +639,18 @@ export default function GplCalculatorPage() {
   useEffect(() => {
     setCampaignListPage((p) => Math.min(p, campaignTotalPages));
   }, [campaignTotalPages]);
+
+  const groupTotalPages = Math.max(1, Math.ceil(sortedFilteredGroups.length / LIST_PAGE_SIZE));
+  const safeGroupPage = Math.min(groupListPage, groupTotalPages);
+  const pagedGroups = sortedFilteredGroups.slice((safeGroupPage - 1) * LIST_PAGE_SIZE, safeGroupPage * LIST_PAGE_SIZE);
+
+  useEffect(() => {
+    setGroupListPage(1);
+  }, [groupSearchFilter, activeTab, selectedInstanceId]);
+
+  useEffect(() => {
+    setGroupListPage((p) => Math.min(p, groupTotalPages));
+  }, [groupTotalPages]);
 
   const handleInstancePickerChange = (newId: string) => {
     setSelectedInstanceId(newId);
@@ -1163,7 +1176,7 @@ export default function GplCalculatorPage() {
             ) : (
                       <>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                        {sortedFilteredGroups.map((g) => {
+                        {pagedGroups.map((g) => {
                   const cum = groupCumulative[g.id];
                   const delta = groupMemberDelta.get(g.id);
                   const novosValor = cum ? cum.total_novos : (delta !== undefined && delta.delta > 0 ? delta.delta : 0);
@@ -1208,6 +1221,18 @@ export default function GplCalculatorPage() {
                   );
                 })}
               </div>
+                      {groupTotalPages > 1 && (
+                        <div className="mt-3 pt-2 border-t border-[#2c2c32] flex flex-col items-center justify-center gap-2 text-[10px] text-text-secondary">
+                          <div className="flex items-center justify-center gap-2 flex-wrap">
+                            <button type="button" onClick={() => setGroupListPage((p) => Math.max(1, p - 1))} disabled={safeGroupPage <= 1} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Anterior</button>
+                            <span className="text-text-primary/90 font-semibold tabular-nums px-2 shrink-0">Pág. {safeGroupPage}/{groupTotalPages}</span>
+                            <button type="button" onClick={() => setGroupListPage((p) => Math.min(groupTotalPages, p + 1))} disabled={safeGroupPage >= groupTotalPages} className="px-3 py-1.5 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-text-secondary hover:text-white disabled:opacity-30 min-w-[76px]">Próxima</button>
+                          </div>
+                          <p className="text-center text-text-secondary/85 leading-relaxed max-w-md">
+                            {(safeGroupPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(safeGroupPage * LIST_PAGE_SIZE, sortedFilteredGroups.length)} de {sortedFilteredGroups.length} grupos
+                          </p>
+                        </div>
+                      )}
                       </>
                     )
                   ) : (
