@@ -1124,9 +1124,7 @@ export default function GruposVendaPage() {
       {/* Header */}
       <header>
         <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2.5 text-white">
-          <div className="p-1.5 bg-[#e24c30]/10 rounded-lg border border-[#e24c30]/20 shrink-0">
-            <Image src="/whatsapp.png" alt="WhatsApp" width={32} height={32} className="w-4 h-4 object-contain" />
-          </div>
+          <Image src="/whatsapp.png" alt="WhatsApp" width={32} height={32} className="w-7 h-7 object-contain shrink-0" />
           Grupos de Venda
         </h1>
         <p className="text-[11px] text-[#a0a0a0] mt-1 leading-relaxed max-md:hidden">
