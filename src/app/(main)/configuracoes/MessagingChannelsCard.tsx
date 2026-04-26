@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, Send } from "lucide-react";
+import Image from "next/image";
 import EvolutionIntegrationCard from "./EvolutionIntegrationCard";
 import TelegramIntegrationCard from "./TelegramIntegrationCard";
 
@@ -17,13 +17,13 @@ export default function MessagingChannelsCard() {
         <TabButton
           active={active === "whatsapp"}
           onClick={() => setActive("whatsapp")}
-          icon={<MessageCircle className="h-4 w-4 text-emerald-500" />}
+          icon={<Image src="/whatsapp.png" alt="WhatsApp" width={32} height={32} className="h-4 w-4 object-contain" />}
           label="WhatsApp"
         />
         <TabButton
           active={active === "telegram"}
           onClick={() => setActive("telegram")}
-          icon={<Send className="h-4 w-4 text-sky-400" />}
+          icon={<Image src="/telegram.png" alt="Telegram" width={32} height={32} className="h-4 w-4 object-contain" />}
           label="Telegram"
         />
       </div>

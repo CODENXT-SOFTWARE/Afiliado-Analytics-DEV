@@ -1,20 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Send } from "lucide-react";
 
 const TABS: { href: string; label: string; icon: React.ReactNode; matchPrefix: string }[] = [
   {
     href: "/dashboard/grupos-venda",
     label: "WhatsApp",
-    icon: <MessageCircle className="h-4 w-4 text-emerald-500" />,
+    icon: <Image src="/whatsapp.png" alt="WhatsApp" width={32} height={32} className="h-4 w-4 object-contain" />,
     matchPrefix: "/dashboard/grupos-venda",
   },
   {
     href: "/dashboard/grupos-venda/telegram",
     label: "Telegram",
-    icon: <Send className="h-4 w-4 text-sky-400" />,
+    icon: <Image src="/telegram.png" alt="Telegram" width={32} height={32} className="h-4 w-4 object-contain" />,
     matchPrefix: "/dashboard/grupos-venda/telegram",
   },
 ];

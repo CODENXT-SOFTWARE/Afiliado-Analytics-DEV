@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
-  Send,
   Plus,
   Trash2,
   AlertTriangle,
@@ -13,6 +13,7 @@ import {
   Users,
   X,
   ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 
 export type TelegramBot = {
@@ -59,6 +60,17 @@ export default function TelegramIntegrationCard() {
 
   // Form de novo bot
   const [showForm, setShowForm] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
+  const [expandedGruposBots, setExpandedGruposBots] = useState<Set<string>>(new Set());
+
+  const toggleGruposExpanded = (botId: string) => {
+    setExpandedGruposBots((prev) => {
+      const next = new Set(prev);
+      if (next.has(botId)) next.delete(botId);
+      else next.add(botId);
+      return next;
+    });
+  };
   const [tokenInput, setTokenInput] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [savingBot, setSavingBot] = useState(false);
@@ -183,43 +195,58 @@ export default function TelegramIntegrationCard() {
     <section className="bg-dark-card border border-dark-border rounded-lg overflow-hidden">
       <div className="bg-dark-bg/40 border-b border-dark-border px-5 py-4">
         <h2 className="text-base sm:text-lg font-semibold text-text-primary font-heading flex items-center gap-2">
-          <Send className="h-5 w-5 text-sky-400" />
+          <Image src="/telegram.png" alt="Telegram" width={32} height={32} className="h-5 w-5 object-contain" />
           Integração Telegram
         </h2>
         <p className="text-xs text-text-secondary mt-1">
-          Cole o token do seu bot vindo do @BotFather. O webhook é configurado automaticamente.
+          O webhook é configurado automaticamente.
         </p>
       </div>
 
       <div className="px-5 py-5 space-y-5">
-      {/* Vídeo + instruções de criação do bot */}
-      <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-4">
-        <p className="text-sm font-semibold text-text-primary mb-2">Antes de cadastrar — como criar seu bot</p>
-        <ol className="list-decimal pl-5 text-xs text-text-secondary space-y-1">
-          <li>
-            Abra o Telegram e procure{" "}
-            <a
-              href="https://t.me/BotFather"
-              target="_blank"
-              rel="noreferrer"
-              className="text-sky-400 hover:underline inline-flex items-center gap-0.5"
-            >
-              @BotFather
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </li>
-          <li>
-            Envie <code className="rounded bg-dark-bg px-1">/newbot</code>, escolha um nome e um username (terminando em{" "}
-            <code className="rounded bg-dark-bg px-1">bot</code>)
-          </li>
-          <li>Copie o token que ele te enviar e cole aqui embaixo</li>
-          <li>
-            <span className="text-amber-400 font-medium">Importante:</span> envie{" "}
-            <code className="rounded bg-dark-bg px-1">/setprivacy</code> ao @BotFather, escolha seu bot e clique em{" "}
-            <code className="rounded bg-dark-bg px-1">Disable</code> — assim ele recebe todas as mensagens dos grupos
-          </li>
-          <li>Adicione o bot como administrador nos grupos que você quer usar</li>
-        </ol>
+      {/* Instruções de criação do bot (dropdown) */}
+      <div className="rounded-lg border border-shopee-orange/30 bg-shopee-orange/5">
+        <button
+          type="button"
+          onClick={() => setHowToOpen((v) => !v)}
+          aria-expanded={howToOpen}
+          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-shopee-orange/10 rounded-lg"
+        >
+          <span className="text-sm font-semibold text-shopee-orange">Como criar seu bot</span>
+          <ChevronDown
+            className={`h-4 w-4 text-shopee-orange transition-transform duration-200 ${howToOpen ? "rotate-180" : ""}`}
+            aria-hidden
+          />
+        </button>
+        {howToOpen && (
+          <div className="px-4 pb-4 pt-1 border-t border-shopee-orange/15">
+            <ol className="list-decimal pl-5 text-xs text-text-secondary space-y-1 mt-3">
+              <li>
+                Abra o Telegram e procure{" "}
+                <a
+                  href="https://t.me/BotFather"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-400 hover:underline inline-flex items-center gap-0.5"
+                >
+                  @BotFather
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </li>
+              <li>
+                Envie <code className="rounded bg-dark-bg px-1">/newbot</code>, escolha um nome e um username (terminando em{" "}
+                <code className="rounded bg-dark-bg px-1">bot</code>)
+              </li>
+              <li>Copie o token que ele te enviar e cole aqui embaixo</li>
+              <li>
+                <span className="text-amber-400 font-medium">Importante:</span> envie{" "}
+                <code className="rounded bg-dark-bg px-1">/setprivacy</code> ao @BotFather, escolha seu bot e clique em{" "}
+                <code className="rounded bg-dark-bg px-1">Disable</code> — assim ele recebe todas as mensagens dos grupos
+              </li>
+              <li>Adicione o bot como administrador nos grupos que você quer usar</li>
+            </ol>
+          </div>
+        )}
       </div>
 
       {/* Mensagens de status */}
@@ -253,7 +280,7 @@ export default function TelegramIntegrationCard() {
           <button
             type="button"
             onClick={openNewForm}
-            className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/50 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-400 hover:bg-sky-500/20 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md border border-shopee-orange/50 bg-shopee-orange/10 px-3 py-1.5 text-sm font-medium text-shopee-orange hover:bg-shopee-orange/20 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Conectar bot
@@ -276,7 +303,7 @@ export default function TelegramIntegrationCard() {
           </div>
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">
-              Token do bot (vindo do @BotFather) *
+              Token do bot *
             </label>
             <input
               type="text"
@@ -290,7 +317,7 @@ export default function TelegramIntegrationCard() {
           </div>
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">
-              Nome amigável (opcional — usaremos o nome do bot se vazio)
+              Apelido do Bot
             </label>
             <input
               type="text"
@@ -305,7 +332,7 @@ export default function TelegramIntegrationCard() {
               type="button"
               onClick={saveBot}
               disabled={savingBot}
-              className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white bg-shopee-orange hover:opacity-90 disabled:opacity-60"
             >
               {savingBot ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Conectar bot
@@ -318,9 +345,7 @@ export default function TelegramIntegrationCard() {
               Cancelar
             </button>
           </div>
-          <p className="text-[11px] text-text-secondary pt-1">
-            Vamos validar o token, salvar e configurar o webhook automaticamente. Você não precisa expor URL nenhuma.
-          </p>
+          
         </div>
       )}
 
@@ -347,7 +372,7 @@ export default function TelegramIntegrationCard() {
                 <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-dark-border">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Send className="h-4 w-4 text-sky-400" />
+                      <Image src="/telegram.png" alt="Telegram" width={32} height={32} className="h-4 w-4 object-contain shrink-0" />
                       <p className="font-medium text-text-primary truncate">{bot.bot_name}</p>
                     </div>
                     <p className="text-xs text-text-secondary mt-0.5">
@@ -402,36 +427,58 @@ export default function TelegramIntegrationCard() {
                   )}
                 </div>
 
-                {/* Lista de grupos descobertos */}
+                {/* Lista de grupos descobertos (dropdown) */}
                 <div className="px-3 py-2.5">
-                  <div className="flex items-center gap-1.5 mb-2 text-xs font-medium text-text-secondary">
-                    <Users className="h-3.5 w-3.5" />
-                    Grupos descobertos ({botGrupos.length})
-                  </div>
-                  {botGrupos.length === 0 ? (
-                    <p className="text-xs text-text-secondary py-1">
-                      Nenhum grupo ainda. Adicione o bot como admin em algum grupo e mande qualquer mensagem.
-                      Depois clique em &quot;Atualizar grupos&quot;.
-                    </p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {botGrupos.map((g) => (
-                        <li
-                          key={g.id}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded border border-dark-border/60 bg-dark-card/50 px-2.5 py-1.5"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm text-text-primary truncate">
-                              {g.group_name || <span className="italic text-text-secondary">sem título</span>}
-                            </p>
-                            <p className="text-[11px] text-text-secondary font-mono">{g.chat_id}</p>
-                          </div>
-                          <span className="text-[11px] text-text-secondary">
-                            última msg {formatRelative(g.ultima_mensagem_em)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                  <button
+                    type="button"
+                    onClick={() => toggleGruposExpanded(bot.id)}
+                    aria-expanded={expandedGruposBots.has(bot.id)}
+                    className="w-full flex items-center justify-between gap-2 text-xs font-medium text-text-secondary hover:text-text-primary transition rounded px-1 py-0.5"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" />
+                      Grupos descobertos ({botGrupos.length})
+                    </span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                        expandedGruposBots.has(bot.id) ? "rotate-180" : ""
+                      }`}
+                      aria-hidden
+                    />
+                  </button>
+                  {expandedGruposBots.has(bot.id) && (
+                    <div className="mt-2">
+                      {botGrupos.length === 0 ? (
+                        <p className="text-xs text-text-secondary py-1">
+                          Nenhum grupo ainda. Adicione o bot como admin em algum grupo e mande qualquer mensagem.
+                          Depois clique em &quot;Atualizar grupos&quot;.
+                        </p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {botGrupos.map((g) => (
+                            <li
+                              key={g.id}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded border border-dark-border/60 bg-dark-card/50 px-2.5 py-1.5"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm text-text-primary truncate">
+                                  {g.group_name || <span className="italic text-text-secondary">sem título</span>}
+                                </p>
+                                <p
+                                  className="text-[11px] font-mono text-shopee-orange"
+                                  style={{ WebkitTextFillColor: "var(--color-shopee-orange)" }}
+                                >
+                                  {g.chat_id}
+                                </p>
+                              </div>
+                              <span className="text-[11px] text-text-secondary">
+                                última msg {formatRelative(g.ultima_mensagem_em)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   )}
                 </div>
               </li>

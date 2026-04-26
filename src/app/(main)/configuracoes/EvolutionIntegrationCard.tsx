@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
-  MessageCircle,
   Plus,
   Trash2,
   AlertTriangle,
@@ -433,7 +433,7 @@ export default function EvolutionIntegrationCard() {
     <section className="bg-dark-card border border-dark-border rounded-lg overflow-hidden">
       <div className="bg-dark-bg/40 border-b border-dark-border px-5 py-4">
         <h2 className="text-base sm:text-lg font-semibold text-text-primary font-heading flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-emerald-500" />
+          <Image src="/whatsapp.png" alt="WhatsApp" width={32} height={32} className="h-5 w-5 object-contain" />
           Integração WhatsApp 
         </h2>
         <p className="text-xs text-text-secondary mt-1">

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
-  MessageCircle, Loader2, Trash2, AlertCircle, Search,
+  Loader2, Trash2, AlertCircle, Search,
   Clock, PlusCircle, Info, Zap, Tag, RefreshCw,
   Play, Pause, Hash, Layers, X, ChevronLeft, ChevronRight, ChevronDown,
   List as ListIcon, User, Settings2, Smartphone, CheckCheck, Send, Pencil,
@@ -1125,7 +1125,7 @@ export default function GruposVendaPage() {
       <header>
         <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2.5 text-white">
           <div className="p-1.5 bg-[#e24c30]/10 rounded-lg border border-[#e24c30]/20 shrink-0">
-            <MessageCircle className="w-4 h-4 text-[#e24c30]" />
+            <Image src="/whatsapp.png" alt="WhatsApp" width={32} height={32} className="w-4 h-4 object-contain" />
           </div>
           Grupos de Venda
         </h1>
