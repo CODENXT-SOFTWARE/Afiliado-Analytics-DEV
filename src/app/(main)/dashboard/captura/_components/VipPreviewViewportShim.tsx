@@ -36,7 +36,7 @@ export default function VipPreviewViewportShim({ enabled, children, overlay }: P
 
   if (!enabled) {
     return (
-      <div className="relative h-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
+      <div className="relative h-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-none">
         {children}
         {overlay ?? null}
       </div>
@@ -52,7 +52,7 @@ export default function VipPreviewViewportShim({ enabled, children, overlay }: P
   return (
     <div
       ref={hostRef}
-      className="flex h-full min-h-0 w-full justify-center overflow-y-auto overflow-x-hidden scrollbar-thin"
+      className="flex h-full min-h-0 w-full justify-center overflow-y-auto overflow-x-hidden scrollbar-none"
     >
       <div className="relative shrink-0" style={zoomStyle}>
         {children}

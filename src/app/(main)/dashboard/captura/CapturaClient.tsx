@@ -3944,19 +3944,21 @@ export default function CapturaClient() {
                           return (
                             <div
                               className="relative mx-auto shadow-2xl shrink-0"
-                              style={{ 
-                                height: "100%", 
-                                maxHeight: 640, 
-                                aspectRatio: "320 / 640", 
-                                background: "#0a0a0b", 
-                                borderRadius: 42, 
-                                padding: 8 
+                              style={{
+                                height: "100%",
+                                maxHeight: 760,
+                                maxWidth: 320,
+                                width: "auto",
+                                aspectRatio: "9 / 19.5",
+                                background: "#0a0a0b",
+                                borderRadius: 42,
+                                padding: 8,
                               }}
                             >
-                              {/* Botões laterais simulados */}
-                              <span aria-hidden className="absolute bg-[#1a1a1e]" style={{ left: -2, top: 110, width: 3, height: 30, borderRadius: 2 }} />
-                              <span aria-hidden className="absolute bg-[#1a1a1e]" style={{ right: -2, top: 140, width: 3, height: 60, borderRadius: 2 }} />
-                              
+                              {/* Botões laterais simulados (cor inline pra não trocar no tema claro) */}
+                              <span aria-hidden className="absolute" style={{ left: -2, top: 110, width: 3, height: 30, borderRadius: 2, background: "#1a1a1e" }} />
+                              <span aria-hidden className="absolute" style={{ right: -2, top: 140, width: 3, height: 60, borderRadius: 2, background: "#1a1a1e" }} />
+
                               <div
                                 className="relative w-full h-full overflow-hidden"
                                 style={{ borderRadius: 34, background: "#18181b" }}
@@ -3964,12 +3966,12 @@ export default function CapturaClient() {
                                 {/* Notch/Dynamic Island simulada */}
                                 <div
                                   aria-hidden
-                                  className="absolute left-1/2 -translate-x-1/2 z-[10] bg-black"
-                                  style={{ top: 8, width: 96, height: 22, borderRadius: 14 }}
+                                  className="absolute left-1/2 -translate-x-1/2 z-[10]"
+                                  style={{ top: 8, width: 96, height: 22, borderRadius: 14, background: "#000" }}
                                 />
                                 
                                 <VipPreviewViewportShim
-                                  enabled={vipMobilePreviewNarrow}
+                                  enabled
                                   overlay={vipPreviewToastOverlay}
                                 >
                                   {vipLanding}

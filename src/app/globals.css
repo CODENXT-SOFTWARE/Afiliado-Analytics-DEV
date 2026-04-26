@@ -961,6 +961,17 @@ select::-webkit-scrollbar-thumb:hover {
   scrollbar-color: #71717a #ffffff;
 }
 
+/* Esconde a barra de scroll mantendo o scroll funcional (usado no preview mobile da captura) */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge antigo */
+}
+.scrollbar-none::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 .scrollbar-app::-webkit-scrollbar {
   width: 12px;
   height: 12px;
