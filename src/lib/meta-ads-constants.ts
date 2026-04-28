@@ -18,12 +18,16 @@ export const META_CREATE_CAMPAIGN_OBJECTIVES = [
   { value: "OUTCOME_SALES", label: "Vendas" },
 ] as const;
 
-/** Placements aceitos em targeting.publisher_platforms (Graph API). */
+/**
+ * Placements aceitos em targeting.publisher_platforms (Graph API).
+ * Audience Network e Messenger foram removidos: o Audience Network distribui em apps
+ * de terceiros (incluindo Taiwan/Hong Kong) e disparava o subcódigo 3858495 do Meta
+ * exigindo verificação de anunciante para audiências de Taiwan, mesmo com targeting
+ * apenas no Brasil. Como o app não usa essas posições, ficam fora.
+ */
 export const META_PUBLISHER_PLATFORMS = [
   { value: "facebook", label: "Facebook" },
   { value: "instagram", label: "Instagram" },
-  { value: "audience_network", label: "Audience Network" },
-  { value: "messenger", label: "Messenger" },
 ] as const;
 
 /** Eventos de pixel para campanhas de vendas (otimização por conversão no site). */
@@ -222,8 +226,6 @@ export const META_COUNTRIES: { code: string; name: string }[] = [
   { code: "EE", name: "Estônia" },
   { code: "NZ", name: "Nova Zelândia" },
   { code: "KR", name: "Coreia do Sul" },
-  { code: "TW", name: "Taiwan" },
-  { code: "HK", name: "Hong Kong" },
   { code: "CN", name: "China" },
   { code: "CR", name: "Costa Rica" },
   { code: "PA", name: "Panamá" },

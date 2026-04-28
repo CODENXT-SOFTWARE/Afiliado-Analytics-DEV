@@ -63,7 +63,7 @@ function toGraphOptimizationGoal(goal: string): string {
   return g === "CONVERSIONS" ? "OFFSITE_CONVERSIONS" : g;
 }
 
-const VALID_PUBLISHER_PLATFORMS = new Set(["facebook", "instagram", "audience_network", "messenger"]);
+const VALID_PUBLISHER_PLATFORMS = new Set(["facebook", "instagram"]);
 
 /** Máximo de países por conjunto (API do Meta aceita vários em geo_locations.countries). */
 const MAX_TARGET_COUNTRIES = 25;
