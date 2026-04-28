@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import type { ChartOptions, TooltipItem } from 'chart.js';
 import type { Context } from 'chartjs-plugin-datalabels';
 import type { ClicksByHourData } from '@/types';
+import { useChartColors } from '@/app/components/theme/useChartColors';
 
 // Carregar apenas no cliente para evitar SSR de canvas/libs que usam window.
 const Line = dynamic(() => import('react-chartjs-2').then(m => m.Line), {
@@ -19,6 +20,7 @@ interface ChartProps {
 const formatNumber = (value: number) => value.toLocaleString('pt-BR');
 
 export default function LineChart({ data = [], title, label }: ChartProps) {
+  const colors = useChartColors();
   const maxDataValue = data.length > 0 ? Math.max(...data.map(d => d.clicks)) : 0;
   const threshold = maxDataValue > 0 ? maxDataValue * 0.9 : 0;
 
@@ -32,7 +34,7 @@ export default function LineChart({ data = [], title, label }: ChartProps) {
       title: {
         display: true,
         text: title,
-        color: '#FFFFFF',
+        color: colors.text,
         font: {
           size: 18,
           weight: 600,
@@ -43,10 +45,10 @@ export default function LineChart({ data = [], title, label }: ChartProps) {
         },
       },
       tooltip: {
-        backgroundColor: '#18181B',
-        titleColor: '#FFFFFF',
-        bodyColor: '#E9E9E9',
-        borderColor: '#27272A',
+        backgroundColor: colors.tooltipBg,
+        titleColor: colors.tooltipTitle,
+        bodyColor: colors.tooltipBody,
+        borderColor: colors.tooltipBorder,
         borderWidth: 1,
         padding: 12,
         cornerRadius: 8,
@@ -62,7 +64,7 @@ export default function LineChart({ data = [], title, label }: ChartProps) {
         display: 'auto',
         anchor: 'end',
         offset: 8,
-        color: '#F5F5F5',
+        color: colors.text,
         font: {
           weight: 600,
         },
@@ -77,12 +79,12 @@ export default function LineChart({ data = [], title, label }: ChartProps) {
     },
     scales: {
       x: {
-        grid: { color: 'rgba(233, 233, 233, 0.1)' },
-        ticks: { color: '#E9E9E9' },
+        grid: { color: colors.grid },
+        ticks: { color: colors.textSecondary },
       },
       y: {
-        grid: { color: 'rgba(233, 233, 233, 0.1)' },
-        ticks: { color: '#E9E9E9' },
+        grid: { color: colors.grid },
+        ticks: { color: colors.textSecondary },
       },
     },
   };

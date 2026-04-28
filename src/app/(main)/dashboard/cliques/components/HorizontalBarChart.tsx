@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import type { ChartOptions, TooltipItem } from 'chart.js';
 import type { Context } from 'chartjs-plugin-datalabels';
 import type { ClicksBarData } from '@/types';
+import { useChartColors } from '@/app/components/theme/useChartColors';
 
 // Carregar apenas no cliente para evitar SSR de canvas/libs que usam window.
 const Bar = dynamic(() => import('react-chartjs-2').then(m => m.Bar), {
@@ -19,8 +20,16 @@ interface ChartProps {
 const formatNumber = (value: number) => value.toLocaleString('pt-BR');
 
 export default function HorizontalBarChart({ data = [], title, label }: ChartProps) {
+  const colors = useChartColors();
   const maxDataValue = data.length > 0 ? Math.max(...data.map(d => d.clicks)) : 0;
   const threshold = maxDataValue > 0 ? maxDataValue * 0.7 : 0;
+
+  // Datalabels desenhadas dentro da barra (laranja) ficam em branco; fora da barra,
+  // adaptam à cor de texto do tema para não sumir no claro.
+  const datalabelColor = (ctx: Context) => {
+    const v = ctx.dataset.data[ctx.dataIndex] as number;
+    return v > threshold ? '#FFFFFF' : colors.text;
+  };
 
   const options: ChartOptions<'bar'> = {
     indexAxis: 'y' as const,
@@ -33,7 +42,7 @@ export default function HorizontalBarChart({ data = [], title, label }: ChartPro
       title: {
         display: true,
         text: title,
-        color: '#FFFFFF',
+        color: colors.text,
         font: {
           size: 18,
           weight: 600,
@@ -59,7 +68,7 @@ export default function HorizontalBarChart({ data = [], title, label }: ChartPro
           weight: 600,
           size: 14,
         },
-        color: '#FFFFFF',
+        color: datalabelColor,
         align: (ctx: Context) => {
           const v = ctx.dataset.data[ctx.dataIndex] as number;
           return v > threshold ? 'start' : 'end';
@@ -84,7 +93,7 @@ export default function HorizontalBarChart({ data = [], title, label }: ChartPro
           display: false,
         },
         ticks: {
-          color: '#E9E9E9',
+          color: colors.textSecondary,
           font: {
             size: 14,
           },

@@ -2,6 +2,7 @@
 
 import type { CampaignPerformanceData } from "@/types";
 import { useEffect, useState, useRef } from "react";
+import { useTheme } from "@/app/components/theme/ThemeProvider";
 
 const formatNumber = (value: number) => (value != null && value > 0) ? value.toLocaleString('pt-BR') : '0';
 
@@ -11,13 +12,23 @@ interface CampaignPerformanceProps {
 }
 
 export default function CampaignPerformanceTable({ data, headers }: CampaignPerformanceProps) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const [firstHeader, ...restHeaders] = headers;
   const platformHeaders = restHeaders.slice(0, -1); // Todas exceto "Total"
   const totalHeader = restHeaders[restHeaders.length - 1]; // "Total"
-  
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showRightShadow, setShowRightShadow] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const stickyShadow = isLight
+    ? "2px 0 6px rgba(24, 24, 27, 0.08)"
+    : "2px 0 6px rgba(24, 24, 27, 0.4)";
+
+  const rightFadeGradient = isLight
+    ? "linear-gradient(to left, rgba(244, 244, 245, 0.95) 0%, rgba(244, 244, 245, 0.6) 40%, rgba(244, 244, 245, 0.2) 70%, transparent 100%)"
+    : "linear-gradient(to left, rgba(24, 24, 27, 0.95) 0%, rgba(24, 24, 27, 0.6) 40%, rgba(24, 24, 27, 0.2) 70%, transparent 100%)";
 
   useEffect(() => {
     // Detectar se é mobile
@@ -71,12 +82,12 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
           <table className="min-w-full table-auto border-collapse table-bordered">
             <thead className="bg-dark-bg border-b-2 border-shopee-orange/30">
               <tr>
-                <th 
+                <th
                   className={`p-3 text-xs font-medium text-text-secondary uppercase tracking-wider rounded-tl-lg text-left ${
                     !isMobile ? 'sticky left-0 sticky-column-header' : 'mobile-column-header'
                   }`}
-                  style={!isMobile && showRightShadow ? { 
-                    boxShadow: '2px 0 6px rgba(24, 24, 27, 0.4)'
+                  style={!isMobile && showRightShadow ? {
+                    boxShadow: stickyShadow
                   } : undefined}
                 >
                   {firstHeader}
@@ -100,12 +111,12 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
             <tbody>
               {data.map((row) => (
                 <tr key={row.subId} className="group hover:bg-dark-bg/50 transition-colors table-row-border">
-                  <td 
+                  <td
                     className={`p-3 text-sm text-text-primary font-semibold whitespace-nowrap text-left ${
                       !isMobile ? 'sticky left-0 sticky-column-body' : 'mobile-column-body'
                     }`}
-                    style={!isMobile && showRightShadow ? { 
-                      boxShadow: '2px 0 6px rgba(24, 24, 27, 0.4)'
+                    style={!isMobile && showRightShadow ? {
+                      boxShadow: stickyShadow
                     } : undefined}
                   >
                     {row.subId}
@@ -131,10 +142,10 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
 
         {/* Sombra gradiente escura sutil indicando mais conteúdo à direita */}
         {showRightShadow && (
-          <div 
+          <div
             className="absolute top-0 right-0 bottom-0 w-12 pointer-events-none z-30"
             style={{
-              background: 'linear-gradient(to left, rgba(24, 24, 27, 0.95) 0%, rgba(24, 24, 27, 0.6) 40%, rgba(24, 24, 27, 0.2) 70%, transparent 100%)',
+              background: rightFadeGradient,
             }}
           />
         )}
@@ -142,11 +153,11 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
 
       <style jsx>{`
         /* ============================================= */
-        /* Estilização customizada do scrollbar tema dark */
+        /* Estilização customizada do scrollbar (tema-aware) */
         /* ============================================= */
         .scrollbar-custom {
           scrollbar-width: thin;
-          scrollbar-color: #f97316 #18181B;
+          scrollbar-color: #f97316 ${isLight ? '#F4F4F5' : '#18181B'};
         }
 
         /* Webkit browsers (Chrome, Safari, Edge) */
@@ -155,7 +166,7 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         }
 
         .scrollbar-custom::-webkit-scrollbar-track {
-          background: #0F0F11;
+          background: ${isLight ? '#F4F4F5' : '#0F0F11'};
           border-radius: 5px;
           margin-left: ${!isMobile ? '200px' : '0px'}; /* Começa após a coluna sticky */
         }
@@ -163,7 +174,7 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         .scrollbar-custom::-webkit-scrollbar-thumb {
           background: #f97316;
           border-radius: 5px;
-          border: 2px solid #18181B;
+          border: 2px solid ${isLight ? '#FAFAFA' : '#18181B'};
         }
 
         .scrollbar-custom::-webkit-scrollbar-thumb:hover {
@@ -174,45 +185,45 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         /* Background diferenciado para coluna Sub_ID */
         /* ============================================= */
         .sticky-column-header {
-          background: #141416;
+          background: ${isLight ? '#F4F4F5' : '#141416'};
           z-index: 20;
         }
 
         .sticky-column-body {
-          background: #141416;
+          background: ${isLight ? '#FAFAFA' : '#141416'};
           z-index: 10;
         }
 
         /* Background para mobile (sem sticky) */
         .mobile-column-header {
-          background: #141416;
+          background: ${isLight ? '#F4F4F5' : '#141416'};
         }
 
         .mobile-column-body {
-          background: #141416;
+          background: ${isLight ? '#FAFAFA' : '#141416'};
         }
 
         /* ============================================= */
         /* Background diferenciado para coluna TOTAL */
         /* ============================================= */
         .total-column-header {
-          background: #18181B;
+          background: ${isLight ? '#F4F4F5' : '#18181B'};
         }
 
         .total-column-body {
-          background: #1B1B1D;
+          background: ${isLight ? '#FAFAFA' : '#1B1B1D'};
         }
 
         /* ============================================= */
         /* Borders horizontais e verticais sutis */
         /* ============================================= */
         .table-row-border {
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Border horizontal */
+          border-bottom: 1px solid ${isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)'};
         }
 
         .table-bordered th,
         .table-bordered td {
-          border-right: 1px solid rgba(255, 255, 255, 0.05); /* Border vertical */
+          border-right: 1px solid ${isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)'};
         }
 
         /* Remove border direita da última coluna */
@@ -226,11 +237,11 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         /* ============================================= */
         ${!isMobile ? `
           tbody tr.group:hover .sticky-column-body {
-            background: #1c1c1f; /* Cor de hover do Sub_ID */
+            background: ${isLight ? '#E4E4E7' : '#1c1c1f'};
           }
-          
+
           tbody tr.group:hover .total-column-body {
-            background: #1c1c1f; /* Mesma cor de hover do Sub_ID */
+            background: ${isLight ? '#E4E4E7' : '#1c1c1f'};
           }
         ` : ''}
 
