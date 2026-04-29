@@ -50,13 +50,26 @@ type Props = {
   productPrice: number;
   frete: number;
   selection: Selection;
+  buyerName: string;
   buyerWhatsapp: string;
   buyerEmail: string;
   ready: boolean;
   palette: MpCheckoutPalette;
 };
 
-type PixState = { qrCode: string; qrCodeBase64: string | null; ticketUrl: string | null };
+type PixState = {
+  paymentId: string;
+  qrCode: string;
+  qrCodeBase64: string | null;
+  ticketUrl: string | null;
+};
+
+// Polling do PIX — após mostrar o QR, consultamos o status a cada 4s. Quando
+// o banco confirmar (status="approved"), redirecionamos pra página de
+// agradecimento. Para automaticamente após o limite (PIX da MP costuma expirar
+// em 30min, mas o comprador pode ter fechado a página antes disso).
+const PIX_POLL_INTERVAL_MS = 4000;
+const PIX_POLL_TIMEOUT_MS = 30 * 60 * 1000;
 
 function formatBRL(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -69,6 +82,7 @@ export default function MercadoPagoCheckoutSection({
   productPrice,
   frete,
   selection,
+  buyerName,
   buyerWhatsapp,
   buyerEmail,
   ready,
@@ -88,6 +102,38 @@ export default function MercadoPagoCheckoutSection({
     initMercadoPago(publicKey, { locale: "pt-BR" });
   }, [publicKey]);
 
+  // Polling do PIX: após gerar o QR, consulta o status até ser aprovado.
+  useEffect(() => {
+    if (!pix?.paymentId) return;
+    let alive = true;
+    const startedAt = Date.now();
+    const interval = setInterval(async () => {
+      if (!alive) return;
+      if (Date.now() - startedAt > PIX_POLL_TIMEOUT_MS) {
+        clearInterval(interval);
+        return;
+      }
+      try {
+        const res = await fetch(
+          `/api/checkout/${encodeURIComponent(slug)}/payment-status?id=${encodeURIComponent(pix.paymentId)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const json = (await res.json()) as { status?: string };
+        if (json.status === "approved") {
+          clearInterval(interval);
+          window.location.href = `/checkout/sucesso?slug=${encodeURIComponent(slug)}&payment_id=${encodeURIComponent(pix.paymentId)}`;
+        }
+      } catch {
+        /* mantém polling */
+      }
+    }, PIX_POLL_INTERVAL_MS);
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
+  }, [pix?.paymentId, slug]);
+
   // Cria a Preference quando o comprador finaliza dados de entrega.
   useEffect(() => {
     if (!ready) {
@@ -103,17 +149,23 @@ export default function MercadoPagoCheckoutSection({
     (async () => {
       try {
         const waE164 = `55${buyerWhatsapp.replace(/\D/g, "")}`;
+        const buyerCommon = {
+          buyerName: buyerName.trim(),
+          buyerWhatsapp: waE164,
+          buyerEmail: buyerEmail.trim(),
+        };
         const payload =
           selection.type === "pickup"
-            ? { mode: "pickup", buyerWhatsapp: waE164 }
+            ? { mode: "pickup", ...buyerCommon }
             : selection.type === "digital"
-              ? { mode: "digital", buyerWhatsapp: waE164, buyerEmail: buyerEmail.trim() }
+              ? { mode: "digital", ...buyerCommon }
               : selection.type === "local_delivery"
-                ? { mode: "local_delivery" }
+                ? { mode: "local_delivery", ...buyerCommon }
                 : {
                     mode: "shipping",
                     shippingPrice: selection.option.price,
                     shippingName: selection.option.name,
+                    ...buyerCommon,
                   };
         const res = await fetch(`/api/checkout/${encodeURIComponent(slug)}/mp-preference`, {
           method: "POST",
@@ -134,7 +186,7 @@ export default function MercadoPagoCheckoutSection({
     return () => {
       alive = false;
     };
-  }, [slug, selection, ready, buyerWhatsapp, buyerEmail]);
+  }, [slug, selection, ready, buyerName, buyerWhatsapp, buyerEmail]);
 
   const cardStyle = { background: palette.cardBg, borderColor: palette.cardBorder };
 
@@ -213,9 +265,10 @@ export default function MercadoPagoCheckoutSection({
             Abrir comprovante <ExternalLink className="w-3 h-3" />
           </a>
         ) : null}
-        <p className="text-[10px] text-center" style={{ color: palette.textFaint }}>
-          Quando o pagamento for confirmado pelo banco, você receberá no WhatsApp/e-mail.
-        </p>
+        <div className="flex items-center justify-center gap-2 text-[10px] text-center" style={{ color: palette.textFaint }}>
+          <Loader2 className="w-3 h-3 animate-spin" style={{ color: palette.accent }} />
+          <span>Aguardando confirmação do banco — esta página atualiza sozinha.</span>
+        </div>
       </div>
     );
   }
@@ -257,6 +310,7 @@ export default function MercadoPagoCheckoutSection({
               ...(selection.type === "shipping"
                 ? { shippingPrice: selection.option.price, shippingName: selection.option.name }
                 : {}),
+              ...(buyerName ? { buyerName: buyerName.trim() } : {}),
               ...(buyerWhatsapp ? { buyerWhatsapp: waE164 } : {}),
               ...(buyerEmail ? { buyerEmail: buyerEmail.trim() } : {}),
             };
@@ -281,9 +335,10 @@ export default function MercadoPagoCheckoutSection({
               window.location.href = `/checkout/sucesso?slug=${encodeURIComponent(slug)}&payment_id=${encodeURIComponent(String(json.id))}`;
               return;
             }
-            // PIX — mostra QR Code na UI
-            if (json.qrCode) {
+            // PIX — mostra QR Code na UI + inicia polling até aprovação.
+            if (json.qrCode && json.id != null) {
               setPix({
+                paymentId: String(json.id),
                 qrCode: json.qrCode,
                 qrCodeBase64: json.qrCodeBase64 ?? null,
                 ticketUrl: json.ticketUrl ?? null,

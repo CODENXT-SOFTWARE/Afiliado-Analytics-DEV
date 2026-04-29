@@ -20,6 +20,8 @@ import {
   CreditCard,
   ExternalLink,
   Search,
+  MessageCircle,
+  Mail,
 } from "lucide-react";
 import { readInfoprodCache, writeInfoprodCache, clearInfoprodCache } from "@/lib/infoprod/cache";
 
@@ -101,6 +103,27 @@ function formatRelative(iso: string | null): string {
 // Cache namespace dedicado pros pedidos MP (shape `payments[]`, evita colisão
 // com cache de outro provider que pudesse ter `orders[]`).
 const CACHE_SECTION = "mp-orders";
+
+/** Recebe `7999062401` (DDD+número, sem 55) ou `5579999062401` (E.164) e
+ * devolve um link wa.me. Quando o número não tiver formato reconhecível,
+ * retorna null pra UI mostrar como texto plain. */
+function buildWhatsAppLink(raw: string | null | undefined): string | null {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  // Se já vem com 55 na frente (E.164), usa direto; senão, prepend.
+  const e164 = digits.startsWith("55") && digits.length >= 12 ? digits : `55${digits}`;
+  return `https://wa.me/${e164}`;
+}
+
+function formatWhatsAppDisplay(raw: string | null | undefined): string | null {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  // Tira o 55 inicial se vier (mostramos só DDD + número pro vendedor).
+  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+  if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  return local;
+}
 
 export default function MpOrdersSection({
   mpConnected,
@@ -309,12 +332,48 @@ export default function MpOrdersSection({
                       {status.label}
                     </span>
                   </div>
-                  <p className="text-[10px] text-[#9a9aa2] mt-0.5 truncate">
-                    {order.customer.name ?? order.customer.email ?? "Comprador sem dados"}
-                    {order.customer.email && order.customer.name ? ` · ${order.customer.email}` : ""}
-                    {order.customer.phone ? ` · ${order.customer.phone}` : ""}
-                  </p>
-                  <p className="text-[10px] text-[#7a7a80] mt-0.5">
+
+                  {/* Bloco do comprador: nome em destaque + e-mail e WhatsApp clicáveis */}
+                  <div className="mt-1 space-y-0.5">
+                    <p className="text-[11px] font-semibold text-[#f0f0f2] truncate">
+                      {order.customer.name ?? "Comprador sem nome"}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      {order.customer.email ? (
+                        <a
+                          href={`mailto:${order.customer.email}`}
+                          className="inline-flex items-center gap-1 text-[10px] text-[#9a9aa2] hover:text-[#f0f0f2] truncate"
+                          title="Enviar e-mail"
+                        >
+                          <Mail className="w-2.5 h-2.5 shrink-0" />
+                          <span className="truncate max-w-[200px]">{order.customer.email}</span>
+                        </a>
+                      ) : null}
+                      {(() => {
+                        const waLink = buildWhatsAppLink(order.customer.phone);
+                        const waDisplay = formatWhatsAppDisplay(order.customer.phone);
+                        if (!waLink || !waDisplay) {
+                          return order.customer.phone ? (
+                            <span className="text-[10px] text-[#9a9aa2]">{order.customer.phone}</span>
+                          ) : null;
+                        }
+                        return (
+                          <a
+                            href={waLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300"
+                            title="Abrir conversa no WhatsApp"
+                          >
+                            <MessageCircle className="w-2.5 h-2.5 shrink-0" />
+                            {waDisplay}
+                          </a>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-[#7a7a80] mt-1">
                     {DELIVERY_LABEL[order.delivery.type]}
                     {order.shippingAddress?.line1 ? ` · ${order.shippingAddress.line1}` : ""}
                     {order.shippingAddress?.city ? ` · ${order.shippingAddress.city}/${order.shippingAddress.state ?? ""}` : ""}

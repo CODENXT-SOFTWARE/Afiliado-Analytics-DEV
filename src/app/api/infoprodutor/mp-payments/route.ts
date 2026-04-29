@@ -112,15 +112,22 @@ export async function GET(req: Request) {
       const meta = (p.metadata ?? {}) as Record<string, unknown>;
       const delivery = deliveryFromMetadata(meta);
 
-      const buyerName = [
-        p.payer?.first_name ?? "",
-        p.payer?.last_name ?? "",
-      ]
+      // Preferimos os dados que coletamos no nosso checkout (gravados em
+      // metadata), porque pra PIX/Boleto o Brick não preenche `payer.first_name`
+      // nem `phone`. Caímos em `payer.*` quando metadata estiver ausente
+      // (pagamentos antigos ou checkouts manuais).
+      const metaName = typeof meta.buyer_name === "string" ? meta.buyer_name.trim() : "";
+      const metaWhatsapp = typeof meta.buyer_whatsapp === "string" ? meta.buyer_whatsapp.trim() : "";
+      const metaEmail = typeof meta.buyer_email === "string" ? meta.buyer_email.trim() : "";
+
+      const payerNameJoined = [p.payer?.first_name ?? "", p.payer?.last_name ?? ""]
         .filter(Boolean)
         .join(" ")
-        .trim() || null;
-      const buyerEmail = p.payer?.email ?? null;
+        .trim();
+      const buyerName = metaName || payerNameJoined || null;
+      const buyerEmail = metaEmail || p.payer?.email || null;
       const buyerPhone = (() => {
+        if (metaWhatsapp) return metaWhatsapp;
         const phone = p.payer?.phone ?? p.additional_info?.payer?.phone;
         if (!phone) return null;
         return `${phone.area_code ?? ""}${phone.number ?? ""}`.trim() || null;

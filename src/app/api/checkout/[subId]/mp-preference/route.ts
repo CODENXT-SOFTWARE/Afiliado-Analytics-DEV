@@ -5,7 +5,7 @@
  * inicializar o Payment Brick do MP.
  *
  *   POST /api/checkout/[subId]/mp-preference
- *   Body: { mode, shippingPrice?, shippingName?, buyerWhatsapp?, buyerEmail? }
+ *   Body: { mode, shippingPrice?, shippingName?, buyerName, buyerWhatsapp, buyerEmail }
  *   Resposta: { preferenceId, publicKey, initPoint, sandboxInitPoint, amount }
  */
 
@@ -53,6 +53,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
     const mode = String(body?.mode ?? "shipping");
     const shippingPrice = Number(body?.shippingPrice ?? 0);
     const shippingName = String(body?.shippingName ?? "Frete").trim() || "Frete";
+    const buyerName = typeof body?.buyerName === "string" ? body.buyerName.trim().slice(0, 120) : "";
     const buyerWhatsapp = typeof body?.buyerWhatsapp === "string" ? body.buyerWhatsapp.trim().slice(0, 40) : "";
     const buyerEmail = typeof body?.buyerEmail === "string" ? body.buyerEmail.trim().slice(0, 200) : "";
 
@@ -62,17 +63,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
     if (mode === "shipping" && (!Number.isFinite(shippingPrice) || shippingPrice < 0)) {
       return NextResponse.json({ error: "Valor de frete inválido" }, { status: 400 });
     }
-    if (mode === "digital" || mode === "pickup") {
-      const waDigits = buyerWhatsapp.replace(/\D/g, "");
-      if (waDigits.length < 10) {
-        return NextResponse.json(
-          { error: "Informe o WhatsApp com DDD (mínimo 10 dígitos)." },
-          { status: 400 },
-        );
-      }
-      if (mode === "digital" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
-        return NextResponse.json({ error: "Informe um e-mail válido." }, { status: 400 });
-      }
+    // Nome, WhatsApp e e-mail são obrigatórios em todos os modos — usados pra
+    // notificações ao vendedor, contato pós-venda e identificação no painel.
+    if (buyerName.length < 3) {
+      return NextResponse.json({ error: "Informe o nome completo do comprador." }, { status: 400 });
+    }
+    if (buyerWhatsapp.replace(/\D/g, "").length < 10) {
+      return NextResponse.json(
+        { error: "Informe o WhatsApp com DDD (mínimo 10 dígitos)." },
+        { status: 400 },
+      );
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
+      return NextResponse.json({ error: "Informe um e-mail válido." }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -172,6 +175,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
         ? { area_code: buyerPhoneDigits.slice(0, 2), number: buyerPhoneDigits.slice(2) }
         : undefined;
 
+    const buyerNameParts = buyerName.split(/\s+/).filter(Boolean);
+    const buyerFirstName = buyerNameParts.length > 0 ? buyerNameParts[0] : "";
+    const buyerLastName = buyerNameParts.length > 1 ? buyerNameParts.slice(1).join(" ") : "";
+
     const preferenceInput: MpPreferenceInput = {
       items: [
         {
@@ -187,7 +194,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
       back_urls: { success: successUrl, failure: failureUrl, pending: pendingUrl },
       auto_return: "approved",
       payer: {
-        ...(buyerEmail ? { email: buyerEmail } : {}),
+        email: buyerEmail,
+        ...(buyerFirstName ? { first_name: buyerFirstName } : {}),
+        ...(buyerLastName ? { last_name: buyerLastName } : {}),
         ...(buyerPhonePayload ? { phone: buyerPhonePayload } : {}),
       },
       payment_methods:
@@ -202,6 +211,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
         shipping_name: itemTitle,
         shipping_price_brl: frete.toFixed(2),
         product_price_brl: productPrice.toFixed(2),
+        ...(buyerName ? { buyer_name: buyerName } : {}),
         ...(buyerWhatsapp ? { buyer_whatsapp: buyerWhatsapp } : {}),
         ...(buyerEmail ? { buyer_email: buyerEmail } : {}),
       },

@@ -138,30 +138,34 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
 
   const [selection, setSelection] = useState<Selection>(null);
+  const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   /** Dados do comprador carregados do localStorage na montagem. */
   const [savedBuyer, setSavedBuyer] = useState<BuyerData>({});
 
-  // Hidrata campos custom (email + WhatsApp) a partir do localStorage uma vez.
+  // Hidrata campos custom a partir do localStorage uma vez.
   useEffect(() => {
     const saved = loadBuyerData();
     setSavedBuyer(saved);
     if (saved.email) setBuyerEmail(saved.email);
     if (saved.whatsapp) setBuyerWhatsapp(saved.whatsapp);
+    if (saved.name) setBuyerName(saved.name);
   }, []);
 
-  // Persiste email e WhatsApp conforme o usuário digita (com dígitos só pra WhatsApp,
-  // sem o "55" — na hora de enviar pro backend a gente prepend).
+  // Persiste nome, email e WhatsApp conforme o usuário digita (com dígitos só pra
+  // WhatsApp, sem o "55" — na hora de enviar pro backend a gente prepend).
   useEffect(() => {
+    const name = buyerName.trim();
     const email = buyerEmail.trim();
     const whatsapp = buyerWhatsapp.replace(/\D/g, "");
-    if (!email && !whatsapp) return;
+    if (!name && !email && !whatsapp) return;
     const patch: BuyerData = {};
+    if (name) patch.name = name;
     if (email) patch.email = email;
     if (whatsapp) patch.whatsapp = whatsapp;
     saveBuyerData(patch);
-  }, [buyerEmail, buyerWhatsapp]);
+  }, [buyerName, buyerEmail, buyerWhatsapp]);
 
   useEffect(() => {
     if (info?.produto.allowDigital && !selection) {
@@ -572,6 +576,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
             selection={selection}
             publishableKey={publishableKey}
             palette={palette}
+            buyerName={buyerName}
+            setBuyerName={setBuyerName}
             buyerWhatsapp={buyerWhatsapp}
             setBuyerWhatsapp={setBuyerWhatsapp}
             buyerEmail={buyerEmail}
@@ -619,6 +625,8 @@ function PaymentSection({
   selection,
   publishableKey,
   palette,
+  buyerName,
+  setBuyerName,
   buyerWhatsapp,
   setBuyerWhatsapp,
   buyerEmail,
@@ -629,6 +637,8 @@ function PaymentSection({
   selection: NonNullable<Selection>;
   publishableKey: string;
   palette: ThemePalette;
+  buyerName: string;
+  setBuyerName: (v: string) => void;
   buyerWhatsapp: string;
   setBuyerWhatsapp: (v: string) => void;
   buyerEmail: string;
@@ -641,26 +651,45 @@ function PaymentSection({
         ? (produto.localDeliveryCost ?? 0)
         : 0;
   const total = produto.price + frete;
-  const isDigital = selection.type === "digital";
-  const isPickup = selection.type === "pickup";
 
   const waDigits = buyerWhatsapp.replace(/\D/g, "");
+  const nameValid = buyerName.trim().length >= 3;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail.trim());
-  const digitalReady = !isDigital || (waDigits.length >= 10 && emailValid);
-  const pickupReady = !isPickup || waDigits.length >= 10;
-  const ready = digitalReady && pickupReady;
+  const waValid = waDigits.length >= 10;
+  const ready = nameValid && emailValid && waValid;
 
-  const digitalForm = isDigital ? (
+  const headerCopy =
+    selection.type === "digital"
+      ? "O conteúdo chega via e-mail e WhatsApp assim que o pagamento for confirmado."
+      : selection.type === "pickup"
+        ? "Pra combinarmos a retirada e te avisar quando o pedido estiver pronto."
+        : "Pra te avisarmos sobre o pedido e a entrega.";
+
+  const buyerForm = (
     <div
       className="rounded-xl border p-5 space-y-3"
       style={{ background: palette.cardBg, borderColor: palette.cardBorder }}
     >
       <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: palette.textMuted }}>
-        Onde você quer receber?
+        Seus dados
       </h2>
       <p className="text-[11px]" style={{ color: palette.textFaint }}>
-        O conteúdo chega via e-mail e WhatsApp assim que o pagamento for confirmado.
+        {headerCopy}
       </p>
+      <div className="space-y-2">
+        <label className="block text-[11px] font-semibold" style={{ color: palette.textMuted }}>
+          Nome completo
+        </label>
+        <input
+          type="text"
+          value={buyerName}
+          onChange={(e) => setBuyerName(e.target.value)}
+          placeholder="Como você se chama?"
+          autoComplete="name"
+          className="w-full rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#635bff]"
+          style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
+        />
+      </div>
       <div className="space-y-2">
         <label className="block text-[11px] font-semibold" style={{ color: palette.textMuted }}>
           E-mail
@@ -670,6 +699,7 @@ function PaymentSection({
           value={buyerEmail}
           onChange={(e) => setBuyerEmail(e.target.value)}
           placeholder="voce@email.com"
+          autoComplete="email"
           className="w-full rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#635bff]"
           style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
         />
@@ -684,47 +714,17 @@ function PaymentSection({
           style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
         />
       </div>
-      {!digitalReady ? (
+      {!ready ? (
         <p className="text-[11px]" style={{ color: palette.textFaint }}>
-          Preencha e-mail e WhatsApp válidos pra liberar o pagamento.
+          Preencha nome, e-mail e WhatsApp válidos pra liberar o pagamento.
         </p>
       ) : null}
     </div>
-  ) : null;
-
-  const pickupForm = isPickup ? (
-    <div
-      className="rounded-xl border p-5 space-y-3"
-      style={{ background: palette.cardBg, borderColor: palette.cardBorder }}
-    >
-      <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: palette.textMuted }}>
-        Seu WhatsApp
-      </h2>
-      <p className="text-[11px]" style={{ color: palette.textFaint }}>
-        Pra combinarmos a retirada e te avisar quando o pedido estiver pronto.
-      </p>
-      <div className="space-y-2">
-        <label className="block text-[11px] font-semibold" style={{ color: palette.textMuted }}>
-          WhatsApp (com DDD)
-        </label>
-        <WhatsAppInputBR
-          value={buyerWhatsapp}
-          onChange={setBuyerWhatsapp}
-          style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
-        />
-      </div>
-      {!pickupReady ? (
-        <p className="text-[11px]" style={{ color: palette.textFaint }}>
-          Informe um WhatsApp válido pra liberar o pagamento.
-        </p>
-      ) : null}
-    </div>
-  ) : null;
+  );
 
   return (
     <>
-      {digitalForm}
-      {pickupForm}
+      {buyerForm}
       <MercadoPagoCheckoutSection
         publicKey={publishableKey}
         slug={slug}
@@ -732,6 +732,7 @@ function PaymentSection({
         productPrice={produto.price}
         frete={frete}
         selection={selection}
+        buyerName={buyerName}
         buyerWhatsapp={buyerWhatsapp}
         buyerEmail={buyerEmail}
         ready={ready}

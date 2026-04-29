@@ -85,8 +85,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
     const mode = String(body?.mode ?? "shipping");
     const shippingPrice = Number(body?.shippingPrice ?? 0);
     const shippingName = String(body?.shippingName ?? "Frete").trim() || "Frete";
+    const buyerName = typeof body?.buyerName === "string" ? body.buyerName.trim().slice(0, 120) : "";
     const buyerWhatsapp = typeof body?.buyerWhatsapp === "string" ? body.buyerWhatsapp.trim().slice(0, 40) : "";
     const buyerEmail = typeof body?.buyerEmail === "string" ? body.buyerEmail.trim().slice(0, 200) : "";
+
+    // Divide o nome em first/last (MP exige campos separados — pega tudo antes
+    // do primeiro espaço como first_name e o resto como last_name).
+    const buyerNameParts = buyerName.split(/\s+/).filter(Boolean);
+    const buyerFirstName = buyerNameParts.length > 0 ? buyerNameParts[0] : "";
+    const buyerLastName = buyerNameParts.length > 1 ? buyerNameParts.slice(1).join(" ") : "";
 
     if (mode !== "shipping" && mode !== "pickup" && mode !== "digital" && mode !== "local_delivery") {
       return NextResponse.json({ error: "Modo de entrega inválido" }, { status: 400 });
@@ -179,8 +186,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
       payer: {
         email: formData.payer.email,
         ...(formData.payer.identification ? { identification: formData.payer.identification } : {}),
-        ...(formData.payer.first_name ? { first_name: formData.payer.first_name } : {}),
-        ...(formData.payer.last_name ? { last_name: formData.payer.last_name } : {}),
+        // Nome coletado no nosso form tem prioridade sobre o que veio do Brick
+        // (no PIX/Boleto o Brick não pede nome — sem fallback ficaria vazio).
+        first_name: buyerFirstName || formData.payer.first_name || "",
+        last_name: buyerLastName || formData.payer.last_name || "",
         ...(buyerPhonePayload ? { phone: buyerPhonePayload } : {}),
       },
       external_reference: `infoprod:${row.id}`,
@@ -193,6 +202,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
         shipping_name: itemTitle,
         shipping_price_brl: frete.toFixed(2),
         product_price_brl: productPrice.toFixed(2),
+        ...(buyerName ? { buyer_name: buyerName } : {}),
         ...(buyerWhatsapp ? { buyer_whatsapp: buyerWhatsapp } : {}),
         ...(buyerEmail ? { buyer_email: buyerEmail } : {}),
       },
