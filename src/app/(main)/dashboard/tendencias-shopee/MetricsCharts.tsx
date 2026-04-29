@@ -18,7 +18,7 @@
 
 import { useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { ArcElement, BubbleController, Chart as ChartJS } from "chart.js";
+import { ArcElement, BubbleController, Chart as ChartJS, LogarithmicScale } from "chart.js";
 import { TreemapController, TreemapElement } from "chartjs-chart-treemap";
 import { TagCloud } from "react-tagcloud";
 import { useChartColors } from "@/app/components/theme/useChartColors";
@@ -97,8 +97,16 @@ export function MetricsCharts<T extends ClickableProduct>({
 
   // Registra controllers/elements que o Chart.js v4 exige por instância.
   // Idempotente — pode rodar em todo mount.
+  // LogarithmicScale: usado no eixo X do bubble chart (vendas variam de 100
+  // a 10k+, log evita que outliers comprimam o resto).
   useEffect(() => {
-    ChartJS.register(ArcElement, BubbleController, TreemapController, TreemapElement);
+    ChartJS.register(
+      ArcElement,
+      BubbleController,
+      LogarithmicScale,
+      TreemapController,
+      TreemapElement,
+    );
   }, []);
 
   // ── Pizza: top produtos por score ───────────────────────────────────────
