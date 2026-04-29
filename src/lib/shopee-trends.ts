@@ -198,3 +198,180 @@ export function computeViralizationScore(p: ShopeeTrendingProduct): number {
 export function isViralProduct(p: ShopeeTrendingProduct, score: number): boolean {
   return score >= 75 && p.sales >= 100;
 }
+
+// ─── Diretório de lojas (logo + nome) ────────────────────────────────────────
+
+export type ShopeeShopDirectoryEntry = {
+  shopId: number;
+  shopName: string;
+  imageUrl: string | null;
+  ratingStar: number | null;
+};
+
+export type ShopeeCategoryDirectoryEntry = {
+  categoryId: number;
+  name: string;
+};
+
+type ShopGqlNode = {
+  offerType?: number | null;
+  shopId?: number | string | null;
+  shopName?: string | null;
+  imageUrl?: string | null;
+  ratingStar?: number | string | null;
+  // Campos extras pra extrair categorias do mesmo node quando offerType for 2.
+  categoryId?: number | string | null;
+  offerName?: string | null;
+};
+
+type ShopGqlResponse = {
+  data?: { shopeeOfferV2?: { nodes?: ShopGqlNode[]; pageInfo?: { hasNextPage?: boolean } } };
+  errors?: { message?: string }[];
+};
+
+/**
+ * Busca o diretório de lojas (e tenta extrair categorias do mesmo endpoint
+ * pra reaproveitar a chamada). O `shopeeOfferV2` retorna ofertas mistas (Mall,
+ * categoria, loja) — separamos pelos campos preenchidos no node:
+ *   - `shopId` + `shopName` + `imageUrl`  → vai pro directory de lojas
+ *   - `categoryId` + `offerName`           → vai pro directory de categorias
+ *
+ * Pra nomes de categorias mais ricos (taxonomia completa, com IDs que casam
+ * com `productCatIds` dos produtos), use `fetchCategoryList()` em paralelo —
+ * essa query devolve a árvore canônica.
+ */
+export async function fetchShopeeDirectories(
+  appId: string,
+  secret: string,
+): Promise<{ shops: ShopeeShopDirectoryEntry[]; categories: ShopeeCategoryDirectoryEntry[] }> {
+  const query = `
+    query {
+      shopeeOfferV2(sortType: 1, page: 0, limit: 200) {
+        nodes {
+          offerType
+          shopId
+          shopName
+          imageUrl
+          ratingStar
+          categoryId
+          offerName
+        }
+      }
+    }
+  `;
+  const payload = JSON.stringify({ query });
+  const Authorization = buildShopeeAuthorizationHeader(appId, secret, payload);
+  const res = await fetch(SHOPEE_GQL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization },
+    body: payload,
+  });
+  const json = (await res.json()) as ShopGqlResponse;
+  if (!res.ok || json.errors?.length) {
+    throw new Error(json.errors?.[0]?.message ?? `Shopee HTTP ${res.status}`);
+  }
+  const nodes = json.data?.shopeeOfferV2?.nodes ?? [];
+
+  const shops: ShopeeShopDirectoryEntry[] = [];
+  const seenShop = new Set<number>();
+  const categories: ShopeeCategoryDirectoryEntry[] = [];
+  const seenCategory = new Set<number>();
+
+  for (const n of nodes) {
+    // Loja
+    const shopId = num(n.shopId);
+    const shopName = n.shopName?.trim();
+    if (shopId && shopName && !seenShop.has(shopId)) {
+      seenShop.add(shopId);
+      shops.push({
+        shopId,
+        shopName,
+        imageUrl: n.imageUrl?.trim() || null,
+        ratingStar: num(n.ratingStar),
+      });
+    }
+    // Categoria
+    const categoryId = num(n.categoryId);
+    const categoryName = n.offerName?.trim();
+    if (categoryId && categoryName && !seenCategory.has(categoryId)) {
+      seenCategory.add(categoryId);
+      categories.push({ categoryId, name: categoryName });
+    }
+  }
+
+  return { shops, categories };
+}
+
+/**
+ * Busca a taxonomia completa de categorias Shopee (IDs canônicos que casam
+ * com `productCatIds` dos produtos no snapshot). Tenta dois endpoints em
+ * sequência — o primeiro que responder válido vence:
+ *   1. `categoryList { nodes { id name parentId level } }` — quando disponível,
+ *      é a fonte oficial e cobre a árvore inteira.
+ *   2. Fallback: nada (devolvemos vazio e o caller mantém o que já tinha).
+ */
+export async function fetchCategoryList(
+  appId: string,
+  secret: string,
+): Promise<ShopeeCategoryDirectoryEntry[]> {
+  const query = `
+    query {
+      categoryList {
+        nodes {
+          id
+          name
+          parentId
+          level
+        }
+      }
+    }
+  `;
+  const payload = JSON.stringify({ query });
+  const Authorization = buildShopeeAuthorizationHeader(appId, secret, payload);
+  let res: Response;
+  try {
+    res = await fetch(SHOPEE_GQL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization },
+      body: payload,
+    });
+  } catch {
+    return [];
+  }
+  type Resp = {
+    data?: {
+      categoryList?: {
+        nodes?: Array<{
+          id?: number | string | null;
+          name?: string | null;
+          parentId?: number | string | null;
+          level?: number | null;
+        }>;
+      };
+    };
+    errors?: { message?: string }[];
+  };
+  let json: Resp;
+  try {
+    json = (await res.json()) as Resp;
+  } catch {
+    return [];
+  }
+  if (!res.ok || json.errors?.length) {
+    // Endpoint pode não existir nesta versão — retornamos vazio sem propagar
+    // erro pra não quebrar o cron principal.
+    return [];
+  }
+  const nodes = json.data?.categoryList?.nodes ?? [];
+  const out: ShopeeCategoryDirectoryEntry[] = [];
+  const seen = new Set<number>();
+  for (const n of nodes) {
+    const id = num(n.id);
+    const name = n.name?.trim();
+    if (!id || !name) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ categoryId: id, name });
+  }
+  return out;
+}

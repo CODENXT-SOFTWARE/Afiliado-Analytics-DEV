@@ -18,6 +18,8 @@ import { createClient } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import {
   fetchTrendingProducts,
+  fetchShopeeDirectories,
+  fetchCategoryList,
   computeViralizationScore,
   isViralProduct,
 } from "@/lib/shopee-trends";
@@ -71,9 +73,33 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // Buscamos produtos (top sellers), diretórios de lojas+categorias (offers),
+  // e taxonomia completa de categorias em paralelo. A taxonomia (`categoryList`)
+  // dá os nomes que batem com `productCatIds` dos produtos — sem ela, os IDs
+  // do snapshot vão cair no fallback "Categoria #X" no client.
   let products;
+  let shopDirectory: Awaited<ReturnType<typeof fetchShopeeDirectories>>["shops"] = [];
+  let categoryDirectory: Awaited<ReturnType<typeof fetchShopeeDirectories>>["categories"] = [];
+  let categoryTaxonomy: Awaited<ReturnType<typeof fetchCategoryList>> = [];
   try {
-    products = await fetchTrendingProducts(appId, secret, TARGET_COUNT);
+    const [productsResult, dirsResult, taxonomyResult] = await Promise.allSettled([
+      fetchTrendingProducts(appId, secret, TARGET_COUNT),
+      fetchShopeeDirectories(appId, secret),
+      fetchCategoryList(appId, secret),
+    ]);
+    if (productsResult.status === "rejected") throw productsResult.reason;
+    products = productsResult.value;
+    if (dirsResult.status === "fulfilled") {
+      shopDirectory = dirsResult.value.shops;
+      categoryDirectory = dirsResult.value.categories;
+    } else {
+      console.warn("[shopee-trends cron] fetch directories falhou:", dirsResult.reason);
+    }
+    if (taxonomyResult.status === "fulfilled") {
+      categoryTaxonomy = taxonomyResult.value;
+    } else {
+      console.warn("[shopee-trends cron] fetch category list falhou:", taxonomyResult.reason);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao buscar Shopee";
     console.error("[shopee-trends cron] fetch falhou:", msg);
@@ -137,10 +163,54 @@ export async function GET(req: NextRequest) {
     // Não trava — o snapshot já foi gravado. Sparkline fica capenga só nessa janela.
   }
 
+  // UPSERT do diretório de lojas. Idempotente.
+  let shopDirectoryUpserted = 0;
+  if (shopDirectory.length > 0) {
+    const directoryRows = shopDirectory.map((s) => ({
+      shop_id: s.shopId,
+      shop_name: s.shopName,
+      image_url: s.imageUrl,
+      rating_star: s.ratingStar,
+      updated_at: fetchedAt,
+    }));
+    const { error: dirError } = await supabase
+      .from("shopee_shop_directory")
+      .upsert(directoryRows, { onConflict: "shop_id" });
+    if (dirError) {
+      console.error("[shopee-trends cron] upsert shop directory falhou:", dirError.message);
+    } else {
+      shopDirectoryUpserted = directoryRows.length;
+    }
+  }
+
+  // UPSERT do diretório de categorias. Mescla offers + taxonomy — taxonomy
+  // tem prioridade (fonte canônica com IDs que casam com produtos).
+  let categoryDirectoryUpserted = 0;
+  const mergedCategories = new Map<number, string>();
+  for (const c of categoryDirectory) mergedCategories.set(c.categoryId, c.name);
+  for (const c of categoryTaxonomy) mergedCategories.set(c.categoryId, c.name); // sobrescreve com taxonomy
+  if (mergedCategories.size > 0) {
+    const catRows = [...mergedCategories.entries()].map(([category_id, name]) => ({
+      category_id,
+      name,
+      updated_at: fetchedAt,
+    }));
+    const { error: catError } = await supabase
+      .from("shopee_category_directory")
+      .upsert(catRows, { onConflict: "category_id" });
+    if (catError) {
+      console.error("[shopee-trends cron] upsert category directory falhou:", catError.message);
+    } else {
+      categoryDirectoryUpserted = catRows.length;
+    }
+  }
+
   return Response.json({
     ok: true,
     count: snapshotRows.length,
     fetchedAt,
     viralCount: snapshotRows.filter((r) => r.is_viral).length,
+    shopsCached: shopDirectoryUpserted,
+    categoriesCached: categoryDirectoryUpserted,
   });
 }

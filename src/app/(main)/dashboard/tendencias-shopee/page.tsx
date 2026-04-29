@@ -26,5 +26,10 @@ export default async function TendenciasShopeePage() {
     profile?.shopee_app_id && profile?.shopee_api_key_last4,
   );
 
-  return <TendenciasShopeeClient hasShopeeCredentials={hasShopeeCredentials} />;
+  return (
+    <TendenciasShopeeClient
+      hasShopeeCredentials={hasShopeeCredentials}
+      userEmail={user.email ?? ""}
+    />
+  );
 }
