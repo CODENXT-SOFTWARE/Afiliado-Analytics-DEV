@@ -522,7 +522,7 @@ export function MontarListaWizard({
                   ) : (
                     <Save className="w-3.5 h-3.5" />
                   )}
-                  {saving ? "Salvando..." : "Salvar lista"}
+                  {saving ? "Salvando..." : "Salvar"}
                 </button>
               )}
             </div>
@@ -1064,31 +1064,96 @@ function Step3Save({
         />
       </div>
 
-      <div>
-        <label className="block text-[10px] uppercase tracking-widest font-bold text-[#9a9aa2] light:text-zinc-500 mb-1.5">
-          SubIDs (opcional, até 3)
-        </label>
-        <input
-          type="text"
-          value={subIdsInput}
-          onChange={(e) => onSubIdsChange(e.target.value)}
-          placeholder="ex.: black-friday, beleza-2026"
-          className="w-full rounded-md border border-[#3e3e46] light:border-zinc-300 bg-[#222228] light:bg-white px-3 py-2 text-[12px] text-text-primary placeholder:text-[#6b6b72] light:placeholder:text-zinc-400 outline-none focus:border-[#ee4d2d]"
-        />
-        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-          <p className="text-[9px] text-[#7a7a80] light:text-zinc-500">
-            Separe por vírgula. Aplicado em todos os {selectedCount} links.
-          </p>
-          {subIdsList.map((s, i) => (
-            <span
-              key={`${s}-${i}`}
-              className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#3e3e46] light:bg-zinc-200 font-mono text-[9px] text-[#c8c8ce] light:text-zinc-700"
-            >
-              #{s}
-            </span>
-          ))}
-        </div>
-      </div>
+      <SubIdsCollapsible
+        subIdsInput={subIdsInput}
+        onSubIdsChange={onSubIdsChange}
+        subIdsList={subIdsList}
+        selectedCount={selectedCount}
+      />
     </motion.div>
+  );
+}
+
+/** Toggle "Adicionar SubIDs?" + input que só aparece quando ativo. Quando
+ *  o toggle desliga, limpa o input pra não vazar valor escondido no save. */
+function SubIdsCollapsible({
+  subIdsInput,
+  onSubIdsChange,
+  subIdsList,
+  selectedCount,
+}: {
+  subIdsInput: string;
+  onSubIdsChange: (v: string) => void;
+  subIdsList: string[];
+  selectedCount: number;
+}) {
+  // Auto-detecta estado inicial: se já tem texto, vem ativo (caso o user
+  // tenha digitado, voltado pra trás e voltado de novo).
+  const [enabled, setEnabled] = useState<boolean>(subIdsInput.trim().length > 0);
+
+  const toggle = () => {
+    if (enabled) {
+      // Desligando: limpa o valor pra não persistir hidden.
+      onSubIdsChange("");
+    }
+    setEnabled((v) => !v);
+  };
+
+  return (
+    <div className="rounded-lg border border-[#3e3e46] light:border-zinc-300 bg-[#1c1c1f] light:bg-zinc-50 p-3">
+      <button
+        type="button"
+        onClick={toggle}
+        className="w-full flex items-center justify-between gap-2"
+      >
+        <div className="flex items-center gap-2 text-left">
+          <span
+            className={`relative inline-flex w-9 h-5 rounded-full transition-colors ${
+              enabled ? "bg-[#ee4d2d]" : "bg-[#3e3e46] light:bg-zinc-300"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                enabled ? "left-[18px]" : "left-0.5"
+              }`}
+            />
+          </span>
+          <div>
+            <p className="text-[12px] font-semibold text-text-primary light:text-zinc-900">
+              Adicionar SubIDs?
+            </p>
+            <p className="text-[10px] text-[#9a9aa2] light:text-zinc-500">
+              Pra rastrear vendas no ATI cruzando com o ad/criativo.
+            </p>
+          </div>
+        </div>
+      </button>
+
+      {enabled ? (
+        <div className="mt-3">
+          <input
+            type="text"
+            value={subIdsInput}
+            onChange={(e) => onSubIdsChange(e.target.value)}
+            placeholder="ex.: black-friday, beleza-2026"
+            autoFocus
+            className="w-full rounded-md border border-[#3e3e46] light:border-zinc-300 bg-[#222228] light:bg-white px-3 py-2 text-[12px] text-text-primary placeholder:text-[#6b6b72] light:placeholder:text-zinc-400 outline-none focus:border-[#ee4d2d]"
+          />
+          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+            <p className="text-[9px] text-[#7a7a80] light:text-zinc-500">
+              Separe por vírgula. Aplicado em todos os {selectedCount} links.
+            </p>
+            {subIdsList.map((s, i) => (
+              <span
+                key={`${s}-${i}`}
+                className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#3e3e46] light:bg-zinc-200 font-mono text-[9px] text-[#c8c8ce] light:text-zinc-700"
+              >
+                #{s}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
