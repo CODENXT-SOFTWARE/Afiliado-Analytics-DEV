@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-[#18181b] flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-[#635bff]" />
+      <Loader2 className="w-8 h-8 animate-spin text-[#EE4D2D]" />
     </div>
   );
 }
@@ -130,7 +130,7 @@ function CheckoutSuccessInner() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#18181b] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#635bff]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#EE4D2D]" />
       </div>
     );
   }

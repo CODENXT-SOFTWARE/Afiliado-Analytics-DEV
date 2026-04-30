@@ -1629,6 +1629,8 @@ function ProductGrid({
   );
 }
 
+const DEFAULT_SHOP_AVATAR_SRC = "/tendencias/ShoIA.png";
+
 function ShopAvatar({
   imageUrl,
   shopName,
@@ -1638,34 +1640,28 @@ function ShopAvatar({
   shopName: string | null | undefined;
   size?: number;
 }) {
-  const initials = (shopName ?? "?").trim().slice(0, 2).toUpperCase();
+  const [remoteFailed, setRemoteFailed] = useState(false);
   const px = `${size}px`;
-  if (imageUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={imageUrl}
-        alt={shopName ?? "Loja"}
-        className="rounded-lg object-cover bg-[#222228] light:bg-zinc-100 border border-[#2c2c32] light:border-zinc-200 shrink-0"
-        style={{ width: px, height: px }}
-        loading="lazy"
-        onError={(e) => {
-          // Fallback inline: troca pelo "container vazio" estilizado quando a
-          // imagem da Shopee falhar (CDN lento, link expirado, etc.).
-          (e.currentTarget as HTMLImageElement).style.display = "none";
-        }}
-      />
-    );
-  }
+  const trimmed = imageUrl?.trim() ?? "";
+  const useRemote = Boolean(trimmed) && !remoteFailed;
+  const src = useRemote ? trimmed : DEFAULT_SHOP_AVATAR_SRC;
+
   return (
-    <div
-      className="rounded-lg bg-gradient-to-br from-[#7cd0f7]/15 to-[#0ea5e9]/15 light:from-cyan-100 light:to-cyan-200 border border-[#7cd0f7]/30 light:border-cyan-300 flex items-center justify-center shrink-0"
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={shopName ?? "Loja"}
+      className={`rounded-lg shrink-0 border border-[#2c2c32] light:border-zinc-200 ${
+        useRemote
+          ? "object-cover bg-[#222228] light:bg-zinc-100"
+          : "object-contain bg-[#f8f8f8]/5 light:bg-zinc-100 p-0.5"
+      }`}
       style={{ width: px, height: px }}
-    >
-      <span className="text-[11px] font-bold text-[#7cd0f7] light:text-cyan-700 tabular-nums">
-        {initials}
-      </span>
-    </div>
+      loading="lazy"
+      onError={() => {
+        if (useRemote) setRemoteFailed(true);
+      }}
+    />
   );
 }
 

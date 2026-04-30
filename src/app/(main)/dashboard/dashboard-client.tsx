@@ -377,6 +377,24 @@ export default function CommissionsPage() {
 
   const analytics = useMemo(() => buildCommissionAnalytics(filteredAppliedRows), [filteredAppliedRows]);
 
+  // Sincroniza a comissão total atual com o servidor (push_user_state) pra
+  // que o cron das 08:10 BRT consiga compor "Comissão total: R$ X" no push.
+  // Debounce de 1.5s + check de mudança evita spam.
+  useEffect(() => {
+    if (!session?.user) return;
+    const total = analytics.totalCommission;
+    if (!Number.isFinite(total)) return;
+    const period = dateFromApplied && dateToApplied ? `${dateFromApplied}..${dateToApplied}` : "";
+    const t = window.setTimeout(() => {
+      fetch("/api/push/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comissaoTotal: total, comissaoPeriod: period }),
+      }).catch(() => {});
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [session?.user, analytics.totalCommission, dateFromApplied, dateToApplied]);
+
   const channelTableData = useMemo<ChannelRow[]>(() => {
     const agg = new Map<string, { commission: number; totalValue: number; orderIds: Set<string> }>();
 

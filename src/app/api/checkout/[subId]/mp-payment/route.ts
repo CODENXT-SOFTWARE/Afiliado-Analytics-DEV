@@ -22,6 +22,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { parseOptionalBuyerEmail, payerEmailForMercadoPago } from "@/lib/infoprod/payer-email-mp";
 import {
   createMpPayment,
   type MpCreatePaymentInput,
@@ -78,16 +79,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
     if (!formData.payment_method_id) {
       return NextResponse.json({ error: "payment_method_id é obrigatório (do Brick)" }, { status: 400 });
     }
-    if (!formData.payer?.email) {
-      return NextResponse.json({ error: "Email do pagador é obrigatório" }, { status: 400 });
-    }
-
     const mode = String(body?.mode ?? "shipping");
     const shippingPrice = Number(body?.shippingPrice ?? 0);
     const shippingName = String(body?.shippingName ?? "Frete").trim() || "Frete";
     const buyerName = typeof body?.buyerName === "string" ? body.buyerName.trim().slice(0, 120) : "";
     const buyerWhatsapp = typeof body?.buyerWhatsapp === "string" ? body.buyerWhatsapp.trim().slice(0, 40) : "";
     const buyerEmail = typeof body?.buyerEmail === "string" ? body.buyerEmail.trim().slice(0, 200) : "";
+
+    const brickEmail = formData.payer?.email?.trim() ?? "";
+    const resolvedPayerEmail =
+      parseOptionalBuyerEmail(buyerEmail) ??
+      parseOptionalBuyerEmail(brickEmail) ??
+      payerEmailForMercadoPago("", buyerWhatsapp);
 
     // Divide o nome em first/last (MP exige campos separados — pega tudo antes
     // do primeiro espaço como first_name e o resto como last_name).
@@ -184,12 +187,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
       ...(typeof formData.installments === "number" ? { installments: formData.installments } : {}),
       ...(formData.issuer_id ? { issuer_id: formData.issuer_id } : {}),
       payer: {
-        email: formData.payer.email,
-        ...(formData.payer.identification ? { identification: formData.payer.identification } : {}),
+        email: resolvedPayerEmail,
+        ...(formData.payer?.identification ? { identification: formData.payer.identification } : {}),
         // Nome coletado no nosso form tem prioridade sobre o que veio do Brick
         // (no PIX/Boleto o Brick não pede nome — sem fallback ficaria vazio).
-        first_name: buyerFirstName || formData.payer.first_name || "",
-        last_name: buyerLastName || formData.payer.last_name || "",
+        first_name: buyerFirstName || formData.payer?.first_name || "",
+        last_name: buyerLastName || formData.payer?.last_name || "",
         ...(buyerPhonePayload ? { phone: buyerPhonePayload } : {}),
       },
       external_reference: `infoprod:${row.id}`,

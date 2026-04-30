@@ -4,8 +4,9 @@
  * Usa o Payment Brick do MP — UI completa cartão+pix+boleto numa caixa só.
  *
  * Fluxo:
- *   1) Quando o comprador escolhe modo de entrega + preenche dados (whatsapp,
- *      email), criamos uma Preference no MP via /api/checkout/[subId]/mp-preference.
+ *   1) Quando o comprador escolhe modo de entrega + preenche dados (nome,
+ *      WhatsApp; e-mail opcional), criamos uma Preference no MP via
+ *      /api/checkout/[subId]/mp-preference.
  *   2) O Brick renderiza com `preferenceId` + amount calculado.
  *   3) Comprador escolhe método e clica pagar dentro do Brick.
  *   4) Brick chama `onSubmit({ formData })` — POSTamos pra

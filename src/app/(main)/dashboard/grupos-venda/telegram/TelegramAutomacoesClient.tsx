@@ -35,6 +35,11 @@ import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationB
 import MetaSearchablePicker from "@/app/components/meta/MetaSearchablePicker";
 import { mensagemErroJanela } from "@/lib/grupos-venda-janela";
 import { isGruposVendaMlOfferBlocked, MERCADOLIVRE_UX_COMING_SOON } from "@/lib/mercadolivre-ux-coming-soon";
+import {
+  isShoiaListName,
+  SHOIA_LIST_LEADING_IMAGE_SRC,
+  stripShoiaListNamePrefix,
+} from "@/lib/shopee/shoia-list-label";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type TelegramBot = {
@@ -1146,7 +1151,19 @@ function DisparoCardTelegram({
           <div className="flex items-start gap-1.5 text-[9px] text-[#a0a0a0] min-w-0">
             <Layers className="w-2.5 h-2.5 text-[#e24c30] shrink-0 mt-0.5" />
             <span className="break-words">
-              Lista Shopee: <span className="text-white">{c.listaOfertasNome}</span>
+              Lista Shopee:{" "}
+              <span className="inline-flex items-center gap-1.5 text-white">
+                {isShoiaListName(c.listaOfertasNome) ? (
+                  <Image
+                    src={SHOIA_LIST_LEADING_IMAGE_SRC}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="h-[18px] w-[18px] shrink-0 object-contain"
+                  />
+                ) : null}
+                <span>{stripShoiaListNamePrefix(c.listaOfertasNome)}</span>
+              </span>
             </span>
           </div>
         )}
@@ -1804,8 +1821,11 @@ function StepConteudo(p: WizardProps) {
                           },
                           ...p.listasOfertasShopee.map((l) => ({
                             value: l.id,
-                            label: l.nome,
+                            label: stripShoiaListNamePrefix(l.nome),
                             description: `${l.totalItens ?? 0} ${l.totalItens === 1 ? "item" : "itens"}`,
+                            ...(isShoiaListName(l.nome)
+                              ? { leadingImageSrc: SHOIA_LIST_LEADING_IMAGE_SRC, leadingImageAlt: "" }
+                              : {}),
                           })),
                         ]}
                         modalTitle="Lista de ofertas Shopee"

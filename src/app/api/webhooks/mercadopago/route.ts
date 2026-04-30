@@ -28,6 +28,8 @@ import { createClient as createServiceClient, type SupabaseClient } from "@supab
 import { verifyMpWebhookSignature } from "@/lib/mercadopago/verify-webhook";
 import { getMpPayment, type MpPayment } from "@/lib/mercadopago/api";
 import { notifyPurchase } from "@/lib/infoprod/send-whatsapp-seller";
+import { sendPushToUser } from "@/lib/push/web-push";
+import { payloadNovaVendaInfoprodutor } from "@/lib/push/payloads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -213,6 +215,13 @@ export async function POST(req: Request) {
     produtoRow.thank_you_message?.trim()
       || `Olá ${buyerName !== "—" ? buyerName : ""}! 🎉\n\nObrigado pela compra de *${produtoRow.name}*! Seu pagamento foi aprovado com sucesso.`;
   const buyerMessage = `${buyerBase}\n\n—\n🧾 Pedido #${orderShort}`;
+
+  // Notificação Web Push pro vendedor (se ele tem subscription registrada).
+  // Não bloqueia a resposta nem influencia o status pro Mercado Pago.
+  const valor = typeof payment.transaction_amount === "number" ? payment.transaction_amount : 0;
+  sendPushToUser(userId, payloadNovaVendaInfoprodutor(valor)).catch((err) => {
+    console.error("[mp-webhook] push de nova venda falhou:", err);
+  });
 
   try {
     const result = await notifyPurchase({

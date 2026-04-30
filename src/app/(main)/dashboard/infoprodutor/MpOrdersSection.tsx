@@ -201,21 +201,21 @@ export default function MpOrdersSection({
     return (
       <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden mt-6">
         <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-lg bg-[#009ee3]/15 border border-[#009ee3]/25 flex items-center justify-center shrink-0">
-            <Package className="w-3 h-3 text-[#7cd0f7]" />
+          <div className="w-6 h-6 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+            <Package className="w-3 h-3 text-[#EE4D2D]" />
           </div>
           <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Pedidos Mercado Pago</h2>
         </div>
         <div className="px-4 sm:px-6 py-10 flex flex-col items-center text-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-[#009ee3]/10 border border-[#009ee3]/25 flex items-center justify-center">
-            <CreditCard className="w-6 h-6 text-[#7cd0f7]" />
+          <div className="w-12 h-12 rounded-xl bg-[#27272a] border border-[#2c2c32] flex items-center justify-center">
+            <CreditCard className="w-6 h-6 text-[#EE4D2D]" />
           </div>
           <p className="text-[11px] text-[#9a9aa2] max-w-sm leading-relaxed">
             Conecte sua conta Mercado Pago para ver pedidos com dados de comprador e endereço.
           </p>
           <Link
             href="/configuracoes"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#009ee3] hover:bg-[#0084c2] text-white text-xs font-semibold"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#EE4D2D] hover:bg-[#d63d20] text-white text-xs font-semibold"
           >
             Conectar Mercado Pago
           </Link>
@@ -228,8 +228,8 @@ export default function MpOrdersSection({
     <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden mt-6">
       <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-[#009ee3]/15 border border-[#009ee3]/25 flex items-center justify-center shrink-0">
-            <Package className="w-3 h-3 text-[#7cd0f7]" />
+          <div className="w-6 h-6 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+            <Package className="w-3 h-3 text-[#EE4D2D]" />
           </div>
           <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Pedidos Mercado Pago</h2>
           {data?.fetchedAt ? (
@@ -247,7 +247,7 @@ export default function MpOrdersSection({
                 onClick={() => setPeriod(p.value)}
                 disabled={loading}
                 className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-colors disabled:opacity-60 ${
-                  period === p.value ? "bg-[#009ee3] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+                  period === p.value ? "bg-[#EE4D2D] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
                 }`}
               >
                 {p.label}
@@ -276,7 +276,7 @@ export default function MpOrdersSection({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filtrar por produto, comprador ou ID"
-          className="flex-1 px-2 py-1 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-[#f0f0f2] text-[11px] placeholder:text-[#6b6b72] outline-none focus:border-[#009ee3]"
+          className="flex-1 px-2 py-1 rounded-md border border-[#2c2c32] bg-[#1c1c1f] text-[#f0f0f2] text-[11px] placeholder:text-[#6b6b72] outline-none focus:border-[#EE4D2D]"
         />
       </div>
 
@@ -289,7 +289,7 @@ export default function MpOrdersSection({
 
       {loading && !data ? (
         <div className="py-10 flex items-center justify-center">
-          <Loader2 className="w-5 h-5 animate-spin text-[#7cd0f7]" />
+          <Loader2 className="w-5 h-5 animate-spin text-[#EE4D2D]" />
         </div>
       ) : null}
 
@@ -390,7 +390,7 @@ export default function MpOrdersSection({
                     href={`https://www.mercadopago.com.br/activities/detail/${encodeURIComponent(order.paymentId)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-[9px] text-[#7cd0f7] hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 text-[9px] text-[#EE4D2D] hover:underline"
                     title="Ver no painel do Mercado Pago"
                   >
                     Ver no MP <ExternalLink className="w-2.5 h-2.5" />

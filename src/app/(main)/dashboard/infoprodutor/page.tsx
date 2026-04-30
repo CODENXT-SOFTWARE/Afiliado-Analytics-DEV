@@ -26,13 +26,13 @@ import {
   CreditCard,
   AlertTriangle,
   RefreshCw,
-  MessageCircle,
   GripVertical,
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
 import { Reorder } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import ConfirmModal from "@/app/components/ui/ConfirmModal";
 import Toolist from "@/app/components/ui/Toolist";
 import FreteCalculator from "@/app/components/frete/FreteCalculator";
@@ -42,6 +42,7 @@ import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationB
 import MpSalesDashboard from "./MpSalesDashboard";
 import MpOrdersSection from "./MpOrdersSection";
 import AdPerformanceTable from "./AdPerformanceTable";
+import InfoprodGrupoMessagePreview from "./InfoprodGrupoMessagePreview";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ProductProvider = "manual" | "mercadopago";
@@ -129,7 +130,7 @@ function InfoprodPriceLine({
       {hasPor ? (
         <>
           <span>Por:</span>
-          <span className="text-emerald-400 font-medium">{formatBRL(price!)}</span>
+          <span className="text-[#EE4D2D] font-medium">{formatBRL(price!)}</span>
         </>
       ) : null}
     </p>
@@ -186,6 +187,8 @@ export default function InfoprodutorPage() {
   const [formLarguraCm, setFormLarguraCm] = useState("");
   const [formComprimentoCm, setFormComprimentoCm] = useState("");
   const [formThankYouMessage, setFormThankYouMessage] = useState("");
+  /** MP: mensagem customizada no WhatsApp após compra; desligado = backend usa texto padrão. */
+  const [formThankYouEnabled, setFormThankYouEnabled] = useState(false);
   const [formImagePreview, setFormImagePreview] = useState<string>("");
   const [formImageUrl, setFormImageUrl] = useState<string>("");
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
@@ -421,6 +424,7 @@ export default function InfoprodutorPage() {
     setFormLarguraCm("");
     setFormComprimentoCm("");
     setFormThankYouMessage("");
+    setFormThankYouEnabled(false);
     setFormImagePreview("");
     setFormImageUrl("");
     setFormImageFile(null);
@@ -540,7 +544,7 @@ export default function InfoprodutorPage() {
         basePayload.localDeliveryCost = effectiveLocalDelivery
           ? Number((formLocalDeliveryCost || "0").replace(",", "."))
           : 0;
-        basePayload.thankYouMessage = formThankYouMessage.trim();
+        basePayload.thankYouMessage = formThankYouEnabled ? formThankYouMessage.trim() : "";
         if (effectiveShipping) {
           const toNum = (s: string) => Number((s || "").replace(",", "."));
           basePayload.pesoG = toNum(formPesoG);
@@ -556,7 +560,7 @@ export default function InfoprodutorPage() {
       } else if (formProvider === "mercadopago") {
         // edit em produto Mercado Pago: subId + mensagem de agradecimento.
         basePayload.subid = normalizedSubid;
-        basePayload.thankYouMessage = formThankYouMessage.trim();
+        basePayload.thankYouMessage = formThankYouEnabled ? formThankYouMessage.trim() : "";
       } else {
         // edit em produto manual
         basePayload.link = formLink.trim();
@@ -608,7 +612,9 @@ export default function InfoprodutorPage() {
     setFormAlturaCm(p.alturaCm != null ? String(p.alturaCm) : "");
     setFormLarguraCm(p.larguraCm != null ? String(p.larguraCm) : "");
     setFormComprimentoCm(p.comprimentoCm != null ? String(p.comprimentoCm) : "");
+    const ty = (p.thankYouMessage ?? "").trim();
     setFormThankYouMessage(p.thankYouMessage ?? "");
+    setFormThankYouEnabled(ty.length > 0);
     setFormImageUrl(p.imageUrl ?? "");
     setFormImagePreview(p.imageUrl ?? "");
     setFormImageFile(null);
@@ -897,8 +903,8 @@ export default function InfoprodutorPage() {
       <div className="mx-auto">
         {/* Cabeçalho */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl border border-[#e24c30]/35 bg-[#e24c30]/10 flex items-center justify-center shrink-0">
-            <ShoppingCart className="h-5 w-5 text-[#e24c30]" />
+          <div className="w-10 h-10 rounded-xl border border-[#2c2c32] bg-[#27272a] flex items-center justify-center shrink-0">
+            <ShoppingCart className="h-5 w-5 text-[#EE4D2D]" />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold leading-tight">Infoprodutor</h1>
@@ -915,11 +921,11 @@ export default function InfoprodutorPage() {
                 : "Atualizar Vendas e Trackeamento"
             }
             aria-label="Atualizar"
-            className="sm:hidden relative overflow-hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors shrink-0 disabled:opacity-60"
+            className="sm:hidden relative overflow-hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#2c2c32] bg-[#222228] text-[#EE4D2D] hover:bg-[#2a2a30] transition-colors shrink-0 disabled:opacity-60"
           >
             <span
               aria-hidden
-              className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#e24c30]/55 to-transparent"
+              className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#EE4D2D]/45 to-transparent"
               style={{ animation: "infoprod-sweep 2.8s ease-in-out infinite" }}
             />
             <RefreshCw className={`relative w-4 h-4 ${refreshingTab ? "animate-spin" : ""}`} />
@@ -928,8 +934,8 @@ export default function InfoprodutorPage() {
 
         {/* Feedback / erro */}
         {feedback ? (
-          <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300 flex items-center gap-2">
-            <Check className="w-3.5 h-3.5" />
+          <div className="mb-3 rounded-lg border border-[#2c2c32] bg-[#222228] px-3 py-2 text-[11px] text-[#ffb09e] flex items-center gap-2">
+            <Check className="w-3.5 h-3.5 text-[#EE4D2D]" />
             <span className="min-w-0">{feedback}</span>
           </div>
         ) : null}
@@ -957,7 +963,7 @@ export default function InfoprodutorPage() {
             aria-label="Produtos"
             title="Produtos"
             className={`inline-flex items-center justify-center sm:justify-start gap-1.5 flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
-              activeTab === "produtos" ? "bg-[#e24c30] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+              activeTab === "produtos" ? "bg-[#EE4D2D] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
             }`}
           >
             <Package className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -971,7 +977,7 @@ export default function InfoprodutorPage() {
             aria-label="Vendas"
             title="Vendas"
             className={`inline-flex items-center justify-center sm:justify-start gap-1.5 flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
-              activeTab === "vendas" ? "bg-emerald-500 text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+              activeTab === "vendas" ? "bg-[#EE4D2D] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
             }`}
           >
             <ShoppingCart className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -985,7 +991,7 @@ export default function InfoprodutorPage() {
             aria-label="Trackeamento"
             title="Trackeamento"
             className={`inline-flex items-center justify-center sm:justify-start gap-1.5 flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
-              activeTab === "trackeamento" ? "bg-[#635bff] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+              activeTab === "trackeamento" ? "bg-[#EE4D2D] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
             }`}
           >
             <CreditCard className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -999,7 +1005,7 @@ export default function InfoprodutorPage() {
             aria-label="Checkout"
             title="Checkout"
             className={`inline-flex items-center justify-center sm:justify-start gap-1.5 flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
-              activeTab === "custom-checkout" ? "bg-[#a855f7] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+              activeTab === "custom-checkout" ? "bg-[#EE4D2D] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
             }`}
           >
             <ImageIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -1027,11 +1033,11 @@ export default function InfoprodutorPage() {
                 : "Atualizar Vendas e Trackeamento"
             }
             aria-label="Atualizar"
-            className="hidden sm:inline-flex ml-auto relative overflow-hidden items-center justify-center w-10 h-10 rounded-xl border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#e24c30] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60 transition-colors disabled:opacity-60"
+            className="hidden sm:inline-flex ml-auto relative overflow-hidden items-center justify-center w-10 h-10 rounded-xl border border-[#2c2c32] bg-[#222228] text-[#EE4D2D] hover:bg-[#2a2a30] transition-colors disabled:opacity-60"
           >
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#e24c30]/55 to-transparent"
+                className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#EE4D2D]/45 to-transparent"
                 style={{ animation: "infoprod-sweep 2.8s ease-in-out infinite" }}
               />
               <RefreshCw className={`relative w-4 h-4 ${refreshingTab ? "animate-spin" : ""}`} />
@@ -1052,8 +1058,8 @@ export default function InfoprodutorPage() {
               }}
               className="w-full px-4 sm:px-6 py-5 flex items-center justify-center gap-3 bg-[#222228] hover:bg-[#2a2a30] transition-colors text-left"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
-                <FilePlus2 className="w-5 h-5 text-[#e24c30]" />
+              <div className="w-10 h-10 rounded-xl bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+                <FilePlus2 className="w-5 h-5 text-[#EE4D2D]" />
               </div>
               <div className="min-w-0 text-center sm:text-left">
                 <h2 className="text-sm font-bold text-[#f0f0f2]">Cadastrar novo produto</h2>
@@ -1064,11 +1070,11 @@ export default function InfoprodutorPage() {
             <div className="bg-[#1c1c1f]">
               <div className="px-4 sm:px-5 py-3 border-b border-[#2c2c32] flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
                     {formMode === "edit" ? (
-                      <Pencil className="w-4 h-4 text-[#e24c30]" />
+                      <Pencil className="w-4 h-4 text-[#EE4D2D]" />
                     ) : (
-                      <FilePlus2 className="w-4 h-4 text-[#e24c30]" />
+                      <FilePlus2 className="w-4 h-4 text-[#EE4D2D]" />
                     )}
                   </div>
                   <h2 className="text-sm font-bold text-[#f0f0f2] truncate">
@@ -1104,7 +1110,7 @@ export default function InfoprodutorPage() {
                     onClick={() => setFormProvider("manual")}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
                       formProvider === "manual"
-                        ? "bg-[#e24c30] text-white"
+                        ? "bg-[#EE4D2D] text-white"
                         : "text-[#c8c8ce] hover:bg-[#2f2f34]"
                     }`}
                     title={formMode === "edit" ? "Não é possível trocar o tipo em modo de edição" : undefined}
@@ -1120,7 +1126,7 @@ export default function InfoprodutorPage() {
                     onClick={() => setFormProvider("mercadopago")}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
                       formProvider === "mercadopago"
-                        ? "bg-[#009ee3] text-white"
+                        ? "bg-[#EE4D2D] text-white"
                         : "text-[#c8c8ce] hover:bg-[#2f2f34]"
                     }`}
                     title={formMode === "edit" ? "Não é possível trocar o tipo em modo de edição" : undefined}
@@ -1132,7 +1138,7 @@ export default function InfoprodutorPage() {
                 {formProvider === "mercadopago" && formMode === "create" ? (
                   mpConnected ? (
                     <p className="mt-2 text-[10px] text-[#9a9aa2] flex items-center gap-1.5">
-                      <Check className="w-3 h-3 text-emerald-400 max-md:hidden" />
+                      <Check className="w-3 h-3 text-[#EE4D2D] max-md:hidden" />
                       Conectado{mpLast4 ? ` (…${mpLast4})` : ""} — o link de checkout será gerado automaticamente.
                     </p>
                   ) : (
@@ -1156,6 +1162,8 @@ export default function InfoprodutorPage() {
               </div>
 
               <div className="p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[1fr_minmax(272px,340px)] xl:gap-6 xl:items-start">
+              <div className="min-w-0 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-[minmax(0,88px)_1fr] gap-4 md:gap-5">
                 {/* Upload de imagem — compacto no desktop */}
                 <div className="flex flex-col items-center md:items-stretch md:max-w-[88px] mx-auto md:mx-0 w-full max-w-[140px] md:max-w-[88px]">
@@ -1165,7 +1173,7 @@ export default function InfoprodutorPage() {
                   </label>
                   <label
                     htmlFor="infoprod-image-input"
-                    className="relative block aspect-square w-full rounded-xl border-2 border-dashed border-[#3e3e46] bg-[#222228] hover:border-[#e24c30]/50 hover:bg-[#e24c30]/5 transition-colors cursor-pointer overflow-hidden group"
+                    className="relative block aspect-square w-full rounded-xl border-2 border-dashed border-[#3e3e46] bg-[#222228] hover:border-[#EE4D2D]/50 hover:bg-[#EE4D2D]/5 transition-colors cursor-pointer overflow-hidden group"
                   >
                     {formImagePreview ? (
                       <>
@@ -1224,7 +1232,7 @@ export default function InfoprodutorPage() {
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
                       placeholder="Ex.: Método de Venda Direta (R$ 97)"
-                      className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition"
+                      className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition"
                     />
                   </div>
 
@@ -1236,7 +1244,7 @@ export default function InfoprodutorPage() {
                       value={formDescription}
                       onChange={(e) => setFormDescription(e.target.value)}
                       placeholder="Apresente os benefícios — será a legenda enviada ao WhatsApp."
-                      className="w-full min-h-[80px] bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#e24c30] outline-none resize-y scrollbar-thin leading-relaxed transition"
+                      className="w-full min-h-[80px] bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none resize-y scrollbar-thin leading-relaxed transition"
                     />
                   </div>
 
@@ -1251,7 +1259,7 @@ export default function InfoprodutorPage() {
                           value={formLink}
                           onChange={(e) => setFormLink(e.target.value)}
                           placeholder="https://pay.hotmart.com/..."
-                          className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition"
+                          className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition"
                         />
                       </div>
                     ) : null}
@@ -1268,7 +1276,7 @@ export default function InfoprodutorPage() {
                           onChange={(e) => setFormPrice(e.target.value)}
                           readOnly={isPaidEditReadOnly}
                           placeholder="97,00"
-                          className={`w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition ${
+                          className={`w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition ${
                             isPaidEditReadOnly ? "opacity-60 cursor-not-allowed" : ""
                           }`}
                         />
@@ -1283,7 +1291,7 @@ export default function InfoprodutorPage() {
                           value={formPriceOld}
                           onChange={(e) => setFormPriceOld(e.target.value)}
                           placeholder="197,00"
-                          className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#e24c30] outline-none transition"
+                          className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition"
                         />
 
                       </div>
@@ -1292,7 +1300,7 @@ export default function InfoprodutorPage() {
                     {isPaidProvider ? (
                       <div>
                         <label className="flex items-center gap-1.5 text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5">
-                          <CreditCard className="inline w-2.5 h-2.5 text-[#009ee3]" />
+                          <CreditCard className="inline w-2.5 h-2.5 text-[#EE4D2D]" />
                           <span>SubId InfoP</span>
                           <span className="text-[#9a9aa2] normal-case tracking-normal">(opcional)</span>
                           <Toolist
@@ -1306,7 +1314,7 @@ export default function InfoprodutorPage() {
                           value={formSubid}
                           onChange={(e) => setFormSubid(e.target.value)}
                           placeholder="ex.: suplementos, whey-protein"
-                          className="w-full bg-[#222228] border border-[#009ee3]/40 rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#009ee3] outline-none transition"
+                          className="w-full bg-[#222228] border border-[#EE4D2D]/40 rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition"
                         />
                       </div>
                     ) : null}
@@ -1316,7 +1324,7 @@ export default function InfoprodutorPage() {
                         <button
                           type="button"
                           onClick={() => setFormDeliveryExpanded((v) => !v)}
-                          className="w-full flex items-center justify-between gap-2 text-left px-3 py-2.5 rounded-xl border border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/40 transition-colors"
+                          className="w-full flex items-center justify-between gap-2 text-left px-3 py-2.5 rounded-xl border border-[#3e3e46] bg-[#222228] hover:border-[#EE4D2D]/40 transition-colors"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest">
@@ -1348,15 +1356,15 @@ export default function InfoprodutorPage() {
                             formAllowDigital || formAllowLocalDelivery
                               ? "border-[#3e3e46] bg-[#222228] opacity-40 cursor-not-allowed"
                               : formAllowShipping
-                                ? "border-[#635bff]/50 bg-[#635bff]/8 cursor-pointer"
-                                : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30 cursor-pointer"
+                                ? "border-[#EE4D2D]/50 bg-[#EE4D2D]/8 cursor-pointer"
+                                : "border-[#3e3e46] bg-[#222228] hover:border-[#EE4D2D]/30 cursor-pointer"
                           }`}>
                             <input
                               type="checkbox"
                               checked={formAllowShipping && !formAllowDigital && !formAllowLocalDelivery}
                               onChange={(e) => setFormAllowShipping(e.target.checked)}
                               disabled={formMode === "edit" || formAllowDigital || formAllowLocalDelivery}
-                              className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff] shrink-0"
+                              className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#EE4D2D] shrink-0"
                             />
                             <div className="min-w-0 flex-1">
                               <p className="text-[11px] font-semibold text-[#f0f0f2]">Aceita envio (Correios)</p>
@@ -1376,7 +1384,7 @@ export default function InfoprodutorPage() {
                               onChange={(e) => setFormShippingCost(e.target.value)}
                               disabled={!formAllowShipping || formAllowDigital || formAllowLocalDelivery || formMode === "edit"}
                               placeholder="0,00"
-                              className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                              className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition disabled:opacity-40"
                             />
                           </div>
                         </div>
@@ -1396,7 +1404,7 @@ export default function InfoprodutorPage() {
                                   onChange={(e) => setFormPesoG(e.target.value)}
                                   disabled={formMode === "edit"}
                                   placeholder="300"
-                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#EE4D2D] outline-none transition disabled:opacity-40"
                                 />
                               </div>
                               <div>
@@ -1408,7 +1416,7 @@ export default function InfoprodutorPage() {
                                   onChange={(e) => setFormAlturaCm(e.target.value)}
                                   disabled={formMode === "edit"}
                                   placeholder="5"
-                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#EE4D2D] outline-none transition disabled:opacity-40"
                                 />
                               </div>
                               <div>
@@ -1420,7 +1428,7 @@ export default function InfoprodutorPage() {
                                   onChange={(e) => setFormLarguraCm(e.target.value)}
                                   disabled={formMode === "edit"}
                                   placeholder="15"
-                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#EE4D2D] outline-none transition disabled:opacity-40"
                                 />
                               </div>
                               <div>
@@ -1432,7 +1440,7 @@ export default function InfoprodutorPage() {
                                   onChange={(e) => setFormComprimentoCm(e.target.value)}
                                   disabled={formMode === "edit"}
                                   placeholder="20"
-                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                                  className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-2 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#686868] focus:border-[#EE4D2D] outline-none transition disabled:opacity-40"
                                 />
                               </div>
                             </div>
@@ -1449,15 +1457,15 @@ export default function InfoprodutorPage() {
                           formAllowDigital
                             ? "border-[#3e3e46] bg-[#222228] opacity-40 cursor-not-allowed"
                             : formAllowPickup
-                              ? "border-[#635bff]/50 bg-[#635bff]/8 cursor-pointer"
-                              : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30 cursor-pointer"
+                              ? "border-[#EE4D2D]/50 bg-[#EE4D2D]/8 cursor-pointer"
+                              : "border-[#3e3e46] bg-[#222228] hover:border-[#EE4D2D]/30 cursor-pointer"
                         }`}>
                           <input
                             type="checkbox"
                             checked={formAllowPickup && !formAllowDigital}
                             onChange={(e) => setFormAllowPickup(e.target.checked)}
                             disabled={formMode === "edit" || formAllowDigital}
-                            className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff] shrink-0"
+                            className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#EE4D2D] shrink-0"
                           />
                           <div className="min-w-0 flex-1">
                             <p className="text-[11px] font-semibold text-[#f0f0f2]">Aceita retirada na loja</p>
@@ -1471,8 +1479,8 @@ export default function InfoprodutorPage() {
                             formAllowDigital
                               ? "border-[#3e3e46] bg-[#222228] opacity-40 cursor-not-allowed"
                               : formAllowLocalDelivery
-                                ? "border-[#635bff]/50 bg-[#635bff]/8 cursor-pointer"
-                                : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30 cursor-pointer"
+                                ? "border-[#EE4D2D]/50 bg-[#EE4D2D]/8 cursor-pointer"
+                                : "border-[#3e3e46] bg-[#222228] hover:border-[#EE4D2D]/30 cursor-pointer"
                           }`}>
                             <input
                               type="checkbox"
@@ -1484,7 +1492,7 @@ export default function InfoprodutorPage() {
                                 else setFormAllowShipping(true);
                               }}
                               disabled={formMode === "edit" || formAllowDigital}
-                              className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff] shrink-0"
+                              className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#EE4D2D] shrink-0"
                             />
                             <div className="min-w-0 flex-1">
                               <p className="text-[11px] font-semibold text-[#f0f0f2]">Receber em casa</p>
@@ -1504,12 +1512,14 @@ export default function InfoprodutorPage() {
                               onChange={(e) => setFormLocalDeliveryCost(e.target.value)}
                               disabled={!formAllowLocalDelivery || formAllowDigital || formMode === "edit"}
                               placeholder="0,00"
-                              className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#635bff] outline-none transition disabled:opacity-40"
+                              className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition disabled:opacity-40"
                             />
                           </div>
                         </div>
                         <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
-                          formAllowDigital ? "border-emerald-500/50 bg-emerald-500/8" : "border-[#3e3e46] bg-[#222228] hover:border-emerald-500/30"
+                          formAllowDigital
+                            ? "border-[#EE4D2D]/50 bg-[#EE4D2D]/8"
+                            : "border-[#3e3e46] bg-[#222228] hover:border-[#EE4D2D]/30"
                         }`}>
                           <input
                             type="checkbox"
@@ -1526,7 +1536,7 @@ export default function InfoprodutorPage() {
                               }
                             }}
                             disabled={formMode === "edit"}
-                            className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-emerald-500 shrink-0"
+                            className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#EE4D2D] shrink-0"
                           />
                           <div className="min-w-0 flex-1">
                             <p className="text-[11px] font-semibold text-[#f0f0f2]">Entrega digital (WhatsApp/E-mail)</p>
@@ -1546,28 +1556,75 @@ export default function InfoprodutorPage() {
                     ) : null}
 
                     {isPaidProvider ? (
-                      <div>
-                        <label className="flex items-center gap-1.5 text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5">
-                          <MessageCircle className="inline w-2.5 h-2.5 text-emerald-400" />
-                          <span>Mensagem enviada ao WhatsApp do comprador após a compra</span>
-                          <span className="text-[#9a9aa2] normal-case tracking-normal">(opcional)</span>
-                          <Toolist
-                            variant="floating"
-                            wide
-                            text="Essa mensagem é enviada automaticamente no WhatsApp do comprador logo após a compra aprovada. Você pode incluir texto livre, emojis e links (WhatsApp torna URLs clicáveis). Deixe em branco pra usar o agradecimento padrão."
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Image
+                                src="/whatsapp.png"
+                                alt=""
+                                width={20}
+                                height={20}
+                                className="h-5 w-5 shrink-0 object-contain"
+                                aria-hidden
+                              />
+                              <span className="text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest">
+                                Mensagem enviada ao WhatsApp do comprador após a compra
+                              </span>
+                              <Toolist
+                                variant="floating"
+                                wide
+                                text="Essa mensagem é enviada automaticamente no WhatsApp do comprador logo após a compra aprovada. Você pode incluir texto livre, emojis e links (WhatsApp torna URLs clicáveis). Com o interruptor desligado, usamos o agradecimento padrão."
+                              />
+                            </div>
+                            <p className="text-[9px] text-[#9a9aa2] leading-relaxed">
+                              {formThankYouEnabled
+                                ? "Edite o texto abaixo. Salve para aplicar."
+                                : "Desligado: o sistema envia a mensagem de agradecimento padrão."}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormThankYouEnabled((v) => !v)}
+                            role="switch"
+                            aria-checked={formThankYouEnabled}
+                            className={`shrink-0 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              formThankYouEnabled ? "bg-[#EE4D2D]" : "bg-[#3e3e46]"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                formThankYouEnabled ? "translate-x-4" : "translate-x-0.5"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                        {formThankYouEnabled ? (
+                          <textarea
+                            value={formThankYouMessage}
+                            onChange={(e) => setFormThankYouMessage(e.target.value)}
+                            placeholder={`Ex.: Olá! 🎉 Obrigado pela compra do Whey Protein!\n\nAcesse seu ebook de receitas: https://...\n\nQualquer dúvida me chama!`}
+                            rows={5}
+                            className="mt-1 w-full min-h-[80px] bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none resize-y scrollbar-thin leading-relaxed transition"
                           />
-                        </label>
-                        <textarea
-                          value={formThankYouMessage}
-                          onChange={(e) => setFormThankYouMessage(e.target.value)}
-                          placeholder={`Ex.: Olá! 🎉 Obrigado pela compra do Whey Protein!\n\nAcesse seu ebook de receitas: https://...\n\nQualquer dúvida me chama!`}
-                          rows={5}
-                          className="w-full bg-[#222228] border border-emerald-500/40 rounded-xl px-3 py-2.5 text-[11px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-emerald-500 outline-none resize-y scrollbar-thin leading-relaxed transition"
-                        />
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
                 </div>
+              </div>
+              </div>
+              <aside className="shrink-0 w-full max-w-md mx-auto xl:mx-0 xl:sticky xl:top-4 xl:self-start">
+                <InfoprodGrupoMessagePreview
+                  title={formName}
+                  description={formDescription}
+                  imageSrc={formImagePreview}
+                  priceStr={formPrice}
+                  priceOldStr={formPriceOld}
+                  linkHint={formProvider === "mercadopago" ? "" : formLink}
+                  isMercadoPago={formProvider === "mercadopago"}
+                />
+              </aside>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#2c2c32]">
@@ -1592,8 +1649,8 @@ export default function InfoprodutorPage() {
                   }
                   className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-white text-xs font-semibold disabled:opacity-60 ${
                     formProvider === "mercadopago"
-                      ? "bg-[#009ee3] hover:bg-[#0084c2]"
-                      : "bg-[#e24c30] hover:bg-[#c94028]"
+                      ? "bg-[#EE4D2D] hover:bg-[#d63d20]"
+                      : "bg-[#EE4D2D] hover:bg-[#d63d20]"
                   }`}
                 >
                   {savingProduto || uploadingImage ? (
@@ -1629,8 +1686,8 @@ export default function InfoprodutorPage() {
         <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden mb-6 lg:mb-0 flex flex-col">
           <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
-                <Package className="w-3 h-3 text-[#e24c30]" />
+              <div className="w-6 h-6 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+                <Package className="w-3 h-3 text-[#EE4D2D]" />
               </div>
               <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Meus Produtos</h2>
               <span className="text-[9px] text-[#bebebe] bg-[#232328] px-1.5 py-px rounded-full border border-[#3e3e3e] shrink-0">
@@ -1642,7 +1699,7 @@ export default function InfoprodutorPage() {
               type="button"
               onClick={openCreateLista}
               disabled={selectedProdutoIds.size === 0}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[#e24c30] hover:bg-[#c94028] text-white"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[#EE4D2D] hover:bg-[#d63d20] text-white"
               title={selectedProdutoIds.size === 0 ? "Selecione produtos para criar uma lista" : ""}
             >
               <ListChecks className="w-3.5 h-3.5" />
@@ -1652,7 +1709,7 @@ export default function InfoprodutorPage() {
               type="button"
               onClick={openAddToLista}
               disabled={selectedProdutoIds.size === 0 || listas.length === 0}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-[#e24c30]/45 bg-[#e24c30]/10 text-[#f0f0f2] hover:bg-[#e24c30]/18 hover:border-[#e24c30]/60"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-[#EE4D2D]/45 bg-[#EE4D2D]/10 text-[#f0f0f2] hover:bg-[#EE4D2D]/18 hover:border-[#EE4D2D]/60"
               title={
                 selectedProdutoIds.size === 0
                   ? "Selecione produtos para adicionar a uma lista"
@@ -1675,7 +1732,7 @@ export default function InfoprodutorPage() {
                 value={produtoSearch}
                 onChange={(e) => setProdutoSearch(e.target.value)}
                 placeholder="Filtrar por nome do produto…"
-                className="flex-1 px-3 py-1.5 rounded-lg border border-[#2c2c32] bg-[#1c1c1f] text-[#f0f0f2] text-[11px] placeholder:text-[#6b6b72] outline-none focus:border-[#e24c30]"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-[#2c2c32] bg-[#1c1c1f] text-[#f0f0f2] text-[11px] placeholder:text-[#6b6b72] outline-none focus:border-[#EE4D2D]"
               />
             </div>
             {pagedProdutos.length > 0 ? (
@@ -1703,7 +1760,7 @@ export default function InfoprodutorPage() {
           <div className="bg-[#1c1c1f] flex-1">
             {loadingProdutos ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-[#e24c30]" />
+                <Loader2 className="h-6 w-6 animate-spin text-[#EE4D2D]" />
               </div>
             ) : produtos.length === 0 ? (
               <div className="mx-auto my-8 flex max-w-sm flex-col items-center justify-center rounded-2xl px-4 py-10 text-center">
@@ -1725,7 +1782,7 @@ export default function InfoprodutorPage() {
                     <li
                       key={p.id}
                       className={`flex items-center gap-3 px-3 sm:px-5 py-3 transition-colors ${
-                        checked ? "bg-[#e24c30]/8" : "hover:bg-[#222228]"
+                        checked ? "bg-[#EE4D2D]/8" : "hover:bg-[#222228]"
                       }`}
                     >
                       <label className="flex items-center cursor-pointer shrink-0">
@@ -1733,7 +1790,7 @@ export default function InfoprodutorPage() {
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleSelectProduto(p.id)}
-                          className="w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#e24c30]"
+                          className="w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#EE4D2D]"
                         />
                       </label>
 
@@ -1756,7 +1813,7 @@ export default function InfoprodutorPage() {
                           {p.provider === "mercadopago" ? (
                             <span
                               title="Produto pago via Mercado Pago"
-                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#009ee3]/40 bg-[#009ee3]/10 text-[9px] font-bold uppercase tracking-wider text-[#7cd0f7]"
+                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#EE4D2D]/40 bg-[#EE4D2D]/10 text-[9px] font-bold uppercase tracking-wider text-[#ffb09e]"
                             >
                               <CreditCard className="w-2.5 h-2.5" />
                               MP
@@ -1782,7 +1839,7 @@ export default function InfoprodutorPage() {
                             href={p.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[10px] text-[#e24c30] hover:underline flex items-center gap-1 min-w-0"
+                            className="text-[10px] text-[#EE4D2D] hover:underline flex items-center gap-1 min-w-0"
                             title={p.link}
                           >
                             <ExternalLink className="h-2.5 w-2.5 shrink-0" />
@@ -1795,7 +1852,7 @@ export default function InfoprodutorPage() {
                         <button
                           type="button"
                           onClick={() => handleEditProduto(p)}
-                          className="p-1.5 rounded-md border border-[#3e3e46] text-[#d2d2d2] hover:bg-[#e24c30]/10 hover:text-[#e24c30] hover:border-[#e24c30]/40"
+                          className="p-1.5 rounded-md border border-[#3e3e46] text-[#d2d2d2] hover:bg-[#EE4D2D]/10 hover:text-[#EE4D2D] hover:border-[#EE4D2D]/40"
                           title="Editar"
                         >
                           <Pencil className="h-3 w-3" />
@@ -1833,8 +1890,8 @@ export default function InfoprodutorPage() {
         <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden flex flex-col">
           <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
-                <ListChecks className="w-3 h-3 text-[#e24c30]" />
+              <div className="w-6 h-6 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+                <ListChecks className="w-3 h-3 text-[#EE4D2D]" />
               </div>
               <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Minhas Listas do Infoprodutor</h2>
               {!loadingListas && listas.length > 0 ? (
@@ -1854,7 +1911,7 @@ export default function InfoprodutorPage() {
                 value={listaSearch}
                 onChange={(e) => setListaSearch(e.target.value)}
                 placeholder="Filtrar por nome da lista…"
-                className="flex-1 px-3 py-1.5 rounded-lg border border-[#2c2c32] bg-[#1c1c1f] text-[#f0f0f2] text-[11px] placeholder:text-[#6b6b72] outline-none focus:border-[#e24c30]"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-[#2c2c32] bg-[#1c1c1f] text-[#f0f0f2] text-[11px] placeholder:text-[#6b6b72] outline-none focus:border-[#EE4D2D]"
               />
               {listaSearch ? (
                 <button
@@ -1871,7 +1928,7 @@ export default function InfoprodutorPage() {
           <div className="flex-1 overflow-y-auto bg-[#1c1c1f] scrollbar-thin">
             {loadingListas ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-[#e24c30]" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#EE4D2D]" />
               </div>
             ) : listas.length === 0 ? (
               <div className="mx-auto my-8 flex max-w-sm flex-col items-center justify-center rounded-2xl px-4 py-12 text-center">
@@ -1904,8 +1961,8 @@ export default function InfoprodutorPage() {
                               ) : (
                                 <ChevronRight className="h-5 w-5 text-[#a0a0a0] shrink-0" />
                               )}
-                              <div className="w-8 h-8 rounded-lg border border-[#e24c30]/35 bg-[#e24c30]/10 flex items-center justify-center shrink-0">
-                                <ShoppingCart className="h-4 w-4 text-[#e24c30]" />
+                              <div className="w-8 h-8 rounded-lg border border-[#2c2c32] bg-[#27272a] flex items-center justify-center shrink-0">
+                                <ShoppingCart className="h-4 w-4 text-[#EE4D2D]" />
                               </div>
                               <span className="text-sm font-bold uppercase tracking-wide text-[#f0f0f2] truncate">
                                 {lista.nome}
@@ -1920,7 +1977,7 @@ export default function InfoprodutorPage() {
                               type="button"
                               onClick={() => askEmptyLista(lista.id)}
                               disabled={(itemsByLista[lista.id]?.length ?? lista.totalItens ?? 0) === 0}
-                              className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[#3e3e46] text-[#d2d2d2] text-xs hover:bg-[#e24c30]/10 hover:text-[#e24c30] hover:border-[#e24c30]/40 disabled:opacity-40"
+                              className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[#3e3e46] text-[#d2d2d2] text-xs hover:bg-[#EE4D2D]/10 hover:text-[#EE4D2D] hover:border-[#EE4D2D]/40 disabled:opacity-40"
                               title="Esvaziar lista"
                             >
                               <FolderMinus className="h-3.5 w-3.5" /> Esvaziar
@@ -1940,7 +1997,7 @@ export default function InfoprodutorPage() {
                           <div className="border-t border-[#2c2c32] p-4 bg-[#1c1c1f]">
                             {loadingListaId === lista.id ? (
                               <div className="flex justify-center py-6">
-                                <Loader2 className="h-6 w-6 animate-spin text-[#e24c30]" />
+                                <Loader2 className="h-6 w-6 animate-spin text-[#EE4D2D]" />
                               </div>
                             ) : !itemsByLista[lista.id]?.length ? (
                               <p className="text-sm text-[#9a9aa2] py-4 text-center">
@@ -2030,7 +2087,7 @@ export default function InfoprodutorPage() {
                                               href={item.link}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="text-xs text-[#e24c30] hover:underline flex items-center gap-1"
+                                              className="text-xs text-[#EE4D2D] hover:underline flex items-center gap-1"
                                             >
                                               <ExternalLink className="h-3 w-3" /> Link
                                             </a>
@@ -2124,8 +2181,8 @@ export default function InfoprodutorPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-lg border border-[#e24c30]/35 bg-[#e24c30]/10 flex items-center justify-center shrink-0">
-                  <ListChecks className="w-4 h-4 text-[#e24c30]" />
+                <div className="w-8 h-8 rounded-lg border border-[#2c2c32] bg-[#27272a] flex items-center justify-center shrink-0">
+                  <ListChecks className="w-4 h-4 text-[#EE4D2D]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-[#f0f0f2]">Criar nova lista</h3>
@@ -2149,7 +2206,7 @@ export default function InfoprodutorPage() {
                   if (e.key === "Enter") handleCreateLista();
                   if (e.key === "Escape" && !savingLista) setCreateListaOpen(false);
                 }}
-                className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-sm text-[#f0f0f2] placeholder:text-[#6b6b72] focus:border-[#e24c30] outline-none transition"
+                className="w-full bg-[#222228] border border-[#3e3e46] rounded-xl px-3 py-2.5 text-sm text-[#f0f0f2] placeholder:text-[#6b6b72] focus:border-[#EE4D2D] outline-none transition"
               />
 
               <div className="flex items-center justify-end gap-2 mt-5">
@@ -2165,7 +2222,7 @@ export default function InfoprodutorPage() {
                   type="button"
                   onClick={handleCreateLista}
                   disabled={savingLista || !novaListaNome.trim()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#e24c30] hover:bg-[#c94028] text-white text-xs font-semibold disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#EE4D2D] hover:bg-[#d63d20] text-white text-xs font-semibold disabled:opacity-60"
                 >
                   {savingLista ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                   {savingLista ? "Criando…" : "Criar lista"}

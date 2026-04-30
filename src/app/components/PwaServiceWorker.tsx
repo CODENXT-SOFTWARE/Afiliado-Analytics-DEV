@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ensureSubscribed } from "@/lib/push/client";
 
 declare global {
   interface Window {
@@ -24,7 +25,21 @@ export function PwaServiceWorker() {
     const host = typeof window !== "undefined" ? window.location.hostname : "";
     const isLocal = host === "localhost" || host === "127.0.0.1";
     if (process.env.NODE_ENV !== "production" && !isLocal) return;
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+
+    let cancelled = false;
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then(() => {
+        if (cancelled) return;
+        // Quando o usuário já concedeu permissão (ex.: PWA instalado e já
+        // ativou em outra sessão), garantimos que o servidor tenha a
+        // subscription mais recente. Idempotente — só faz POST se mudou.
+        ensureSubscribed().catch(() => {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
   return null;
 }

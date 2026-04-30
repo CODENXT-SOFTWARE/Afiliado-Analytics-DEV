@@ -75,7 +75,7 @@ const DARK_PALETTE: ThemePalette = {
   text: "#f0f0f2",
   textMuted: "#c8c8ce",
   textFaint: "#9a9aa2",
-  accent: "#635bff",
+  accent: "#EE4D2D",
   emerald: "#34d399",
 };
 
@@ -89,7 +89,7 @@ const LIGHT_PALETTE: ThemePalette = {
   text: "#18181b",
   textMuted: "#52525b",
   textFaint: "#71717a",
-  accent: "#635bff",
+  accent: "#EE4D2D",
   emerald: "#059669",
 };
 
@@ -221,7 +221,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
   if (loadingInfo) {
     return (
       <div className="min-h-screen bg-[#18181b] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#635bff]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#EE4D2D]" />
       </div>
     );
   }
@@ -392,7 +392,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                   Produto digital
                 </p>
                 <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: palette.textMuted }}>
-                  Você receberá o conteúdo via e-mail ou WhatsApp logo após a confirmação do pagamento.
+                  Você receberá o conteúdo por WhatsApp após a confirmação do pagamento (e por e-mail também, se informar).
                 </p>
               </div>
             </div>
@@ -409,14 +409,14 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                   value={cep}
                   onChange={(e) => setCep(maskCep(e.target.value))}
                   placeholder="00000-000"
-                  className="flex-1 rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#635bff]"
+                  className="flex-1 rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#EE4D2D]"
                   style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
                 />
                 <button
                   type="button"
                   onClick={calcularFrete}
                   disabled={cep.replace(/\D/g, "").length !== 8 || quoting}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#635bff] text-white text-[12px] font-bold hover:bg-[#5048e5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#EE4D2D] text-white text-[12px] font-bold hover:bg-[#d63d20] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {quoting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Truck className="w-3.5 h-3.5" />}
                   Calcular
@@ -452,7 +452,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                         key={`${opt.id}-${i}`}
                         className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors"
                         style={{
-                          background: checked ? "#635bff1a" : palette.inputBg,
+                          background: checked ? "#EE4D2D1a" : palette.inputBg,
                           borderColor: checked ? palette.accent : palette.inputBorder,
                         }}
                       >
@@ -462,7 +462,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                             name="delivery"
                             checked={checked}
                             onChange={() => setSelection({ type: "shipping", option: opt })}
-                            className="w-4 h-4 accent-[#635bff] shrink-0"
+                            className="w-4 h-4 accent-[#EE4D2D] shrink-0"
                           />
                           <Truck className="w-4 h-4 shrink-0" style={{ color: palette.accent }} />
                           <div className="min-w-0">
@@ -495,7 +495,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
               <label
                 className="flex items-start gap-3 px-3 py-3 rounded-xl border cursor-pointer transition-colors"
                 style={{
-                  background: selection?.type === "pickup" ? "#635bff1a" : palette.inputBg,
+                  background: selection?.type === "pickup" ? "#EE4D2D1a" : palette.inputBg,
                   borderColor: selection?.type === "pickup" ? palette.accent : palette.inputBorder,
                 }}
               >
@@ -504,7 +504,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                   name="delivery"
                   checked={selection?.type === "pickup"}
                   onChange={() => setSelection({ type: "pickup" })}
-                  className="mt-0.5 w-4 h-4 accent-[#635bff] shrink-0"
+                  className="mt-0.5 w-4 h-4 accent-[#EE4D2D] shrink-0"
                 />
                 <Store className="w-4 h-4 shrink-0 mt-0.5" style={{ color: palette.accent }} />
                 <div className="min-w-0 flex-1">
@@ -532,7 +532,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
               <label
                 className="flex items-start gap-3 px-3 py-3 rounded-xl border cursor-pointer transition-colors"
                 style={{
-                  background: selection?.type === "local_delivery" ? "#635bff1a" : palette.inputBg,
+                  background: selection?.type === "local_delivery" ? "#EE4D2D1a" : palette.inputBg,
                   borderColor:
                     selection?.type === "local_delivery" ? palette.accent : palette.inputBorder,
                 }}
@@ -542,7 +542,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ subId: stri
                   name="delivery"
                   checked={selection?.type === "local_delivery"}
                   onChange={() => setSelection({ type: "local_delivery" })}
-                  className="mt-0.5 w-4 h-4 accent-[#635bff] shrink-0"
+                  className="mt-0.5 w-4 h-4 accent-[#EE4D2D] shrink-0"
                 />
                 <Home className="w-4 h-4 shrink-0 mt-0.5" style={{ color: palette.accent }} />
                 <div className="min-w-0 flex-1">
@@ -654,13 +654,15 @@ function PaymentSection({
 
   const waDigits = buyerWhatsapp.replace(/\D/g, "");
   const nameValid = buyerName.trim().length >= 3;
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail.trim());
+  const trimmedEmail = buyerEmail.trim();
+  const emailValid =
+    trimmedEmail === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
   const waValid = waDigits.length >= 10;
   const ready = nameValid && emailValid && waValid;
 
   const headerCopy =
     selection.type === "digital"
-      ? "O conteúdo chega via e-mail e WhatsApp assim que o pagamento for confirmado."
+      ? "O conteúdo chega por WhatsApp assim que o pagamento for confirmado (e por e-mail também, se você informar)."
       : selection.type === "pickup"
         ? "Pra combinarmos a retirada e te avisar quando o pedido estiver pronto."
         : "Pra te avisarmos sobre o pedido e a entrega.";
@@ -686,13 +688,13 @@ function PaymentSection({
           onChange={(e) => setBuyerName(e.target.value)}
           placeholder="Como você se chama?"
           autoComplete="name"
-          className="w-full rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#635bff]"
+          className="w-full rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#EE4D2D]"
           style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
         />
       </div>
       <div className="space-y-2">
         <label className="block text-[11px] font-semibold" style={{ color: palette.textMuted }}>
-          E-mail
+          E-mail <span className="font-normal opacity-75">(opcional)</span>
         </label>
         <input
           type="email"
@@ -700,7 +702,7 @@ function PaymentSection({
           onChange={(e) => setBuyerEmail(e.target.value)}
           placeholder="voce@email.com"
           autoComplete="email"
-          className="w-full rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#635bff]"
+          className="w-full rounded-xl px-3 py-2.5 text-[13px] border outline-none focus:border-[#EE4D2D]"
           style={{ background: palette.inputBg, borderColor: palette.inputBorder, color: palette.text }}
         />
       </div>
@@ -716,7 +718,7 @@ function PaymentSection({
       </div>
       {!ready ? (
         <p className="text-[11px]" style={{ color: palette.textFaint }}>
-          Preencha nome, e-mail e WhatsApp válidos pra liberar o pagamento.
+          Preencha nome e WhatsApp válidos pra liberar o pagamento. Se informar e-mail, use um endereço válido.
         </p>
       ) : null}
     </div>

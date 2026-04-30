@@ -5,12 +5,13 @@
  * inicializar o Payment Brick do MP.
  *
  *   POST /api/checkout/[subId]/mp-preference
- *   Body: { mode, shippingPrice?, shippingName?, buyerName, buyerWhatsapp, buyerEmail }
+ *   Body: { mode, shippingPrice?, shippingName?, buyerName, buyerWhatsapp, buyerEmail? }
  *   Resposta: { preferenceId, publicKey, initPoint, sandboxInitPoint, amount }
  */
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { parseOptionalBuyerEmail, payerEmailForMercadoPago } from "@/lib/infoprod/payer-email-mp";
 import { createMpPreference, type MpPreferenceInput } from "@/lib/mercadopago/api";
 import { getMercadoPagoAppOrigin } from "@/lib/mercadopago/config";
 
@@ -63,8 +64,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
     if (mode === "shipping" && (!Number.isFinite(shippingPrice) || shippingPrice < 0)) {
       return NextResponse.json({ error: "Valor de frete inválido" }, { status: 400 });
     }
-    // Nome, WhatsApp e e-mail são obrigatórios em todos os modos — usados pra
-    // notificações ao vendedor, contato pós-venda e identificação no painel.
+    // Nome e WhatsApp obrigatórios; e-mail é opcional (MP exige payer.email —
+    // usamos placeholder técnico quando vazio: ver `payerEmailForMercadoPago`).
     if (buyerName.length < 3) {
       return NextResponse.json({ error: "Informe o nome completo do comprador." }, { status: 400 });
     }
@@ -74,9 +75,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
         { status: 400 },
       );
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
-      return NextResponse.json({ error: "Informe um e-mail válido." }, { status: 400 });
+    const buyerEmailParsed = parseOptionalBuyerEmail(buyerEmail);
+    if (buyerEmail.length > 0 && !buyerEmailParsed) {
+      return NextResponse.json({ error: "Informe um e-mail válido ou deixe o campo vazio." }, { status: 400 });
     }
+
+    const payerEmailResolved = payerEmailForMercadoPago(buyerEmail, buyerWhatsapp);
 
     const supabase = createAdminClient();
     const { data: produto, error } = await supabase
@@ -194,7 +198,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
       back_urls: { success: successUrl, failure: failureUrl, pending: pendingUrl },
       auto_return: "approved",
       payer: {
-        email: buyerEmail,
+        email: payerEmailResolved,
         ...(buyerFirstName ? { first_name: buyerFirstName } : {}),
         ...(buyerLastName ? { last_name: buyerLastName } : {}),
         ...(buyerPhonePayload ? { phone: buyerPhonePayload } : {}),
@@ -213,7 +217,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ subId: string 
         product_price_brl: productPrice.toFixed(2),
         ...(buyerName ? { buyer_name: buyerName } : {}),
         ...(buyerWhatsapp ? { buyer_whatsapp: buyerWhatsapp } : {}),
-        ...(buyerEmail ? { buyer_email: buyerEmail } : {}),
+        ...(buyerEmailParsed ? { buyer_email: buyerEmailParsed } : {}),
       },
       statement_descriptor: row.name.slice(0, 22),
     };

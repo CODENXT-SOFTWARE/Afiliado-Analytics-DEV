@@ -2,6 +2,7 @@
 
 import React, { useId, useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { ChevronDown, Search, X } from "lucide-react";
 
 function normalizeSearch(s: string) {
@@ -12,7 +13,22 @@ function normalizeSearch(s: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-export type MetaPickerOption = { value: string; label: string; description?: string };
+function LeadingOptionImage({ src, alt }: { src: string; alt?: string }) {
+  return (
+    <span className="relative flex h-7 w-7 shrink-0 items-center justify-center">
+      <Image src={src} alt={alt ?? ""} width={28} height={28} className="h-full w-full object-contain" />
+    </span>
+  );
+}
+
+export type MetaPickerOption = {
+  value: string;
+  label: string;
+  description?: string;
+  /** Miniatura à esquerda do nome (ex.: mascote para listas Sho.IA). */
+  leadingImageSrc?: string;
+  leadingImageAlt?: string;
+};
 
 export type MetaSearchablePickerProps = {
   value: string;
@@ -93,6 +109,8 @@ export default function MetaSearchablePicker({
     },
     [options, emptyAsTag, emptyTagLabel]
   );
+
+  const selectedOption = useMemo(() => options.find((x) => x.value === value), [options, value]);
 
   const openModal = useCallback(() => {
     if (disabled || options.length === 0) return;
@@ -207,18 +225,23 @@ export default function MetaSearchablePicker({
                         key={o.value}
                         type="button"
                         onClick={() => setDraft(o.value)}
-                        className={`w-full text-left rounded-lg border px-3 py-2.5 text-sm font-medium transition-all ${
+                        className={`flex w-full items-start gap-2.5 text-left rounded-lg border px-3 py-2.5 text-sm font-medium transition-all ${
                           selected
                             ? "border-shopee-orange/50 bg-shopee-orange/10 text-text-primary"
                             : "border-dark-border/60 bg-dark-bg/30 text-text-secondary hover:border-shopee-orange/30"
                         }`}
                       >
-                        <span className="block truncate">{o.label}</span>
-                        {o.description ? (
-                          <span className="block text-[11px] text-text-secondary/55 font-normal truncate mt-0.5">
-                            {o.description}
-                          </span>
+                        {o.leadingImageSrc ? (
+                          <LeadingOptionImage src={o.leadingImageSrc} alt={o.leadingImageAlt} />
                         ) : null}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{o.label}</span>
+                          {o.description ? (
+                            <span className="block text-[11px] text-text-secondary/55 font-normal truncate mt-0.5">
+                              {o.description}
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
                     );
                   })
@@ -330,12 +353,25 @@ export default function MetaSearchablePicker({
               className={fieldTriggerClass}
               aria-haspopup="dialog"
             >
-              <span
-                className={`min-w-0 flex-1 truncate font-medium ${
-                  value === "" && emptyAsTag ? "text-text-secondary" : ""
-                }`}
-              >
-                {labelFor(value)}
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                {selectedOption?.leadingImageSrc ? (
+                  <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
+                    <Image
+                      src={selectedOption.leadingImageSrc}
+                      alt={selectedOption.leadingImageAlt ?? ""}
+                      width={20}
+                      height={20}
+                      className="h-full w-full object-contain"
+                    />
+                  </span>
+                ) : null}
+                <span
+                  className={`min-w-0 truncate font-medium ${
+                    value === "" && emptyAsTag ? "text-text-secondary" : ""
+                  }`}
+                >
+                  {labelFor(value)}
+                </span>
               </span>
               <ChevronDown className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden />
             </button>
@@ -359,6 +395,17 @@ export default function MetaSearchablePicker({
                   : "border-shopee-orange/50 bg-shopee-orange/8 text-text-primary"
               }`}
             >
+              {selectedOption?.leadingImageSrc ? (
+                <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
+                  <Image
+                    src={selectedOption.leadingImageSrc}
+                    alt={selectedOption.leadingImageAlt ?? ""}
+                    width={20}
+                    height={20}
+                    className="h-full w-full object-contain"
+                  />
+                </span>
+              ) : null}
               <span className="truncate max-w-[min(100%,280px)]">{labelFor(value)}</span>
               {value !== "" && allowClear ? (
                 <button

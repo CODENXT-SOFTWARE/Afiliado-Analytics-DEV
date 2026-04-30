@@ -137,7 +137,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ subId: string 
     const payButtonColor =
       sender?.checkout_pay_button_color && HEX.test(sender.checkout_pay_button_color.trim())
         ? sender.checkout_pay_button_color.trim().toLowerCase()
-        : "#635bff";
+        : "#EE4D2D";
     const triggers = {
       payButton: {
         color: payButtonColor,

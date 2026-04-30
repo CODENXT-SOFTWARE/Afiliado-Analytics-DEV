@@ -120,14 +120,14 @@ export function ConvertLinkModal({
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
-  // Reset toda vez que abre.
+  // Reset só ao trocar de produto (itemId). Não use [product]: cada refetch recria
+  // o objeto em toProductSummary() e o toggle “desmarcava” sozinho.
   useEffect(() => {
-    if (product) {
-      setSubEnabled(false);
-      setSubValue("");
-      setFeedback(null);
-    }
-  }, [product]);
+    if (product == null) return;
+    setSubEnabled(false);
+    setSubValue("");
+    setFeedback(null);
+  }, [product?.itemId]);
 
   const handleConvert = async () => {
     if (!product) return;
@@ -272,14 +272,13 @@ export function AddToListModal({
   const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
-    if (product) {
-      setSubEnabled(false);
-      setSubValue("");
-      setNewListName("");
-      setActiveListId(null);
-      setFeedback(null);
-    }
-  }, [product]);
+    if (product == null) return;
+    setSubEnabled(false);
+    setSubValue("");
+    setNewListName("");
+    setActiveListId(null);
+    setFeedback(null);
+  }, [product?.itemId]);
 
   const handleCreateList = async () => {
     const nome = newListName.trim();

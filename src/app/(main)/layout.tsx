@@ -4,6 +4,7 @@
 import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { LoginModalProvider, useLoginModal } from '../components/auth/LoginModalProvider'
+import PushPermissionPrompt from '../components/PushPermissionPrompt'
 
 function MainChrome({ children }: { children: React.ReactNode }) {
   const { openLogin } = useLoginModal()
@@ -12,6 +13,7 @@ function MainChrome({ children }: { children: React.ReactNode }) {
       <Header onLoginClick={openLogin} />
       <main className="flex-grow">{children}</main>
       <Footer />
+      <PushPermissionPrompt />
     </div>
   )
 }

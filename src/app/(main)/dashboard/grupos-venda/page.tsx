@@ -19,6 +19,11 @@ import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationB
 import { janelaDuracaoMinutos, mensagemErroJanela, MAX_JANELA_MINUTOS } from "@/lib/grupos-venda-janela";
 import { createClient as createBrowserSupabase } from "utils/supabase/client";
 import { isGruposVendaMlOfferBlocked, MERCADOLIVRE_UX_COMING_SOON } from "@/lib/mercadolivre-ux-coming-soon";
+import {
+  isShoiaListName,
+  SHOIA_LIST_LEADING_IMAGE_SRC,
+  stripShoiaListNamePrefix,
+} from "@/lib/shopee/shoia-list-label";
 import ChannelTabs from "./ChannelTabs";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -218,7 +223,19 @@ function DisparoCard({ c, togglingId, onToggle, onRemove, onEdit, onTestPulse, t
           <div className="flex items-start md:items-center gap-1.5 text-[9px] text-[#a0a0a0] min-w-0">
             <Layers className="w-2.5 h-2.5 text-[#e24c30] shrink-0 mt-0.5 md:mt-0" />
             <span className="min-w-0 max-md:break-words md:truncate">
-              Lista Shopee: <span className="text-white">{c.listaOfertasNome}</span>
+              Lista Shopee:{" "}
+              <span className="inline-flex items-center gap-1.5 text-white">
+                {isShoiaListName(c.listaOfertasNome) ? (
+                  <Image
+                    src={SHOIA_LIST_LEADING_IMAGE_SRC}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="h-[18px] w-[18px] shrink-0 object-contain"
+                  />
+                ) : null}
+                <span>{stripShoiaListNamePrefix(c.listaOfertasNome)}</span>
+              </span>
             </span>
           </div>
         )}
@@ -933,8 +950,11 @@ export default function GruposVendaPage() {
       },
       ...listasOfertas.map((l) => ({
         value: l.id,
-        label: l.nome,
+        label: stripShoiaListNamePrefix(l.nome),
         description: `${l.totalItens} ${l.totalItens === 1 ? "item" : "itens"}`,
+        ...(isShoiaListName(l.nome)
+          ? { leadingImageSrc: SHOIA_LIST_LEADING_IMAGE_SRC, leadingImageAlt: "" }
+          : {}),
       })),
     ],
     [listasOfertas],

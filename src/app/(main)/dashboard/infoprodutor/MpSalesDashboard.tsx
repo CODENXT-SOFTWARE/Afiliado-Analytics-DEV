@@ -184,13 +184,13 @@ export default function MpSalesDashboard({
           fill: true,
           label: "Receita",
           data: byDay.map((d) => Number(d.revenue.toFixed(2))),
-          borderColor: "#009ee3",
-          backgroundColor: "rgba(99, 91, 255, 0.18)",
-          pointBackgroundColor: "#009ee3",
+          borderColor: "#EE4D2D",
+          backgroundColor: "rgba(238, 77, 45, 0.18)",
+          pointBackgroundColor: "#EE4D2D",
           pointBorderColor: "#FFFFFF",
           pointBorderWidth: 2,
           pointHoverBackgroundColor: "#FFFFFF",
-          pointHoverBorderColor: "#009ee3",
+          pointHoverBorderColor: "#EE4D2D",
           pointHoverBorderWidth: 2,
           pointRadius: byDay.length > 45 ? 0 : 3,
           tension: 0.35,
@@ -247,14 +247,14 @@ export default function MpSalesDashboard({
     return (
       <section className="rounded-xl border border-[#2c2c32] bg-[#27272a] overflow-hidden mt-6">
         <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-lg bg-[#009ee3]/15 border border-[#009ee3]/25 flex items-center justify-center shrink-0">
-            <BarChart3 className="w-3 h-3 text-[#7cd0f7]" />
+          <div className="w-6 h-6 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+            <BarChart3 className="w-3 h-3 text-[#EE4D2D]" />
           </div>
           <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Vendas Mercado Pago</h2>
         </div>
         <div className="px-4 sm:px-6 py-10 flex flex-col items-center text-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-[#009ee3]/10 border border-[#009ee3]/25 flex items-center justify-center">
-            <CreditCard className="w-6 h-6 text-[#7cd0f7]" />
+          <div className="w-12 h-12 rounded-xl bg-[#27272a] border border-[#2c2c32] flex items-center justify-center">
+            <CreditCard className="w-6 h-6 text-[#EE4D2D]" />
           </div>
           <div className="max-w-sm">
             <p className="text-sm font-semibold text-[#f0f0f2]">Conecte sua conta Mercado Pago</p>
@@ -264,7 +264,7 @@ export default function MpSalesDashboard({
           </div>
           <Link
             href="/configuracoes"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#009ee3] hover:bg-[#0084c2] text-white text-xs font-semibold"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#EE4D2D] hover:bg-[#d63d20] text-white text-xs font-semibold"
           >
             Conectar em Configurações
           </Link>
@@ -278,8 +278,8 @@ export default function MpSalesDashboard({
       {/* Header */}
       <div className="px-3 sm:px-5 py-4 border-b border-[#2c2c32] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-[#009ee3]/15 border border-[#009ee3]/25 flex items-center justify-center shrink-0">
-            <BarChart3 className="w-3 h-3 text-[#7cd0f7]" />
+          <div className="w-6 h-6 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+            <BarChart3 className="w-3 h-3 text-[#EE4D2D]" />
           </div>
           <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Vendas Mercado Pago</h2>
           {data?.fetchedAt ? (
@@ -297,7 +297,7 @@ export default function MpSalesDashboard({
                 onClick={() => setPeriod(p.value)}
                 disabled={loading}
                 className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-colors disabled:opacity-60 ${
-                  period === p.value ? "bg-[#009ee3] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+                  period === p.value ? "bg-[#EE4D2D] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
                 }`}
               >
                 {p.label}
@@ -331,8 +331,8 @@ export default function MpSalesDashboard({
       {/* Empty state: conectado mas sem produtos Mercado Pago */}
       {data && !data.hasProducts ? (
         <div className="px-4 sm:px-6 py-10 flex flex-col items-center text-center gap-3 bg-[#1c1c1f]">
-          <div className="w-12 h-12 rounded-xl bg-[#009ee3]/10 border border-[#009ee3]/25 flex items-center justify-center">
-            <ShoppingBag className="w-6 h-6 text-[#7cd0f7]" />
+          <div className="w-12 h-12 rounded-xl bg-[#27272a] border border-[#2c2c32] flex items-center justify-center">
+            <ShoppingBag className="w-6 h-6 text-[#EE4D2D]" />
           </div>
           <div className="max-w-sm">
             <p className="text-sm font-semibold text-[#f0f0f2]">Nenhum produto Mercado Pago cadastrado</p>
@@ -346,7 +346,7 @@ export default function MpSalesDashboard({
       {/* Loading placeholder */}
       {loading && !data ? (
         <div className="px-4 py-16 flex items-center justify-center bg-[#1c1c1f]">
-          <Loader2 className="w-6 h-6 animate-spin text-[#009ee3]" />
+          <Loader2 className="w-6 h-6 animate-spin text-[#EE4D2D]" />
         </div>
       ) : null}
 
@@ -356,35 +356,30 @@ export default function MpSalesDashboard({
           {/* Cards de KPI */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
             <KpiCard
-              icon={<TrendingUp className="w-4 h-4 text-emerald-400" />}
+              icon={<TrendingUp className="w-4 h-4 text-[#EE4D2D]" />}
               label="Receita"
               value={formatBRL(data.summary.totalRevenue)}
-              accent="emerald"
             />
             <KpiCard
-              icon={<ShoppingBag className="w-4 h-4 text-[#7cd0f7]" />}
+              icon={<ShoppingBag className="w-4 h-4 text-[#EE4D2D]" />}
               label="Vendas"
               value={formatInt(data.summary.totalSales)}
-              accent="mp"
             />
             <KpiCard
-              icon={<Receipt className="w-4 h-4 text-sky-400" />}
+              icon={<Receipt className="w-4 h-4 text-[#EE4D2D]" />}
               label="Ticket médio"
               value={formatBRL(data.summary.avgTicket)}
-              accent="sky"
             />
             <KpiCard
-              icon={<Undo2 className="w-4 h-4 text-amber-400" />}
+              icon={<Undo2 className="w-4 h-4 text-[#EE4D2D]" />}
               label="Reembolsos"
               value={formatBRL(data.summary.totalRefunded)}
               sub={data.summary.totalRevenue > 0 ? `${formatPct(data.summary.refundRate)} do total` : "—"}
-              accent="amber"
             />
             <KpiCard
-              icon={<Users className="w-4 h-4 text-fuchsia-400" />}
+              icon={<Users className="w-4 h-4 text-[#EE4D2D]" />}
               label="Clientes únicos"
               value={formatInt(data.summary.uniqueCustomers)}
-              accent="fuchsia"
             />
           </div>
 
@@ -421,7 +416,7 @@ export default function MpSalesDashboard({
                   href="https://www.mercadopago.com.br/activities"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] text-[#7cd0f7] hover:underline inline-flex items-center gap-1"
+                  className="text-[10px] text-[#EE4D2D] hover:underline inline-flex items-center gap-1"
                   title="Ver no painel do Mercado Pago"
                 >
                   Mercado Pago <ExternalLink className="w-2.5 h-2.5" />
@@ -458,7 +453,7 @@ export default function MpSalesDashboard({
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[11px] font-bold text-emerald-400">{formatBRL(p.revenue)}</p>
+                        <p className="text-[11px] font-bold text-[#EE4D2D]">{formatBRL(p.revenue)}</p>
                         <p className="text-[9px] text-[#7a7a80]">{formatPct(p.share)}</p>
                       </div>
                     </li>
@@ -478,23 +473,14 @@ function KpiCard({
   label,
   value,
   sub,
-  accent,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub?: string;
-  accent: "emerald" | "mp" | "sky" | "amber" | "fuchsia";
 }) {
-  const borderClass = {
-    emerald: "border-emerald-500/20",
-    mp: "border-[#009ee3]/25",
-    sky: "border-sky-500/20",
-    amber: "border-amber-500/20",
-    fuchsia: "border-fuchsia-500/20",
-  }[accent];
   return (
-    <div className={`rounded-xl border ${borderClass} bg-[#222228] p-3`}>
+    <div className="rounded-xl border border-[#2c2c32] bg-[#222228] p-3">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#9a9aa2] uppercase tracking-wider">
         {icon}
         <span>{label}</span>

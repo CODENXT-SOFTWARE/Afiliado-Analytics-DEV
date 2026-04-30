@@ -35,7 +35,7 @@ type Row = {
 };
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
-const DEFAULT_COLOR = "#635bff";
+const DEFAULT_COLOR = "#EE4D2D";
 
 function normalizeColor(v: unknown): string {
   if (typeof v !== "string") return DEFAULT_COLOR;

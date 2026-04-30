@@ -73,7 +73,7 @@ const INITIAL: State = {
   methodCard: true,
   methodPix: true,
   methodBoleto: true,
-  payButtonColor: "#635bff",
+  payButtonColor: "#EE4D2D",
   payButtonLightSweep: false,
   triggerSaleNotifications: false,
   triggerCountdown: false,
@@ -127,7 +127,7 @@ export default function CustomCheckoutTab() {
           methodCard: json.methodCard !== false,
           methodPix: json.methodPix !== false,
           methodBoleto: json.methodBoleto !== false,
-          payButtonColor: json.payButtonColor ?? "#635bff",
+          payButtonColor: json.payButtonColor ?? "#EE4D2D",
           payButtonLightSweep: Boolean(json.payButtonLightSweep),
           triggerSaleNotifications: Boolean(json.triggerSaleNotifications),
           triggerCountdown: Boolean(json.triggerCountdown),
@@ -216,7 +216,7 @@ export default function CustomCheckoutTab() {
   if (loading) {
     return (
       <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-10 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#635bff]" />
+        <Loader2 className="w-6 h-6 animate-spin text-[#EE4D2D]" />
       </div>
     );
   }
@@ -227,8 +227,8 @@ export default function CustomCheckoutTab() {
         {/* ═══════════════ EDITOR ═══════════════ */}
         <div className="rounded-xl border border-[#2c2c32] bg-[#27272a] p-5 space-y-5 h-fit">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#635bff]/15 border border-[#635bff]/25 flex items-center justify-center">
-              <CreditCard className="w-4 h-4 text-[#a8a2ff]" />
+            <div className="w-8 h-8 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-[#EE4D2D]" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-[#f0f0f2]">Personalizar checkout</h2>
@@ -251,9 +251,9 @@ export default function CustomCheckoutTab() {
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-all ${
                         current
-                          ? "bg-[#e24c30] text-white shadow-[0_0_12px_rgba(238,77,45,0.4)]"
+                          ? "bg-[#EE4D2D] text-white shadow-[0_0_12px_rgba(238,77,45,0.4)]"
                           : done
-                            ? "bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400"
+                            ? "bg-[#EE4D2D]/18 border-2 border-[#EE4D2D] text-[#ffb09e]"
                             : "bg-[#1a1a1e] border-2 border-[#3e3e46] text-[#9a9aa2]"
                       }`}
                     >
@@ -264,7 +264,7 @@ export default function CustomCheckoutTab() {
                         current
                           ? "text-[#f0f0f2] font-semibold"
                           : done
-                            ? "text-emerald-400"
+                            ? "text-[#ffb09e]"
                             : "text-[#9a9aa2]"
                       }`}
                     >
@@ -274,7 +274,7 @@ export default function CustomCheckoutTab() {
                   {idx < STEPS.length - 1 && (
                     <div
                       className={`flex-1 h-px mx-2 transition-colors ${
-                        done ? "bg-emerald-500/40" : "bg-[#3e3e46]"
+                        done ? "bg-[#EE4D2D]/35" : "bg-[#3e3e46]"
                       }`}
                     />
                   )}
@@ -323,13 +323,13 @@ export default function CustomCheckoutTab() {
                 type="button"
                 onClick={handleSave}
                 disabled={!dirty || saving}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#635bff] text-white text-[12px] font-bold hover:bg-[#5048e5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#EE4D2D] text-white text-[12px] font-bold hover:bg-[#d63d20] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 {saving ? "Salvando..." : "Salvar"}
               </button>
               {ok ? (
-                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#ffb09e]">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   Salvo!
                 </span>
@@ -510,26 +510,26 @@ function StepIdentidade({
             onClick={() => setState((p) => ({ ...p, mode: "dark" }))}
             className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
               state.mode === "dark"
-                ? "border-[#635bff] bg-[#635bff]/10 text-[#f0f0f2]"
-                : "border-[#3e3e46] bg-[#222228] text-[#c8c8ce] hover:border-[#635bff]/50"
+                ? "border-[#3e3e46] bg-[#2f2f34] text-[#f0f0f2]"
+                : "border-[#3e3e46] bg-[#222228] text-[#c8c8ce] hover:bg-[#26262c]"
             }`}
           >
             <Moon className="w-4 h-4" />
             <span className="text-[12px] font-semibold">Escuro</span>
-            {state.mode === "dark" ? <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-[#a8a2ff]" /> : null}
+            {state.mode === "dark" ? <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-[#EE4D2D]" /> : null}
           </button>
           <button
             type="button"
             onClick={() => setState((p) => ({ ...p, mode: "light" }))}
             className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
               state.mode === "light"
-                ? "border-[#635bff] bg-[#635bff]/10 text-[#f0f0f2]"
-                : "border-[#3e3e46] bg-[#222228] text-[#c8c8ce] hover:border-[#635bff]/50"
+                ? "border-[#3e3e46] bg-[#2f2f34] text-[#f0f0f2]"
+                : "border-[#3e3e46] bg-[#222228] text-[#c8c8ce] hover:bg-[#26262c]"
             }`}
           >
             <Sun className="w-4 h-4" />
             <span className="text-[12px] font-semibold">Claro</span>
-            {state.mode === "light" ? <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-[#a8a2ff]" /> : null}
+            {state.mode === "light" ? <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-[#EE4D2D]" /> : null}
           </button>
         </div>
       </div>
@@ -576,8 +576,8 @@ function StepIdentidade({
                 onClick={() => setState((p) => ({ ...p, footerImageSize: opt.value }))}
                 className={`px-3 py-2 rounded-lg border text-[12px] font-semibold transition-colors ${
                   state.footerImageSize === opt.value
-                    ? "border-[#635bff] bg-[#635bff]/10 text-[#f0f0f2]"
-                    : "border-[#3e3e46] bg-[#222228] text-[#c8c8ce] hover:border-[#635bff]/50"
+                    ? "border-[#3e3e46] bg-[#2f2f34] text-[#f0f0f2]"
+                    : "border-[#3e3e46] bg-[#222228] text-[#c8c8ce] hover:bg-[#26262c]"
                 }`}
               >
                 {opt.label}
@@ -626,14 +626,14 @@ function StepPagamento({
               <div key={m.key}>
                 <label
                   className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                    checked ? "border-[#635bff]/50 bg-[#635bff]/8" : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30"
+                    checked ? "border-[#3e3e46] bg-[#25252b]" : "border-[#3e3e46] bg-[#222228] hover:bg-[#252528]"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={(e) => setState((p) => ({ ...p, [m.key]: e.target.checked }))}
-                    className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff] shrink-0"
+                    className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#EE4D2D] shrink-0"
                   />
                   <div className="min-w-0 flex-1 flex items-center gap-1.5">
                     <p className="text-[12px] font-semibold text-[#f0f0f2]">{m.label}</p>
@@ -675,11 +675,11 @@ function StepPagamento({
                   setState((p) => ({ ...p, payButtonColor: v }));
                 }
               }}
-              placeholder="#635bff"
-              className="flex-1 bg-[#222228] border border-[#3e3e46] rounded-lg px-3 py-2 text-[12px] font-mono text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#635bff] outline-none transition"
+              placeholder="#EE4D2D"
+              className="flex-1 bg-[#222228] border border-[#3e3e46] rounded-lg px-3 py-2 text-[12px] font-mono text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none transition"
             />
             {[
-              "#635bff", "#e24c30", "#10b981", "#f59e0b", "#ec4899", "#0ea5e9",
+              "#EE4D2D", "#10b981", "#f59e0b", "#ec4899", "#0ea5e9",
             ].map((c) => (
               <button
                 key={c}
@@ -696,15 +696,15 @@ function StepPagamento({
         <label
           className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
             state.payButtonLightSweep
-              ? "border-[#635bff]/50 bg-[#635bff]/8"
-              : "border-[#3e3e46] bg-[#222228] hover:border-[#635bff]/30"
+              ? "border-[#3e3e46] bg-[#25252b]"
+              : "border-[#3e3e46] bg-[#222228] hover:bg-[#252528]"
           }`}
         >
           <input
             type="checkbox"
             checked={state.payButtonLightSweep}
             onChange={(e) => setState((p) => ({ ...p, payButtonLightSweep: e.target.checked }))}
-            className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#635bff] shrink-0"
+            className="mt-0.5 w-4 h-4 rounded border-[#3e3e46] bg-[#222228] accent-[#EE4D2D] shrink-0"
           />
           <div className="min-w-0 flex-1 flex items-center gap-1.5">
             <p className="text-[12px] font-semibold text-[#f0f0f2]">Efeito de brilho (light sweep)</p>
@@ -736,7 +736,7 @@ function StepGatilhos({
       {/* Notificações de compra */}
       <TriggerCard
         icon={ShoppingBag}
-        iconColor="#34d399"
+        iconColor="#EE4D2D"
         title="Notificações de compra"
         hint="Toasts rotativos no canto inferior: 'Maria de SP acabou de comprar'. Nomes e cidades BR sintéticos."
         enabled={state.triggerSaleNotifications}
@@ -746,7 +746,7 @@ function StepGatilhos({
       {/* Countdown */}
       <TriggerCard
         icon={Clock}
-        iconColor="#ef4444"
+        iconColor="#EE4D2D"
         title="Cronômetro regressivo no topo"
         hint="Barra sticky vermelha/laranja com tempo + frase. Quando zera, pisca e troca a frase."
         enabled={state.triggerCountdown}
@@ -780,7 +780,7 @@ function StepGatilhos({
       {/* Estoque */}
       <TriggerCard
         icon={Flame}
-        iconColor="#f59e0b"
+        iconColor="#EE4D2D"
         title="Contador de estoque"
         hint="Mostra 'Apenas X unidades' abaixo do produto. Desce 1 a cada 10s, nunca zera (para em 1)."
         enabled={state.triggerStock}
@@ -802,7 +802,7 @@ function StepGatilhos({
       {/* Visualizadores */}
       <TriggerCard
         icon={Eye}
-        iconColor="#a8a2ff"
+        iconColor="#EE4D2D"
         title="Visualizadores em tempo real"
         hint="Badge fixa no canto superior: 'X pessoas vendo agora'. Varia ±3 a cada 5s dentro do range."
         enabled={state.triggerViewers}
@@ -846,9 +846,9 @@ function StepGarantia({
     <div className="space-y-4">
       <TriggerCard
         icon={ShieldCheck}
-        iconColor="#34d399"
+        iconColor="#EE4D2D"
         title="Selo de garantia"
-        hint="Aparece abaixo do botão Pagar como um selinho verde. Diminui a fricção da compra."
+        hint="Aparece abaixo do botão Pagar como um selo de confiança. Diminui a fricção da compra."
         enabled={state.triggerGuarantee}
         onToggle={(v) => setState((p) => ({ ...p, triggerGuarantee: v }))}
       >
@@ -870,7 +870,7 @@ function StepGarantia({
               rows={3}
               maxLength={240}
               placeholder="Garantia de 7 dias. Se não gostar, devolvemos seu dinheiro."
-              className="w-full bg-[#222228] border border-emerald-500/40 rounded-lg px-3 py-2 text-[12px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-emerald-500 outline-none resize-y transition"
+              className="w-full bg-[#222228] border border-[#3e3e46] rounded-lg px-3 py-2 text-[12px] text-[#f0f0f2] placeholder:text-[#868686] focus:border-[#EE4D2D] outline-none resize-y transition"
             />
           </div>
         ) : null}
@@ -903,13 +903,12 @@ function TriggerCard({
   return (
     <div
       className={`rounded-xl border p-3.5 transition-colors ${
-        enabled ? "border-[#635bff]/50 bg-[#635bff]/8" : "border-[#3e3e46] bg-[#222228]"
+        enabled ? "border-[#3e3e46] bg-[#25252b]" : "border-[#3e3e46] bg-[#222228]"
       }`}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: `${iconColor}22`, border: `1px solid ${iconColor}55` }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-[#27272a] border border-[#2c2c32]"
         >
           <Icon className="w-4 h-4" style={{ color: iconColor }} />
         </div>
@@ -923,7 +922,7 @@ function TriggerCard({
           role="switch"
           aria-checked={enabled}
           className={`shrink-0 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-            enabled ? "bg-[#635bff]" : "bg-[#3e3e46]"
+            enabled ? "bg-[#EE4D2D]" : "bg-[#3e3e46]"
           }`}
         >
           <span
@@ -964,7 +963,7 @@ function FieldNumber({
           if (!Number.isFinite(n)) return;
           onChange(Math.max(min, Math.min(max, Math.round(n))));
         }}
-        className="w-full bg-[#222228] border border-[#3e3e46] rounded-lg px-3 py-2 text-[12px] text-[#f0f0f2] focus:border-[#635bff] outline-none transition"
+        className="w-full bg-[#222228] border border-[#3e3e46] rounded-lg px-3 py-2 text-[12px] text-[#f0f0f2] focus:border-[#EE4D2D] outline-none transition"
       />
     </div>
   );
@@ -989,7 +988,7 @@ function FieldText({
         value={value}
         maxLength={maxLength}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-[#222228] border border-[#3e3e46] rounded-lg px-3 py-2 text-[12px] text-[#f0f0f2] focus:border-[#635bff] outline-none transition"
+        className="w-full bg-[#222228] border border-[#3e3e46] rounded-lg px-3 py-2 text-[12px] text-[#f0f0f2] focus:border-[#EE4D2D] outline-none transition"
       />
     </div>
   );
@@ -1036,8 +1035,8 @@ function ImageUploadSlot({
         <label
           className={`flex items-center justify-center gap-2 h-32 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
             uploading
-              ? "border-[#635bff]/60 bg-[#635bff]/5"
-              : "border-[#3e3e46] hover:border-[#635bff]/60 hover:bg-[#222228]"
+              ? "border-[#3e3e46] bg-[#25252b]"
+              : "border-[#3e3e46] hover:bg-[#252528]"
           }`}
         >
           <input
@@ -1050,12 +1049,12 @@ function ImageUploadSlot({
           />
           {uploading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-[#a8a2ff]" />
+              <Loader2 className="w-4 h-4 animate-spin text-[#EE4D2D]" />
               <span className="text-[11px] text-[#c8c8ce]">Enviando...</span>
             </>
           ) : (
             <>
-              <Upload className="w-4 h-4 text-[#a8a2ff]" />
+              <Upload className="w-4 h-4 text-[#EE4D2D]" />
               <span className="text-[11px] text-[#c8c8ce]">Clique pra enviar imagem</span>
             </>
           )}
@@ -1096,12 +1095,12 @@ function CheckoutPreview({
   const text = isLight ? "#18181b" : "#f0f0f2";
   const textMuted = isLight ? "#71717a" : "#c8c8ce";
   const textFaint = isLight ? "#a1a1aa" : "#9a9aa2";
-  const emerald = isLight ? "#059669" : "#34d399";
 
   const isMobile = device === "mobile";
   const contentMaxW = isMobile ? "100%" : 560;
 
   const payColor = state.payButtonColor;
+  const priceAccent = payColor || "#EE4D2D";
 
   // Toast flutuante de notificação de compra (aparece/some rotacionando)
   const [notifIdx, setNotifIdx] = useState<number | null>(null);
@@ -1160,8 +1159,8 @@ function CheckoutPreview({
         <div className="absolute top-1 right-1 z-[3] pointer-events-none">
           <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/35 backdrop-blur px-2 py-1 shadow-lg">
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
-              <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="absolute inset-0 rounded-full bg-[#EE4D2D] animate-ping opacity-75" />
+              <span className="relative h-1.5 w-1.5 rounded-full bg-[#EE4D2D]" />
             </span>
             <Eye className="w-2.5 h-2.5 text-white/85" />
             <span className="text-[9px] text-white font-semibold tabular-nums">
@@ -1193,7 +1192,7 @@ function CheckoutPreview({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[12px] font-bold" style={{ color: text }}>Produto de exemplo</p>
-            <p className="text-sm font-bold font-mono tabular-nums mt-0.5" style={{ color: emerald }}>
+            <p className="text-sm font-bold font-mono tabular-nums mt-0.5" style={{ color: priceAccent }}>
               R$ 100,00
             </p>
           </div>
@@ -1205,7 +1204,7 @@ function CheckoutPreview({
             className="rounded-lg border px-2.5 py-1.5 flex items-center gap-2"
             style={{ background: cardBg, borderColor: cardBorder }}
           >
-            <Flame className="w-3 h-3 shrink-0" style={{ color: "#f59e0b" }} />
+            <Flame className="w-3 h-3 shrink-0" style={{ color: "#EE4D2D" }} />
             <p className="text-[10px] leading-tight" style={{ color: text }}>
               Apenas <span className="font-bold tabular-nums">{state.stockInitial}</span> unidades em estoque
             </p>
@@ -1223,7 +1222,7 @@ function CheckoutPreview({
               <Truck className="w-3 h-3" style={{ color: payColor }} />
               <span className="text-[10px] font-semibold">Frete PAC</span>
             </div>
-            <span className="text-[10px] font-mono font-bold" style={{ color: emerald }}>R$ 15,00</span>
+            <span className="text-[10px] font-mono font-bold" style={{ color: priceAccent }}>R$ 15,00</span>
           </div>
           <div
             className="flex items-center justify-between px-2 py-1.5 rounded-md border"
@@ -1233,7 +1232,7 @@ function CheckoutPreview({
               <Store className="w-3 h-3" style={{ color: textFaint }} />
               <span className="text-[10px]" style={{ color: textMuted }}>Retirar na loja</span>
             </div>
-            <span className="text-[9px] font-bold" style={{ color: emerald }}>Grátis</span>
+            <span className="text-[9px] font-bold" style={{ color: priceAccent }}>Grátis</span>
           </div>
         </div>
 
@@ -1295,11 +1294,11 @@ function CheckoutPreview({
             <div
               className="rounded-md border px-2 py-1 flex items-center gap-1.5"
               style={{
-                background: isLight ? "rgba(5, 150, 105, 0.08)" : "rgba(16, 185, 129, 0.1)",
-                borderColor: isLight ? "rgba(5, 150, 105, 0.3)" : "rgba(16, 185, 129, 0.35)",
+                background: "rgba(238, 77, 45, 0.1)",
+                borderColor: "rgba(238, 77, 45, 0.35)",
               }}
             >
-              <ShieldCheck className="w-3 h-3 shrink-0" style={{ color: isLight ? "#059669" : "#34d399" }} />
+              <ShieldCheck className="w-3 h-3 shrink-0" style={{ color: "#EE4D2D" }} />
               <p className="text-[9px] leading-tight" style={{ color: text }}>
                 {state.guaranteeText}
               </p>

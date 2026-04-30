@@ -148,8 +148,8 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
       {/* Header */}
       <div className="px-4 sm:px-6 py-4 border-b border-[#2c2c32] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#635bff]/15 border border-[#635bff]/25 flex items-center justify-center shrink-0">
-            <BarChart3 className="w-4 h-4 text-[#a8a2ff]" />
+          <div className="w-8 h-8 rounded-lg bg-[#27272a] border border-[#2c2c32] flex items-center justify-center shrink-0">
+            <BarChart3 className="w-4 h-4 text-[#EE4D2D]" />
           </div>
           <h2 className="text-base font-bold text-[#f0f0f2] truncate">Performance</h2>
           {data ? (
@@ -167,7 +167,7 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
                 onClick={() => setPeriod(p.value)}
                 disabled={loading}
                 className={`px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors disabled:opacity-60 ${
-                  period === p.value ? "bg-[#635bff] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
+                  period === p.value ? "bg-[#EE4D2D] text-white" : "text-[#c8c8ce] hover:bg-[#2f2f34]"
                 }`}
               >
                 {p.label}
@@ -203,14 +203,14 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
           <Megaphone className="w-10 h-10 text-[#686868]" />
           <p className="text-base font-semibold text-[#f0f0f2]">Nenhuma campanha marcada como InfoP</p>
           <p className="text-[13px] text-[#9a9aa2] max-w-md leading-relaxed">
-            Vá em <Link href="/dashboard/ati" className="underline text-[#7cd0f7]">ATI</Link>, ative o botão <strong>InfoP</strong> nas campanhas que vendem seus produtos e cole o mesmo SubId do produto no campo <strong>SubId InfoP</strong> de cada anúncio.
+            Vá em <Link href="/dashboard/ati" className="underline text-[#EE4D2D]">ATI</Link>, ative o botão <strong>InfoP</strong> nas campanhas que vendem seus produtos e cole o mesmo SubId do produto no campo <strong>SubId InfoP</strong> de cada anúncio.
           </p>
         </div>
       ) : null}
 
       {loading && !data ? (
         <div className="py-16 flex items-center justify-center bg-[#1c1c1f]">
-          <Loader2 className="w-6 h-6 animate-spin text-[#635bff]" />
+          <Loader2 className="w-6 h-6 animate-spin text-[#EE4D2D]" />
         </div>
       ) : null}
 
@@ -255,7 +255,7 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
                       <td className="px-4 py-3.5 align-top">
                         {r.subId ? (
                           <>
-                            <p className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-[#635bff]/40 bg-[#635bff]/10 text-[11px] font-bold text-[#a8a2ff] font-mono">
+                            <p className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-[#3e3e46] bg-[#222228] text-[11px] font-bold text-[#EE4D2D] font-mono">
                               <CreditCard className="w-3 h-3" />
                               {r.subId}
                             </p>
@@ -280,7 +280,7 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
                                 )}
                                 <span className="text-[12px] text-[#c8c8ce] truncate max-w-[180px]">{r.produto.name}</span>
                                 {r.produtoCount > 1 ? (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-[#3e3e46] bg-[#222228] text-[10px] font-bold text-[#a8a2ff]">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-[#3e3e46] bg-[#222228] text-[10px] font-bold text-[#EE4D2D]">
                                     +{r.produtoCount - 1}
                                   </span>
                                 ) : null}
@@ -293,7 +293,7 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
                           </>
                         ) : (
                           <span className="text-[12px] text-[#7a7a80] italic">
-                            sem SubId — <Link href="/dashboard/ati" className="underline hover:text-[#a8a2ff]">configurar</Link>
+                            sem SubId — <Link href="/dashboard/ati" className="underline hover:text-[#EE4D2D]">configurar</Link>
                           </span>
                         )}
                       </td>
@@ -383,7 +383,7 @@ export default function AdPerformanceTable({ refreshSignal = 0 }: { refreshSigna
             <Link
               href="https://www.mercadopago.com.br/activities"
               target="_blank"
-              className="inline-flex items-center gap-1.5 hover:text-[#7cd0f7]"
+              className="inline-flex items-center gap-1.5 hover:text-[#EE4D2D]"
             >
               Ver pagamentos no Mercado Pago <ExternalLink className="w-3 h-3" />
             </Link>
