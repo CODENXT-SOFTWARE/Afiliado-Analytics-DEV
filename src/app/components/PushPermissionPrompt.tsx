@@ -80,11 +80,15 @@ export default function PushPermissionPrompt() {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes aaPushBtnSweep {
+          0%   { transform: translateX(-130%) skewX(-14deg); }
+          100% { transform: translateX(320%) skewX(-14deg); }
+        }
       `}</style>
 
       <div className="overflow-hidden rounded-2xl border border-white/12 bg-zinc-900/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.55)] backdrop-blur-md">
         <div className="flex items-start gap-3 p-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#e24c30] to-[#ff6b35] shadow-[0_8px_24px_rgba(226,76,48,0.45)]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5">
             <Image
               src="/pwa-icon-192.png"
               alt=""
@@ -110,20 +114,31 @@ export default function PushPermissionPrompt() {
                 <X className="h-3.5 w-3.5" aria-hidden />
               </button>
             </div>
-            <p className="mt-1 text-[12px] leading-snug text-white/70">
-              Avisos de comissões, vendas no Mercado Pago e tendências —
-              direto na sua tela inicial.
-            </p>
+
+          
 
             <div className="mt-3 flex items-center gap-2">
               <button
                 type="button"
                 onClick={onEnable}
                 disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-[#e24c30] to-[#ff6b35] px-3 py-1.5 text-[12px] font-bold tracking-tight text-white shadow-[0_4px_14px_rgba(226,76,48,0.45)] transition-all hover:shadow-[0_6px_18px_rgba(226,76,48,0.55)] active:scale-[0.98] disabled:opacity-60"
+                className="relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg bg-shopee-orange px-3 py-1.5 text-[12px] font-bold tracking-tight text-white shadow-[0_4px_14px_rgba(238,77,45,0.35)] transition-[filter,transform] hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
               >
-                <Bell className="h-3.5 w-3.5" aria-hidden />
-                {busy ? "Ativando..." : "Ativar"}
+                <span
+                  className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg motion-reduce:hidden"
+                  aria-hidden
+                >
+                  <span
+                    className="absolute top-0 left-0 h-full w-[55%] bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                    style={{
+                      animation: "aaPushBtnSweep 2.5s ease-in-out infinite",
+                    }}
+                  />
+                </span>
+                <span className="relative z-10 inline-flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5" aria-hidden />
+                  {busy ? "Ativando..." : "Ativar"}
+                </span>
               </button>
               <button
                 type="button"

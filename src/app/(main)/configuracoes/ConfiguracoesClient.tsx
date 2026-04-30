@@ -1,16 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IdCard, Megaphone, MessageCircle, ChevronRight, ShoppingBag, Wallet } from "lucide-react";
+import { Bell, IdCard, Megaphone, MessageCircle, ChevronRight, ShoppingBag, Wallet } from "lucide-react";
 import ShopeeIntegrationCard from "./ShopeeIntegrationCard";
 import MetaIntegrationCard from "./MetaIntegrationCard";
 import MessagingChannelsCard from "./MessagingChannelsCard";
 import MercadoLivreIntegrationCard from "./MercadoLivreIntegrationCard";
 import MercadoPagoIntegrationCard from "./MercadoPagoIntegrationCard";
 import ShippingProfileCard from "./ShippingProfileCard";
+import NotificacoesCard from "./NotificacoesCard";
 import { MERCADOLIVRE_UX_COMING_SOON } from "@/lib/mercadolivre-ux-coming-soon";
 
-export type SectionKey = "shopee" | "mercadolivre" | "meta" | "evolution" | "mercadopago" | null;
+export type SectionKey =
+  | "shopee"
+  | "mercadolivre"
+  | "meta"
+  | "evolution"
+  | "mercadopago"
+  | "notificacoes"
+  | null;
 
 type ConfiguracoesClientProps = {
   initialAppId: string;
@@ -63,6 +71,12 @@ const CARDS: {
     title: "Infoprodutor",
     description: "Conecte suas formas de pagamento.",
     icon: Wallet,
+  },
+  {
+    key: "notificacoes",
+    title: "Ativar notificação",
+    description: "",
+    icon: Bell,
   },
 ];
 
@@ -187,6 +201,11 @@ export default function ConfiguracoesClient({
         <div className="animate-in fade-in duration-200 space-y-4">
           <MercadoPagoIntegrationCard />
           <ShippingProfileCard />
+        </div>
+      )}
+      {openSection === "notificacoes" && (
+        <div className="animate-in fade-in duration-200">
+          <NotificacoesCard />
         </div>
       )}
     </div>

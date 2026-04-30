@@ -119,5 +119,5 @@ export async function GET(req: NextRequest) {
   }
 
   const result = await dispatch(slug);
-  return NextResponse.json({ ok: true, slug, ...result });
+  return NextResponse.json({ ok: true, slug, result });
 }

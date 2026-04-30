@@ -21,5 +21,5 @@ export async function POST() {
   }
 
   const result = await sendPushToUser(user.id, payloadTeste());
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true, result });
 }
