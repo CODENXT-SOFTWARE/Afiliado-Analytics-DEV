@@ -18,6 +18,7 @@ export type TrialCouponCatalogEntry = {
 
 export const TRIAL_COUPONS_CATALOG: TrialCouponCatalogEntry[] = [
   { cupom: "7DAYSFREE", days: 7, ativo: true, quantidade: 99999 },
+  { cupom: "30DAYSFREE", days: 30, ativo: true, quantidade: 99999 },
   { cupom: "1DAYFREE", days: 1, ativo: true, quantidade: 99999 },
   { cupom: "BRENDA3DAYS", days: 3, ativo: true, quantidade: 99999 },
 ];
