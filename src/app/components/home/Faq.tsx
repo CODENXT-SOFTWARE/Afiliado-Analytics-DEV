@@ -30,117 +30,114 @@ export default function Faq() {
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   return (
-    <section id="faq" className="relative overflow-hidden pt-12 pb-24 px-5 md:px-7 md:pt-[40px] md:pb-[100px]">
+    <section id="faq" className="relative overflow-hidden bg-[#18181B] pt-20 pb-24 px-5 md:px-7 md:pt-[100px] md:pb-[120px]">
       {/* Background glow laranja para seguir o padrão do projeto */}
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(226,76,48,0.08)_0%,transparent_65%)] blur-[40px]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(238,95,63,0.06)_0%,transparent_65%)] blur-[50px]" />
 
-      <div className="relative mx-auto max-w-[760px] z-10">
-        
-        {/* ── HEADER DO FAQ (Animado) ── */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-[60px] text-center"
-        >
-          <span className="mb-3.5 block font-['Inter'] text-xs font-bold uppercase tracking-[0.18em] text-[#fb923c]">
-            Dúvidas Frequentes
-          </span>
+      <div className="container relative mx-auto px-6 max-w-[1300px] z-10">
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-[1fr_1.5fr] lg:gap-24">
 
-          <h2 className="mb-4 font-[var(--font-space-grotesk)] text-[clamp(1.9rem,5vw,3.2rem)] font-black leading-[1.1] tracking-[-1.5px] text-white">
-            Tudo que você precisa{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b35] via-[#e24c30] to-[#ff9a6c]">
-              saber antes
-            </span>
-          </h2>
+          {/* ── HEADER À ESQUERDA (Mesma Altura) ── */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="flex flex-col h-full justify-between pt-2"
+          >
+            <div>
 
-          <p className="mx-auto max-w-[440px] font-['Inter'] text-base leading-[1.7] text-white/60">
-            Respondemos as principais objeções para que você tome a melhor decisão com total confiança.
-          </p>
-        </motion.div>
+              <h2 className="mb-6 font-[var(--font-space-grotesk)] text-[clamp(2.5rem,4vw,3.5rem)] font-black leading-[1.05] tracking-tight text-white">
+                Sua resposta está{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF7A54] via-[#EE5F3F] to-[#D04526] drop-shadow-[0_0_15px_rgba(238,95,63,0.2)]">
+                  aqui
+                </span>
+              </h2>
 
-        {/* ── LISTA DE FAQS (Cascata animada) ── */}
-        <div className="flex flex-col gap-2.5">
-          {FAQS.map((faq, i) => {
-            const open = openFaq === i
+              <p className="mb-10 max-w-[480px] font-['Inter'] text-[17px] leading-[1.75] text-white/50">
+                Respondemos as principais dúvidas para que você tome a melhor decisão com total confiança e escale suas campanhas sem medo.
+              </p>
+            </div>
 
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.4, delay: i * 0.1, ease: "easeOut" }} // Cascata: o delay multiplica pelo index
-              >
-                <div
-                  onClick={() => setOpenFaq(open ? null : i)}
-                  className={`
-                    cursor-pointer overflow-hidden rounded-2xl transition-all duration-300
-                    bg-white/5 backdrop-blur-md
-                    ${open 
-                      ? 'border border-[#e24c30]/45 shadow-[0_0_30px_rgba(226,76,48,0.12)]' 
-                      : 'border border-white/10 hover:bg-white/10'}
-                  `}
+            {/* ── BOX DE SUPORTE ── */}
+            <div className="mt-8 rounded-[20px] border border-white/5 bg-[#242427] p-6 backdrop-blur-xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-colors hover:border-[#EE5F3F]/20">
+              <p className="font-['Inter'] text-[15px] text-white/50">
+                Ficou alguma dúvida específica?{' '}
+                <a
+                  href="https://wa.me/5579999407366"
+                  className="mt-2 block font-bold text-[#EE5F3F] hover:text-[#ffb09e] transition-colors"
                 >
-                  {/* Pergunta (Cabeçalho do Acordeão) */}
-                  <div className="flex items-center justify-between gap-4 p-5 md:px-6 md:py-[22px]">
-                    <span className={`font-['Inter'] text-base font-bold leading-[1.4] flex-1 transition-colors duration-300 ${open ? 'text-white' : 'text-white/85'}`}>
-                      {faq.q}
-                    </span>
+                  Fale com nosso suporte →
+                </a>
+              </p>
+            </div>
+          </motion.div>
 
-                    {/* Ícone de Mais/Menos */}
-                    <div
-                      className={`
-                        flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full transition-all duration-300
-                        ${open 
-                          ? 'bg-gradient-to-br from-[#e24c30] to-[#ff7a54] rotate-45 shadow-[0_4px_16px_rgba(226,76,48,0.4)]' 
-                          : 'bg-white/10 rotate-0'}
-                      `}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M6 2v8M2 6h8" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  </div>
+          {/* ── LISTA DE FAQS À DIREITA ── */}
+          <div className="flex flex-col gap-4">
+            {FAQS.map((faq, i) => {
+              const open = openFaq === i
 
-                  {/* Resposta (Conteúdo Acordeão) */}
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: i * 0.1, ease: "easeOut" }}
+                >
                   <div
-                    className="transition-all duration-300 ease-in-out"
-                    style={{
-                      maxHeight: open ? '250px' : '0px',
-                      opacity: open ? 1 : 0,
-                    }}
+                    onClick={() => setOpenFaq(open ? null : i)}
+                    className={`
+                      group cursor-pointer overflow-hidden rounded-[24px] transition-all duration-500
+                      backdrop-blur-xl
+                      ${open
+                        ? 'border border-[#EE5F3F]/40 shadow-[0_10px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(238,95,63,0.15)] bg-[#242427]'
+                        : 'border border-white/5 bg-[#242427] hover:border-[#EE5F3F]/20 hover:bg-[#2C2C30]'}
+                    `}
                   >
-                    <div className="pb-[22px] px-5 md:px-6 font-['Inter'] text-[15px] leading-[1.8] text-white/60">
-                      {faq.a}
+                    {/* Linha Fina Flutuante Superior */}
+                    <div className={`h-[1px] w-full bg-gradient-to-r from-transparent via-[#EE5F3F] to-transparent opacity-0 transition-opacity duration-500 ${open ? 'opacity-40' : 'group-hover:opacity-20'}`} />
+
+                    {/* Cabeçalho do Acordeão */}
+                    <div className="flex items-center justify-between gap-6 p-6 sm:px-8 sm:py-7">
+                      <span className={`font-[var(--font-space-grotesk)] text-[18px] font-bold leading-[1.4] tracking-tight flex-1 transition-colors duration-300 ${open ? 'text-white' : 'text-white/70 group-hover:text-white/90'}`}>
+                        {faq.q}
+                      </span>
+
+                      {/* Ícone Minimalista */}
+                      <div
+                        className={`
+                          flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all duration-500
+                          ${open
+                            ? 'bg-gradient-to-br from-[#EE5F3F] to-[#D04526] border-transparent text-white rotate-45 shadow-[0_4px_20px_rgba(238,95,63,0.4)]'
+                            : 'bg-transparent border-white/10 text-[#EE5F3F] group-hover:bg-[#EE5F3F]/10 group-hover:border-[#EE5F3F]/30 rotate-0'}
+                        `}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+                          <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Conteúdo Acordeão */}
+                    <div
+                      className="transition-all duration-500 ease-in-out"
+                      style={{
+                        maxHeight: open ? '400px' : '0px',
+                        opacity: open ? 1 : 0,
+                      }}
+                    >
+                      <div className="pb-8 px-6 sm:px-8 font-['Inter'] text-[16px] leading-[1.8] text-white/50">
+                        {faq.a}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )
-          })}
+                </motion.div>
+              )
+            })}
+          </div>
         </div>
-
-        {/* ── BOX DE SUPORTE (Animação com delay extra) ── */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.6, ease: "easeOut" }} // Aparece depois de todas as perguntas
-          className="mt-10 rounded-[14px] border border-white/10 bg-white/5 p-5 text-center backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.22)]"
-        >
-          <p className="font-['Inter'] text-sm text-white/55">
-            Ainda tem dúvidas?{' '}
-            <a
-              href="https://wa.me/5579999407366"
-              className="font-bold text-[#fb923c] hover:underline transition-all"
-            >
-              Fale com nosso suporte em tempo real →
-            </a>
-          </p>
-        </motion.div>
-        
       </div>
     </section>
   )

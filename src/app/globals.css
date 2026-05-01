@@ -10,9 +10,9 @@
 
 @theme {
   --color-shopee-orange: #EE4D2D;
-  --color-dark-bg: #18181B;        
-  --color-dark-card: #27272A;     
-  --color-dark-border: #27272A; 
+  --color-dark-bg: #0F0F0F;
+  --color-dark-card: #27272A;
+  --color-dark-border: #27272A;
   --color-text-primary: #FFFFFF;
   --color-text-secondary: #E9E9E9;
   --color-dark-tooltip: #303033;
@@ -20,7 +20,7 @@
   --color-text-tertiary: #f7814b;
   --color-border-secondary: #afa19e;
   --color-border-houver: #F48A5A;
-  
+
   --font-heading: 'Poppins', sans-serif;
   --font-body: 'Inter', sans-serif;
 
@@ -34,7 +34,7 @@ html {
 }
 
 :root {
-  --background: #0a0a0a;
+  --background: #0F0F0F;
   --foreground: #ededed;
 }
 
@@ -311,6 +311,14 @@ html.light .text-white {
   color: #18181B !important;
 }
 
+/* Forçar cores específicas ignorando overrides de tema */
+.force-white {
+  color: #FFFFFF !important;
+}
+.force-bg-white {
+  background-color: #FFFFFF !important;
+}
+
 html.light .bg-shopee-orange.text-white,
 html.light .bg-shopee-orange .text-white,
 html.light .bg-gradient-to-r.text-white,
@@ -391,13 +399,16 @@ html.light .scrollbar-thin {
   color-scheme: light;
   scrollbar-color: #A1A1AA #F4F4F5;
 }
+
 html.light .scrollbar-thin::-webkit-scrollbar-track {
   background: #F4F4F5;
 }
+
 html.light .scrollbar-thin::-webkit-scrollbar-thumb {
   background: #A1A1AA;
   border-color: #F4F4F5;
 }
+
 html.light .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: #EE4D2D;
 }
@@ -406,9 +417,11 @@ html.light .scrollbar-thin::-webkit-scrollbar-thumb:hover {
 html.light .scrollbar-shopee {
   scrollbar-color: #EE4D2D #F4F4F5;
 }
+
 html.light .scrollbar-shopee::-webkit-scrollbar-track {
   background: #F4F4F5;
 }
+
 html.light .scrollbar-shopee::-webkit-scrollbar-thumb {
   border-color: #F4F4F5;
 }
@@ -426,14 +439,17 @@ html.light {
   background-color: rgba(51, 51, 51, 0.8);
   color: #a8a8a8;
 }
+
 .toolist-trigger:hover {
   background-color: rgba(238, 77, 45, 0.15);
   color: var(--color-shopee-orange);
 }
+
 html.light .toolist-trigger {
   background-color: #E4E4E7 !important;
   color: #71717A !important;
 }
+
 html.light .toolist-trigger:hover {
   background-color: #D4D4D8 !important;
   color: #52525B !important;
@@ -453,18 +469,18 @@ html.light .hover\:bg-\[\#222228\]:hover {
  * então setar border-color em todos os filhos é o mais robusto — o primeiro
  * filho tem border-top-width: 0 e não renderiza a linha.
  */
-html.light .divide-\[\#2c2c32\] > *,
-html.light .divide-\[\#27272a\] > *,
-html.light .divide-\[\#3e3e46\] > *,
-html.light .divide-zinc-700 > *,
-html.light .divide-zinc-800 > *,
-html.light .divide-zinc-900 > *,
-html.light .divide-slate-700 > *,
-html.light .divide-slate-800 > *,
-html.light .divide-gray-700 > *,
-html.light .divide-gray-800 > *,
-html.light .divide-neutral-700 > *,
-html.light .divide-neutral-800 > * {
+html.light .divide-\[\#2c2c32\]>*,
+html.light .divide-\[\#27272a\]>*,
+html.light .divide-\[\#3e3e46\]>*,
+html.light .divide-zinc-700>*,
+html.light .divide-zinc-800>*,
+html.light .divide-zinc-900>*,
+html.light .divide-slate-700>*,
+html.light .divide-slate-800>*,
+html.light .divide-gray-700>*,
+html.light .divide-gray-800>*,
+html.light .divide-neutral-700>*,
+html.light .divide-neutral-800>* {
   border-color: #E4E4E7 !important;
 }
 
@@ -482,6 +498,7 @@ html.light .text-white\/50,
 html.light .text-white\/55 {
   color: rgba(24, 24, 27, 0.6) !important;
 }
+
 html.light .text-white\/65,
 html.light .text-white\/75,
 html.light .text-white\/85,
@@ -522,15 +539,19 @@ html.light .bg-gradient-to-tl .text-white\/85 {
 html.light .bg-amber-500\/5 {
   background-color: rgba(238, 77, 45, 0.06) !important;
 }
+
 html.light .bg-amber-500\/10 {
   background-color: rgba(238, 77, 45, 0.1) !important;
 }
+
 html.light .border-amber-500\/20 {
   border-color: rgba(238, 77, 45, 0.35) !important;
 }
+
 html.light .border-amber-500\/30 {
   border-color: rgba(238, 77, 45, 0.4) !important;
 }
+
 html.light .text-amber-200,
 html.light .text-amber-300,
 html.light .text-amber-300\/90,
@@ -542,17 +563,49 @@ html.light .text-amber-400 {
  * Tons claros (200/300) em texto são quase invisíveis sobre fundo branco.
  * Mapeia para tons médios/escuros da mesma família de cor.
  */
-html.light .text-red-200 { color: #b91c1c !important; }
-html.light .text-red-300 { color: #c53030 !important; }
-html.light .text-red-400 { color: #dc2626 !important; }
-html.light .text-emerald-200 { color: #047857 !important; }
-html.light .text-emerald-300 { color: #059669 !important; }
-html.light .text-emerald-400 { color: #059669 !important; }
-html.light .text-blue-200 { color: #1e40af !important; }
-html.light .text-blue-300 { color: #1d4ed8 !important; }
-html.light .text-blue-400 { color: #2563eb !important; }
-html.light .text-sky-200 { color: #0369a1 !important; }
-html.light .text-sky-300 { color: #0284c7 !important; }
+html.light .text-red-200 {
+  color: #b91c1c !important;
+}
+
+html.light .text-red-300 {
+  color: #c53030 !important;
+}
+
+html.light .text-red-400 {
+  color: #dc2626 !important;
+}
+
+html.light .text-emerald-200 {
+  color: #047857 !important;
+}
+
+html.light .text-emerald-300 {
+  color: #059669 !important;
+}
+
+html.light .text-emerald-400 {
+  color: #059669 !important;
+}
+
+html.light .text-blue-200 {
+  color: #1e40af !important;
+}
+
+html.light .text-blue-300 {
+  color: #1d4ed8 !important;
+}
+
+html.light .text-blue-400 {
+  color: #2563eb !important;
+}
+
+html.light .text-sky-200 {
+  color: #0369a1 !important;
+}
+
+html.light .text-sky-300 {
+  color: #0284c7 !important;
+}
 
 /* —— Textos coloridos pastéis: escurecem no claro para ter contraste ——
  * Tons pastel de laranja/roxo/ciano são projetados para fundo escuro; no claro
@@ -565,11 +618,13 @@ html.light .text-\[\#ffd2c8\],
 html.light .text-\[\#ffd7cb\] {
   color: #c94028 !important;
 }
+
 html.light .text-\[\#a8a2ff\],
 html.light .text-\[\#c7c2ff\],
 html.light .text-\[\#d9b8ff\] {
   color: #6d28d9 !important;
 }
+
 html.light .text-\[\#8be9f8\] {
   color: #0e7490 !important;
 }
@@ -595,16 +650,26 @@ html.light [data-theme="dark"] .text-\[\#fff\],
 html.light [data-theme="dark"] .text-\[\#ffffff\] {
   color: #FFFFFF !important;
 }
+
 html.light [data-theme="dark"] [class*="text-[rgba(255,255,255"] {
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
 /* Backgrounds: hex escuros + rgba branco */
-html.light [data-theme="dark"] [class~="bg-[#242431]"] { background-color: #242431 !important; }
+html.light [data-theme="dark"] [class~="bg-[#242431]"] {
+  background-color: #242431 !important;
+}
+
 html.light [data-theme="dark"] [class~="bg-[#18181B]"],
-html.light [data-theme="dark"] [class~="bg-[#18181b]"] { background-color: #18181B !important; }
+html.light [data-theme="dark"] [class~="bg-[#18181b]"] {
+  background-color: #18181B !important;
+}
+
 html.light [data-theme="dark"] [class~="bg-[#27272A]"],
-html.light [data-theme="dark"] [class~="bg-[#27272a]"] { background-color: #27272A !important; }
+html.light [data-theme="dark"] [class~="bg-[#27272a]"] {
+  background-color: #27272A !important;
+}
+
 html.light [data-theme="dark"] [class*="bg-[rgba(255,255,255"] {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
@@ -618,35 +683,108 @@ html.light [data-theme="dark"] [class*="bg-[linear-gradient(180deg,rgba(255,255,
 html.light [data-theme="dark"] [class*="border-[rgba(255,255,255"] {
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
-html.light [data-theme="dark"] .border-white\/10 { border-color: rgba(255, 255, 255, 0.1) !important; }
-html.light [data-theme="dark"] .border-white\/12 { border-color: rgba(255, 255, 255, 0.12) !important; }
-html.light [data-theme="dark"] .border-white\/15 { border-color: rgba(255, 255, 255, 0.15) !important; }
-html.light [data-theme="dark"] .border-white\/20 { border-color: rgba(255, 255, 255, 0.2) !important; }
+
+html.light [data-theme="dark"] .border-white\/10 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.light [data-theme="dark"] .border-white\/12 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.light [data-theme="dark"] .border-white\/15 {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+html.light [data-theme="dark"] .border-white\/20 {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
 
 /* Textos pastéis: re-aplica cor original pastel */
-html.light [data-theme="dark"] [class~="text-[#d9b8ff]"] { color: #d9b8ff !important; }
-html.light [data-theme="dark"] [class~="text-[#8be9f8]"] { color: #8be9f8 !important; }
-html.light [data-theme="dark"] [class~="text-[#fb923c]"] { color: #fb923c !important; }
-html.light [data-theme="dark"] [class~="text-[#ffd7cb]"] { color: #ffd7cb !important; }
-html.light [data-theme="dark"] [class~="text-[#ffb38f]"] { color: #ffb38f !important; }
-html.light [data-theme="dark"] [class~="text-[#ff7a54]"] { color: #ff7a54 !important; }
-html.light [data-theme="dark"] [class~="text-[#ff7a5b]"] { color: #ff7a5b !important; }
-html.light [data-theme="dark"] [class~="text-[#ffd2c8]"] { color: #ffd2c8 !important; }
+html.light [data-theme="dark"] [class~="text-[#d9b8ff]"] {
+  color: #d9b8ff !important;
+}
+
+html.light [data-theme="dark"] [class~="text-[#8be9f8]"] {
+  color: #8be9f8 !important;
+}
+
+html.light [data-theme="dark"] [class~="text-[#fb923c]"] {
+  color: #fb923c !important;
+}
+
+html.light [data-theme="dark"] [class~="text-[#ffd7cb]"] {
+  color: #ffd7cb !important;
+}
+
+html.light [data-theme="dark"] [class~="text-[#ffb38f]"] {
+  color: #ffb38f !important;
+}
+
+html.light [data-theme="dark"] [class~="text-[#ff7a54]"] {
+  color: #ff7a54 !important;
+}
+
+html.light [data-theme="dark"] [class~="text-[#ff7a5b]"] {
+  color: #ff7a5b !important;
+}
+
+html.light [data-theme="dark"] [class~="text-[#ffd2c8]"] {
+  color: #ffd2c8 !important;
+}
 
 /* Variantes text-white/opacity dentro do scope dark */
-html.light [data-theme="dark"] .text-white\/40 { color: rgba(255, 255, 255, 0.4) !important; }
-html.light [data-theme="dark"] .text-white\/45 { color: rgba(255, 255, 255, 0.45) !important; }
-html.light [data-theme="dark"] .text-white\/50 { color: rgba(255, 255, 255, 0.5) !important; }
-html.light [data-theme="dark"] .text-white\/55 { color: rgba(255, 255, 255, 0.55) !important; }
-html.light [data-theme="dark"] .text-white\/60 { color: rgba(255, 255, 255, 0.6) !important; }
-html.light [data-theme="dark"] .text-white\/65 { color: rgba(255, 255, 255, 0.65) !important; }
-html.light [data-theme="dark"] .text-white\/70 { color: rgba(255, 255, 255, 0.7) !important; }
-html.light [data-theme="dark"] .text-white\/75 { color: rgba(255, 255, 255, 0.75) !important; }
-html.light [data-theme="dark"] .text-white\/80 { color: rgba(255, 255, 255, 0.8) !important; }
-html.light [data-theme="dark"] .text-white\/85 { color: rgba(255, 255, 255, 0.85) !important; }
-html.light [data-theme="dark"] .text-white\/90 { color: rgba(255, 255, 255, 0.9) !important; }
-html.light [data-theme="dark"] .text-white\/92 { color: rgba(255, 255, 255, 0.92) !important; }
-html.light [data-theme="dark"] .text-white\/95 { color: rgba(255, 255, 255, 0.95) !important; }
+html.light [data-theme="dark"] .text-white\/40 {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/45 {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/50 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/55 {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/60 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/65 {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/70 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/75 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/80 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/85 {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/90 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/92 {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.light [data-theme="dark"] .text-white\/95 {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
 
 /* —— Arbitrary rgba(255,255,255,XX) em landing/home no modo claro ——
  * Componentes da home (Pricing, Features, Testimonials, Faq, Mockup, Hero)
@@ -658,9 +796,11 @@ html.light [data-theme="dark"] .text-white\/95 { color: rgba(255, 255, 255, 0.95
 html.light [class*="text-[rgba(255,255,255"] {
   color: #18181B !important;
 }
+
 html.light [class*="bg-[rgba(255,255,255"] {
   background-color: rgba(24, 24, 27, 0.04) !important;
 }
+
 html.light [class*="border-[rgba(255,255,255"] {
   border-color: rgba(24, 24, 27, 0.10) !important;
 }
@@ -689,27 +829,6 @@ html.light [class*="bg-[linear-gradient(180deg,rgba(255,255,255"] {
   background: linear-gradient(180deg, rgba(24, 24, 27, 0.02) 0%, rgba(24, 24, 27, 0.05) 100%), #FFFFFF !important;
 }
 
-/* —— Banda de integrações (seção "Integra com as maiores plataformas") ——
- * Gradient horizontal escuro da home → laranja claro Shopee com textos brancos
- * no modo claro, mantendo a identidade de marca como faixa de destaque.
- */
-html.light section[class*="bg-[linear-gradient(90deg"] {
-  background: linear-gradient(90deg, #ff9a7a 0%, #ff7a54 50%, #ff9a7a 100%) !important;
-}
-html.light section[class*="bg-[linear-gradient(90deg"],
-html.light section[class*="bg-[linear-gradient(90deg"] * {
-  color: #FFFFFF !important;
-}
-html.light section[class*="bg-[linear-gradient(90deg"] [class*="text-white"] {
-  color: #FFFFFF !important;
-}
-/* Overlay interno da seção laranja: torna transparente pra não cobrir o laranja.
- * Sem esse reset, meu rule global para "bg-[linear-gradient(180deg,rgba(255,255,255..."
- * pinta esse overlay de branco, escondendo a faixa.
- */
-html.light section[class*="bg-[linear-gradient(90deg"] [class*="bg-[linear-gradient(180deg,rgba(255,255,255"] {
-  background: transparent !important;
-}
 
 /* —— Header: borda/shadow inferior no modo claro para separar do body —— */
 html.light header.sticky {
@@ -765,6 +884,7 @@ body {
 .commissions-date-picker-wrap input[type="date"] {
   color-scheme: dark;
 }
+
 .commissions-date-picker-wrap input[type="date"]::-webkit-calendar-picker-indicator {
   position: absolute;
   right: 0.4rem;
@@ -778,6 +898,7 @@ body {
   opacity: 0;
   z-index: 2;
 }
+
 .commissions-date-picker-wrap input[type="date"]:disabled::-webkit-calendar-picker-indicator {
   cursor: not-allowed;
 }
@@ -786,9 +907,11 @@ body {
 .embla {
   overflow: hidden;
 }
+
 .embla__container {
   display: flex;
 }
+
 .embla__slide {
   flex: 0 0 100%;
   min-width: 0;
@@ -805,6 +928,7 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -815,6 +939,7 @@ body {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -836,9 +961,11 @@ body {
     left: 100%;
     opacity: 0;
   }
+
   8% {
     opacity: 1;
   }
+
   100% {
     left: -48%;
     opacity: 0.85;
@@ -857,14 +984,12 @@ body {
   bottom: -25%;
   width: 44%;
   left: 100%;
-  background: linear-gradient(
-    100deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0) 28%,
-    rgba(255, 255, 255, 0.42) 50%,
-    rgba(255, 255, 255, 0) 72%,
-    transparent 100%
-  );
+  background: linear-gradient(100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0) 28%,
+      rgba(255, 255, 255, 0.42) 50%,
+      rgba(255, 255, 255, 0) 72%,
+      transparent 100%);
   transform: skewX(-16deg);
   animation: compress-media-light-sweep 2.5s ease-in-out infinite;
   pointer-events: none;
@@ -873,18 +998,24 @@ body {
 
 /* Botão Compartilhar ativo: pulsante + light sweep estilo pêndulo */
 @keyframes share-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4), 0 10px 15px -3px rgba(245, 158, 11, 0.2);
   }
+
   50% {
     box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.15), 0 10px 15px -3px rgba(245, 158, 11, 0.3);
   }
 }
 
 @keyframes share-sweep {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
@@ -900,14 +1031,12 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    110deg,
-    transparent 0%,
-    transparent 35%,
-    rgba(255, 255, 255, 0.25) 50%,
-    transparent 65%,
-    transparent 100%
-  );
+  background: linear-gradient(110deg,
+      transparent 0%,
+      transparent 35%,
+      rgba(255, 255, 255, 0.25) 50%,
+      transparent 65%,
+      transparent 100%);
   background-size: 200% 100%;
   animation: share-sweep 2.5s ease-in-out infinite;
   pointer-events: none;
@@ -916,13 +1045,16 @@ body {
 
 /* Card selecionado: brilho laranja forte nas bordas + leve pulsação */
 @keyframes selected-card-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow:
       0 0 0 3px rgba(238, 77, 45, 0.95),
       0 0 20px 2px rgba(238, 77, 45, 0.65),
       0 0 40px 4px rgba(238, 77, 45, 0.45),
       0 0 60px 8px rgba(238, 77, 45, 0.25);
   }
+
   50% {
     box-shadow:
       0 0 0 4px rgba(238, 77, 45, 1),
@@ -963,9 +1095,12 @@ select::-webkit-scrollbar-thumb:hover {
 
 /* Esconde a barra de scroll mantendo o scroll funcional (usado no preview mobile da captura) */
 .scrollbar-none {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge antigo */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge antigo */
 }
+
 .scrollbar-none::-webkit-scrollbar {
   width: 0;
   height: 0;
@@ -1100,6 +1235,7 @@ select::-webkit-scrollbar-thumb:hover {
   0% {
     transform: translateX(-120%);
   }
+
   100% {
     transform: translateX(120%);
   }
@@ -1109,14 +1245,12 @@ select::-webkit-scrollbar-thumb:hover {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 0%,
-    transparent 38%,
-    rgba(255, 255, 255, 0.28) 50%,
-    transparent 62%,
-    transparent 100%
-  );
+  background: linear-gradient(105deg,
+      transparent 0%,
+      transparent 38%,
+      rgba(255, 255, 255, 0.28) 50%,
+      transparent 62%,
+      transparent 100%);
   width: 55%;
   animation: ml-refresh-sweep 2.4s ease-in-out infinite;
   pointer-events: none;
@@ -1129,14 +1263,17 @@ select::-webkit-scrollbar-thumb:hover {
     opacity: 0;
     transform: translateY(20px) scale(0.9);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
+
 .animate-fade-in-up {
   animation: fab-fade-in-up 0.4s ease-out forwards;
 }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in-up {
     animation: none !important;
@@ -1151,11 +1288,13 @@ select::-webkit-scrollbar-thumb:hover {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 .animate-slide-up {
   animation: checkout-slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -1166,35 +1305,52 @@ select::-webkit-scrollbar-thumb:hover {
     opacity: 0;
     transform: translateX(30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
+
 .animate-slide-in-right {
   animation: checkout-slide-in-right 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Barra de countdown piscando quando o tempo acaba */
 @keyframes checkout-blink {
-  0%, 100% { filter: brightness(1); }
-  50%      { filter: brightness(1.3); }
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.3);
+  }
 }
+
 .animate-blink {
   animation: checkout-blink 0.9s ease-in-out infinite;
 }
 
 /* Light sweep do botão Pagar */
 @keyframes checkout-light-sweep {
-  0%   { left: -40%; }
-  100% { left: 110%; }
+  0% {
+    left: -40%;
+  }
+
+  100% {
+    left: 110%;
+  }
 }
+
 .animate-light-sweep {
   animation: checkout-light-sweep 2.6s ease-in-out infinite;
   left: -40%;
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .animate-slide-up,
   .animate-slide-in-right,
   .animate-blink,

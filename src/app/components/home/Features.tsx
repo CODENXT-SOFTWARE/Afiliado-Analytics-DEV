@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import useEmblaCarousel from "embla-carousel-react";
-import Autoplay from "embla-carousel-autoplay";
-import type { EmblaCarouselType } from "embla-carousel";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, useScroll, useTransform, useMotionValue, useSpring, useMotionValueEvent } from "framer-motion";
 import {
   BarChart2, MousePointerClick, Link2, TrendingUp,
   LayoutTemplate, ShoppingBag, Bell, Calculator,
-  Zap, ChevronLeft, ChevronRight, ArrowRight, ArrowLeftRight,
+  Zap, ArrowLeftRight,
   User,
 } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 
 const features = [
   {
@@ -83,213 +82,250 @@ const features = [
     description:
       "Analise minuciosamente o volume, a origem e os horários de pico dos seus cliques na Shopee.",
   },
-    {
-      icon: Link2,
-      tag: "Links",
-      title: "Redirecionador de Links",
-      description:
-        "Crie links curtos, amigáveis e evite o bloqueio em redes sociais alterando o destino.",
-    },
-    {
-      icon: User,
-      tag: "IA",
-      title: "Gerador de Especialistas",
-      description:
-        "Gere especialistas para seus grupos de WhatsApp com nossa IA. Faça o seu especialista usar seus produtos.",
-    }
+  {
+    icon: Link2,
+    tag: "Links",
+    title: "Redirecionador de Links",
+    description:
+      "Crie links curtos, amigáveis e evite o bloqueio em redes sociais alterando o destino.",
+  },
+  {
+    icon: User,
+    tag: "IA",
+    title: "Gerador de Especialistas",
+    description:
+      "Gere especialistas para seus grupos de WhatsApp com nossa IA. Faça o seu especialista usar seus produtos.",
+  }
 ];
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
-function FeatureCard({ feature }: { feature: (typeof features)[number] }) {
-  const Icon = feature.icon;
+function ScrollWrapper({ feature, index }: { feature: (typeof features)[number], index: number }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(true);
+  const [inFocus, setInFocus] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const { scrollYProgress } = useScroll({
+    target: wrapperRef,
+    offset: ["start end", "end start"],
+  });
+
+  const scale = useTransform(scrollYProgress, [0, 0.45, 0.55, 1], [0.85, 1, 1, 0.85]);
+  const opacity = useTransform(scrollYProgress, [0, 0.45, 0.55, 1], [0.3, 1, 1, 0.3]);
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    if (isMobile) return;
+    const distance = Math.abs(latest - 0.5);
+    if (distance < 0.15) {
+      if (!inFocus) setInFocus(true);
+    } else {
+      if (inFocus) setInFocus(false);
+    }
+  });
 
   return (
-    <motion.div
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
-      className="h-full group"
-    >
-      <div className="relative flex h-full flex-col overflow-hidden rounded-[26px] border border-white/20 bg-[#242427] p-[26px] backdrop-blur-xl transition-all duration-400 ease-out group-hover:border-[#EC5C3C]/55 group-hover:bg-[#2c2c30] group-hover:shadow-[0_12px_28px_rgba(236,92,60,0.10)]">
-
-        {/* Linha de acento no topo — cresce de w-0 → w-full no hover */}
-        <div className="absolute inset-x-0 top-0 h-[2px] w-0 bg-gradient-to-r from-[#EC5C3C] to-[#ff9a6c] rounded-t-[26px] transition-all duration-500 group-hover:w-full" />
-
-        {/* Efeito de brilho sutil no topo ao passar o mouse */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#EC5C3C]/40 to-transparent opacity-0 transition-opacity duration-400 group-hover:opacity-100" />
-
-        {/* Tag badge + seta */}
-        <div className="mb-5 flex items-center justify-between">
-          <span className="inline-flex items-center rounded-full border border-[#EC5C3C]/20 bg-[#EC5C3C]/10 px-[10px] py-[4px] font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fb923c]">
-            {feature.tag}
-          </span>
-          {/* Seta aparece e desliza no hover */}
-          <ArrowRight className="h-[14px] w-[14px] text-[#333333] opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-[#EC5C3C]" />
-        </div>
-
-        {/* Ícone + Título */}
-        <div className="mb-4 flex items-start gap-[14px]">
-          <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] bg-gradient-to-br from-[#3d1f17] to-[#1e1210] light:bg-none light:bg-white shadow-[0_0_0_1px_rgba(236,92,60,0.12)] light:shadow-[0_0_0_1.5px_#EC5C3C] transition-all duration-400 group-hover:shadow-[0_0_10px_rgba(236,92,60,0.20)] light:group-hover:shadow-[0_0_0_2px_#EC5C3C,0_0_14px_rgba(236,92,60,0.35)] group-hover:scale-105">
-            <Icon className="h-[18px] w-[18px] text-[#EC5C3C]" />
-          </div>
-
-          <h3 className="m-0 pt-[2px] font-[var(--font-space-grotesk)] text-[15.5px] font-bold leading-snug tracking-tight text-zinc-100 group-hover:text-white transition-colors duration-300">
-            {feature.title}
-          </h3>
-        </div>
-
-        {/* Divisor gradiente */}
-        <div className="mb-4 h-px w-full bg-gradient-to-r from-[#EC5C3C]/15 via-[#2a2a2a] to-transparent" />
-
-        {/* Descrição em tom claro */}
-        <p className="m-0 font-['Inter'] text-[13.5px] leading-[1.72] text-zinc-300 group-hover:text-zinc-100 transition-colors duration-300">
-          {feature.description}
-        </p>
-
-      </div>
-    </motion.div>
+    <div ref={wrapperRef} className="w-full shrink-0 lg:flex-auto lg:shrink">
+      <motion.div
+        style={isMobile ? undefined : { scale, opacity }}
+        className="w-full h-full origin-center will-change-transform"
+      >
+        <FeatureCard feature={feature} isMobile={isMobile} inFocus={inFocus} index={index} />
+      </motion.div>
+    </div>
   );
 }
 
-// ─── Componente Principal ─────────────────────────────────────────────────────
-export default function FeaturesGridPunchy() {
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {
-      align: "center",
-      containScroll: "trimSnaps",
-      dragFree: true,
-      loop: true,
-      breakpoints: { "(min-width: 768px)": { align: "start" } },
-    },
-    [Autoplay({ delay: 4000, stopOnInteraction: false })]
-  );
+const spinKeyframes = `
+@keyframes border-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+`;
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+function FeatureCard({ feature, isMobile, inFocus, index }: { feature: (typeof features)[number], isMobile: boolean, inFocus: boolean, index: number }) {
+  const Icon = feature.icon;
+  const cardRef = useRef<HTMLDivElement>(null);
+  const displayIndex = String(index + 1).padStart(2, "0");
 
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-  const scrollTo   = useCallback((i: number) => emblaApi?.scrollTo(i), [emblaApi]);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
 
-  const handleMouseEnter = useCallback(() => emblaApi?.plugins().autoplay.stop(), [emblaApi]);
-  const handleMouseLeave = useCallback(() => emblaApi?.plugins().autoplay.play(),  [emblaApi]);
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [5, -5]), { damping: 20, stiffness: 150 });
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-5, 5]), { damping: 20, stiffness: 150 });
 
-  const onInit = useCallback((api: EmblaCarouselType) => setScrollSnaps(api.scrollSnapList()), []);
-  const onSelect = useCallback((api: EmblaCarouselType) => setSelectedIndex(api.selectedScrollSnap()), []);
+  // No mobile, forçamos o destaque para todos os cards conforme pedido
+  const active = isMobile || inFocus;
 
-  useEffect(() => {
-    if (!emblaApi) return;
-    onInit(emblaApi);
-    onSelect(emblaApi);
-    emblaApi.on("reInit", onInit).on("reInit", onSelect).on("select", onSelect);
-  }, [emblaApi, onInit, onSelect]);
+  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    if (isMobile) return;
+    const rect = currentTarget.getBoundingClientRect();
+    x.set((clientX - rect.left) / rect.width - 0.5);
+    y.set((clientY - rect.top) / rect.height - 0.5);
+  }
+
+  function handleMouseLeave() {
+    if (isMobile) return;
+    x.set(0);
+    y.set(0);
+  }
 
   return (
-    <section id="features" className="relative overflow-hidden py-20 sm:py-28">
-
-      {/* ── Background: glows + dot pattern escuro ── */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: spinKeyframes }} />
+      <motion.div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={isMobile ? undefined : { rotateX, rotateY, transformPerspective: 1000 }}
+        className="relative flex h-full flex-col overflow-hidden rounded-[24px] p-[1.5px] group w-full transition-shadow duration-700"
+      >
         <div
-          className="absolute inset-0 opacity-[0.35]"
+          className={`absolute inset-[-40%] z-0 transition-opacity duration-700 ${active ? "opacity-100" : "opacity-0 group-hover:opacity-70"
+            }`}
           style={{
-            backgroundImage: `radial-gradient(circle, #1e1e1e 1px, transparent 1px)`,
-            backgroundSize: "28px 28px",
+            background: "conic-gradient(from 0deg, transparent 0%, #FF6B00 10%, transparent 20%, transparent 50%, #FF6B00 60%, transparent 70%)",
+            animation: "border-spin 4s linear infinite",
           }}
         />
-        <div className="absolute left-1/2 top-[-60px] h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(226,76,48,0.08)_0%,transparent_68%)] blur-[55px]" />
-        <div className="absolute right-[-80px] top-1/2 h-[380px] w-[380px] -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(255,107,53,0.05)_0%,transparent_70%)] blur-[45px]" />
-        <div className="absolute bottom-[-40px] left-1/2 h-[280px] w-[600px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(236,92,60,0.04)_0%,transparent_70%)] blur-[40px]" />
-      </div>
+        <div className={`absolute inset-0 rounded-[24px] z-[1] pointer-events-none transition-all duration-500 ${active
+          ? "shadow-[inset_0_0_0_1.5px_rgba(255,107,0,0.5)]"
+          : "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)] group-hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.13)]"
+          }`} />
 
-      <div className="container relative z-10 mx-auto max-w-[1320px] px-4">
+        <div className={`relative z-[2] flex h-full flex-col rounded-[22.5px] overflow-hidden transition-colors duration-700 ${active ? "bg-[#1e1e24]" : "bg-[#16161c] group-hover:bg-[#1c1c24]"
+          }`}>
+          <div className="relative flex flex-col h-full p-7 lg:p-9">
+            <div className={`absolute top-3 right-5 lg:top-4 lg:right-7 font-[var(--font-space-grotesk)] text-[5rem] lg:text-[7rem] font-black leading-none select-none pointer-events-none transition-all duration-700 ${active
+              ? "text-[#FF6B00]/[0.06]"
+              : "text-white/[0.02] group-hover:text-white/[0.04]"
+              }`}>
+              {displayIndex}
+            </div>
 
-        {/* ── HEADER ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mx-auto mb-14 max-w-2xl text-center"
-        >
-          <span className="mb-[14px] block font-['Inter'] text-[12px] font-bold uppercase tracking-[0.18em] text-[#fb923c]">
-            Arsenal de Elite
-          </span>
+            <div className={`absolute bottom-4 left-5 w-[60px] h-[60px] pointer-events-none transition-opacity duration-700 ${active ? "opacity-[0.12]" : "opacity-[0.04] group-hover:opacity-[0.07]"
+              }`}>
+              <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {[0, 15, 30, 45].map(cx =>
+                  [0, 15, 30, 45].map(cy => (
+                    <circle key={`${cx}-${cy}`} cx={cx + 7.5} cy={cy + 7.5} r="1.2" fill="#FF6B00" />
+                  ))
+                )}
+              </svg>
+            </div>
 
-          <h2 className="mb-5 font-[var(--font-space-grotesk)] text-[clamp(2rem,5vw,3.1rem)] font-black leading-[1.08] tracking-[-1.5px] text-white">
-            12 ferramentas{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b35] via-[#e24c30] to-[#ff9a6c]">
-              poderosas
-            </span>
-          </h2>
+            <div className="relative z-10 flex flex-col h-full gap-5">
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-[2px] transition-all duration-500 ${active
+                  ? "bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/30"
+                  : "bg-white/[0.03] text-white/30 border border-white/[0.06] group-hover:text-white/45 group-hover:border-white/10"
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${active ? "bg-[#FF6B00] shadow-[0_0_6px_rgba(255,107,0,0.6)]" : "bg-white/20"
+                    }`} />
+                  {feature.tag}
+                </span>
+                <span className={`font-[var(--font-space-grotesk)] text-[11px] font-semibold tracking-[3px] transition-colors duration-500 ${active ? "text-[#FF6B00]/40" : "text-white/10 group-hover:text-white/15"
+                  }`}>
+                  {displayIndex}/{String(features.length).padStart(2, "0")}
+                </span>
+              </div>
 
-          <p className="mx-auto max-w-[580px] font-['Inter'] text-[16.5px] leading-[1.75] text-zinc-400">
-            Tudo que você precisa para analisar, otimizar e escalar seus resultados no ecossistema Shopee.
-          </p>
-        </motion.div>
+              <div className="flex items-center gap-5 mt-1">
+                <div className="relative flex-shrink-0">
+                  <div
+                    className={`relative flex h-[56px] w-[56px] items-center justify-center rounded-full border transition-all duration-700 ${active ? "scale-110 border-[#FF6B00]/40 shadow-[0_0_20px_rgba(255,107,0,0.2)]" : "border-white/[0.08] group-hover:border-[#FF6B00]/30"
+                      }`}
+                  >
+                    <div className={`absolute inset-0 rounded-full transition-all duration-700 ${active
+                      ? "bg-gradient-to-br from-[#FF6B00]/25 to-[#FF6B00]/5"
+                      : "bg-gradient-to-br from-white/[0.06] to-white/[0.02] group-hover:from-[#FF6B00]/12 group-hover:to-[#FF6B00]/3"
+                      }`} />
+                    <Icon className="h-6 w-6 text-[#FF6B00] relative z-10" strokeWidth={1.8} />
+                  </div>
+                  <div className={`absolute inset-0 blur-[20px] rounded-full transition-opacity duration-700 ${active ? "bg-[#FF6B00]/25 opacity-100" : "bg-[#FF6B00]/10 opacity-0 group-hover:opacity-60"
+                    }`} />
+                </div>
 
-        {/* ── CARROSSEL ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 36 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-          className="relative group/carousel md:px-14 lg:px-16"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="overflow-hidden cursor-grab active:cursor-grabbing py-5" ref={emblaRef}>
-            <div className="flex -ml-4 md:-ml-5 lg:-ml-6">
-              {features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="pl-4 md:pl-5 lg:pl-6 flex-[0_0_85%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] xl:flex-[0_0_25%] min-w-0"
-                >
-                  <FeatureCard feature={feature} />
+                <h3 className={`font-[var(--font-space-grotesk)] text-[1.35rem] lg:text-[1.65rem] font-bold tracking-[-0.03em] leading-[1.15] transition-colors duration-500 ${active ? "text-white" : "text-white/80 group-hover:text-white"
+                  }`}>
+                  {feature.title}
+                </h3>
+              </div>
+
+              <div className="relative h-[1px] w-full">
+                <div className={`absolute left-0 top-0 h-full bg-gradient-to-r from-[#FF6B00] via-[#FF6B00]/40 to-transparent transition-all duration-700 ${active ? "w-full opacity-50" : "w-1/4 opacity-15 group-hover:w-3/4 group-hover:opacity-30"
+                  }`} />
+              </div>
+
+              <p className={`text-[0.98rem] lg:text-[1.05rem] leading-[1.75] tracking-[0.005em] transition-all duration-500 ${active ? "text-white/70" : "text-[#6b6b78] group-hover:text-white/50"
+                }`}>
+                {feature.description}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className={`absolute -inset-[1px] rounded-[25px] pointer-events-none z-0 transition-opacity duration-700 ${active ? "opacity-100" : "opacity-0"
+          }`}
+          style={{ boxShadow: "0 0 60px -10px rgba(255,107,0,0.2), 0 0 120px -30px rgba(255,107,0,0.1)" }}
+        />
+      </motion.div>
+    </>
+  );
+}
+
+export default function FeaturesHybrid() {
+  const [emblaRef] = useEmblaCarousel({ loop: true, align: "center" }, [
+    Autoplay({ delay: 3500, stopOnInteraction: false })
+  ]);
+
+  return (
+    <section id="features" className="relative bg-dark-bg text-white font-['Inter'] scroll-mt-24 overflow-x-clip transition-colors duration-500">
+      <div className="container relative mx-auto px-6 flex flex-col lg:flex-row z-10 max-w-[1400px]">
+        {/* TITULO E DESCRIÇÃO - Centralizados no mobile */}
+        <div className="w-full lg:w-[50%] h-auto lg:h-screen lg:sticky lg:top-0 flex flex-col items-center lg:items-start justify-center pt-16 pb-8 lg:pt-0 lg:pb-0 lg:pr-16 z-10">
+          <div className="space-y-8 text-center lg:text-left">
+            <div className="inline-flex flex-col">
+              <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white">
+                Um arsenal completo<br />
+                <span className="text-[#ff6b35]">para afiliados sérios.</span>
+              </h2>
+            </div>
+
+            <div className="space-y-6">
+              <p className="font-['Inter'] text-[16px] leading-[1.8] text-white/60 max-w-[400px] mx-auto lg:mx-0">
+                Analytics, automação, IA e links — tudo integrado para você escalar suas vendas na Shopee sem abrir 12 abas differentes.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* CARDS - Carrossel no mobile, Scroll Sticky no desktop */}
+        <div className="w-full lg:w-[50%] relative z-20 pb-16 lg:pb-0">
+          
+          {/* Versão Desktop (Scroll Vertical) */}
+          <div className="hidden lg:flex flex-col gap-[20vh] pt-[50vh] pb-[50vh]">
+            {features.map((feature, idx) => (
+              <ScrollWrapper key={`desktop-${idx}`} feature={feature} index={idx} />
+            ))}
+          </div>
+
+          {/* Versão Mobile (Embla Carousel) */}
+          <div className="lg:hidden w-full overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {features.map((feature, idx) => (
+                <div key={`mobile-${idx}`} className="flex-[0_0_85%] min-w-0 px-3">
+                  <FeatureCard feature={feature} isMobile={true} inFocus={false} index={idx} />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* ── Seta Anterior ── */}
-          <button
-            onClick={scrollPrev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 hidden md:flex h-[46px] w-[46px] items-center justify-center rounded-full border border-[#EC5C3C]/30 bg-[#EC5C3C]/10 text-[#EC5C3C] backdrop-blur-sm transition-all duration-300 hover:bg-[#EC5C3C]/20 hover:border-[#EC5C3C]/60 hover:shadow-[0_0_22px_rgba(236,92,60,0.30)] z-20"
-            aria-label="Item anterior"
-          >
-            <ChevronLeft className="h-[20px] w-[20px]" />
-          </button>
-
-          {/* ── Seta Próxima ── */}
-          <button
-            onClick={scrollNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 hidden md:flex h-[46px] w-[46px] items-center justify-center rounded-full border border-[#EC5C3C]/30 bg-[#EC5C3C]/10 text-[#EC5C3C] backdrop-blur-sm transition-all duration-300 hover:bg-[#EC5C3C]/20 hover:border-[#EC5C3C]/60 hover:shadow-[0_0_22px_rgba(236,92,60,0.30)] z-20"
-            aria-label="Próximo item"
-          >
-            <ChevronRight className="h-[20px] w-[20px]" />
-          </button>
-        </motion.div>
-
-        {/* ── DOTS ── */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-10 flex items-center justify-center gap-2"
-        >
-          {scrollSnaps.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => scrollTo(index)}
-              className={`rounded-full transition-all duration-300 ${
-                index === selectedIndex
-                  ? "w-7 h-[5px] bg-gradient-to-r from-[#EC5C3C] to-[#ff9a6c] shadow-[0_0_10px_rgba(236,92,60,0.65)]"
-                  : "w-[5px] h-[5px] bg-[#2a2a2a] hover:bg-[#EC5C3C]/40"
-              }`}
-              aria-label={`Ir para a página ${index + 1}`}
-            />
-          ))}
-        </motion.div>
-
+        </div>
       </div>
     </section>
   );

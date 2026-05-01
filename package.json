@@ -16,6 +16,8 @@
     "@ffmpeg/util": "^0.12.2",
     "@getbrevo/brevo": "^3.0.1",
     "@mercadopago/sdk-react": "^1.0.7",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@remotion/animation-utils": "^4.0.438",
     "@remotion/captions": "^4.0.438",
     "@remotion/cli": "^4.0.438",
@@ -25,6 +27,7 @@
     "@sparticuz/chromium": "^143.0.4",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.4",
+    "@tsparticles/react": "^3.0.0",
     "@vercel/blob": "^2.3.0",
     "@vercel/functions": "^3.4.1",
     "@vercel/sandbox": "^1.6.0",
@@ -55,6 +58,8 @@
     "react-tagcloud": "^2.3.3",
     "recharts": "^3.1.2",
     "remotion": "^4.0.438",
+    "three": "^0.184.0",
+    "tsparticles": "^3.9.1",
     "web-push": "^3.6.7"
   },
   "overrides": {

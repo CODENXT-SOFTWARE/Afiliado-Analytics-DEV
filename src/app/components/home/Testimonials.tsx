@@ -1,181 +1,376 @@
 'use client'
 
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
 import Image from 'next/image'
-import { motion } from 'framer-motion' // 📦 Importando o Framer Motion
 
-const testimonials = [
+interface Testimonial {
+  id: number
+  quote: string
+  name: string
+  role: string
+  avatar: string
+}
+
+const testimonialsData: Testimonial[] = [
   {
+    id: 1,
+    quote: 'Automatizar ofertas no WhatsApp e saber meu lucro exato por lead mudou o jogo. A Calculadora GPL é surreal!',
     name: 'Ana Silva',
     role: 'Afiliada Profissional',
-    quote:
-      'Automatizar ofertas no WhatsApp e saber meu lucro exato por lead mudou o jogo. A Calculadora GPL é surreal!',
-    avatarUrl: 'https://i.imgur.com/PI9pFyt.png',
-    c1: '#ff6b35',
-    c2: '#e24c30',
+    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Ana',
   },
   {
+    id: 2,
+    quote: 'O termômetro da ATIA me fez parar de queimar dinheiro. Ele cruza Meta e Shopee e diz na hora qual criativo escalar.',
     name: 'Carlos Oliveira',
     role: 'Especialista em E-commerce',
-    quote:
-      'O termômetro da ATIA me fez parar de queimar dinheiro. Ele cruza Meta e Shopee e diz na hora qual criativo escalar.',
-    avatarUrl: 'https://i.pravatar.cc/150?img=3',
-    c1: '#7c3aed',
-    c2: '#a855f7',
+    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Carlos',
   },
   {
+    id: 3,
+    quote: 'Fim do trabalho manual. Agora eu gerencio minhas listas e disparo ofertas para os meus grupos de WhatsApp no piloto automático.',
     name: 'Juliana Pereira',
     role: 'Influenciadora Digital',
-    quote:
-      'Fim do trabalho manual. Agora eu gerencio minhas listas e disparo ofertas para os meus grupos de WhatsApp no piloto automático.',
-    avatarUrl: 'https://i.pravatar.cc/150?img=5',
-    c1: '#06b6d4',
-    c2: '#3b82f6',
+    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Juliana',
   },
   {
+    id: 4,
+    quote: 'Escalar campanhas ficou muito mais seguro. A ATIA valida meus anúncios e a Calculadora GPL me dá o teto exato por clique.',
     name: 'Ricardo Mendes',
     role: 'Gestor de Tráfego',
-    quote:
-      'Escalar campanhas ficou muito mais seguro. A ATIA valida meus anúncios e a Calculadora GPL me dá o teto exato por clique.',
-    avatarUrl: 'https://i.pravatar.cc/150?img=7',
-    c1: '#f97316',
-    c2: '#fb923c',
+    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Ricardo',
   },
   {
+    id: 5,
+    quote: 'Ficar travada sem programador, nunca mais. Agora crio minhas próprias páginas de captura de alta conversão em minutos.',
     name: 'Beatriz Costa',
     role: 'Iniciante em Afiliados',
-    quote:
-      'Ficar travada sem programador, nunca mais. Agora crio minhas próprias páginas de captura de alta conversão em minutos.',
-    avatarUrl: 'https://i.imgur.com/Gat3J9V.png',
-    c1: '#14b8a6',
-    c2: '#22c55e',
+    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Beatriz',
   },
 ]
 
-function Stars() {
-  return (
-    <div className="flex gap-[3px]">
-      {[...Array(5)].map((_, i) => (
-        <svg key={i} width="15" height="15" viewBox="0 0 20 20" fill="#fb923c">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-    </div>
-  )
-}
-
 export default function Testimonials() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
-    Autoplay({ delay: 4000, stopOnInteraction: false }),
+    Autoplay({ delay: 3000, stopOnInteraction: false, stopOnMouseEnter: true }),
   ])
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([])
 
-  const handleMouseEnter = useCallback(() => {
-    if (emblaApi) emblaApi.plugins().autoplay.stop()
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev()
   }, [emblaApi])
 
-  const handleMouseLeave = useCallback(() => {
-    if (emblaApi) emblaApi.plugins().autoplay.play()
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext()
   }, [emblaApi])
+
+  const scrollTo = useCallback(
+    (index: number) => {
+      if (emblaApi) emblaApi.scrollTo(index)
+    },
+    [emblaApi]
+  )
+
+  const onInit = useCallback(() => {
+    if (!emblaApi) return
+    setScrollSnaps(emblaApi.scrollSnapList())
+  }, [emblaApi])
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return
+    setSelectedIndex(emblaApi.selectedScrollSnap())
+  }, [emblaApi])
+
+  useEffect(() => {
+    if (!emblaApi) return
+
+    onInit()
+    onSelect()
+    emblaApi.on('reInit', onInit)
+    emblaApi.on('reInit', onSelect)
+    emblaApi.on('select', onSelect)
+  }, [emblaApi, onInit, onSelect])
 
   return (
-    <section
-      id="testimonials"
-      className="relative overflow-hidden bg-[#18181B] py-10 sm:py-18"
-    >
-      {/* Glows */}
-      <div className="pointer-events-none absolute left-[5%] top-[15%] h-[320px] w-[320px] rounded-full bg-[radial-gradient(circle,rgba(226,76,48,0.08)_0%,transparent_65%)] blur-[40px]" />
-      <div className="pointer-events-none absolute bottom-[10%] right-[10%] h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle,rgba(6,182,212,0.08)_0%,transparent_65%)] blur-[40px]" />
+    <section id="testimonials" className="relative py-20 sm:py-32 bg-dark-bg transition-colors duration-500">
+      {/* ── BLEED TOP GLOW (Matching Mockup/Theme) ── */}
+      <div
+        className="pointer-events-none absolute top-0 left-[2%] h-[600px] w-[600px] z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(255,107,53,0.10), transparent 70%)',
+          filter: 'blur(70px)',
+        }}
+        aria-hidden="true"
+      />
 
-      <div className="container relative mx-auto px-4">
-        
-        {/* ── HEADER DA SEÇÃO COM ANIMAÇÃO ── */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-[68px] text-center"
-        >
-          <span className="mb-[14px] block font-['Inter'] text-[12px] font-bold uppercase tracking-[0.18em] text-[#fb923c]">
-            Prova Social
-          </span>
+      <style>{`
+        #testimonials {
+          --bg-color: transparent;
+          --text-primary: #ffffff;
+          --text-secondary: rgba(255, 255, 255, 0.5);
+          --card-bg: rgba(255, 255, 255, 0.03);
+          --card-border: rgba(255, 255, 255, 0.06);
+          --accent: #ff6b35;
+          
+          color: var(--text-primary);
+          display: flex;
+          align-items: center;
+          overflow-x: hidden;
+        }
 
-          <h2 className="mb-[16px] font-[var(--font-space-grotesk)] text-[clamp(1.9rem,5vw,3.4rem)] font-black leading-[1.1] tracking-[-1.5px] text-white">
-            Afiliados reais. <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b35] via-[#e24c30] to-[#ff9a6c]">Resultados reais.</span>
+        #testimonials * {
+          box-sizing: border-box;
+        }
+
+        #testimonials .t-container {
+          width: 100%;
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 0 1.5rem; /* px-6 */
+          display: flex;
+          align-items: stretch;
+          justify-content: space-between;
+          gap: 4rem;
+          position: relative;
+          z-index: 10;
+        }
+
+        #testimonials .intro-section {
+          flex: 1;
+          max-width: 600px;
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        #testimonials .controls {
+          display: flex;
+          gap: 1rem;
+          margin-top: auto;
+          padding-bottom: 2rem;
+        }
+
+        #testimonials .btn-nav {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.05);
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          padding: 0;
+          backdrop-filter: blur(8px);
+        }
+
+        #testimonials .btn-nav:hover {
+          background: var(--accent);
+          border-color: var(--accent);
+          color: white;
+          transform: scale(1.05);
+          box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+        }
+
+        #testimonials .btn-nav:active {
+          transform: scale(0.95);
+        }
+
+        #testimonials .carousel-stage {
+          flex: 1;
+          max-width: 650px;
+          position: relative;
+        }
+
+        #testimonials .embla__viewport {
+          width: 100%;
+          overflow: hidden;
+          border-radius: 24px;
+          position: relative;
+        }
+
+        #testimonials .embla__container {
+          display: flex;
+          width: 100%;
+        }
+
+        #testimonials .card {
+          flex: 0 0 100%;
+          background: var(--card-bg);
+          border: 1px solid var(--card-border);
+          padding: 4rem;
+          display: flex;
+          flex-direction: column;
+          gap: 2.5rem;
+          backdrop-filter: blur(10px);
+          min-height: 440px;
+          transition: border-color 0.3s ease;
+          border-radius: 24px;
+        }
+
+        #testimonials .card:hover {
+          border-color: rgba(255, 107, 53, 0.3);
+        }
+
+        #testimonials .quote-mark {
+          font-size: 5rem;
+          color: var(--accent);
+          opacity: 0.3;
+          line-height: 0;
+          margin-top: 2.5rem;
+          font-family: serif;
+        }
+
+        #testimonials .review-text {
+          font-size: 1.45rem;
+          line-height: 1.7;
+          color: #e4e4e7;
+          font-weight: 300;
+          flex-grow: 1;
+          margin: 0;
+        }
+
+        #testimonials .client-info {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        #testimonials .client-avatar {
+          width: 65px;
+          height: 65px;
+          border-radius: 50%;
+          object-fit: cover;
+          background: #27272a;
+          border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #testimonials .client-details h4 {
+          font-family: 'Inter', sans-serif;
+          font-size: 1.25rem;
+          margin: 0;
+          margin-bottom: 0.2rem;
+        }
+
+        #testimonials .client-details p {
+          color: var(--accent);
+          font-size: 1rem;
+          font-weight: 500;
+          margin: 0;
+        }
+
+        #testimonials .indicators {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 1.5rem;
+        }
+
+        #testimonials .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--card-border);
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        #testimonials .dot.active {
+          background: var(--accent);
+          width: 24px;
+          border-radius: 10px;
+        }
+
+        @media (max-width: 968px) {
+          #testimonials .t-container {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+          }
+
+          #testimonials .intro-section {
+            align-items: center;
+          }
+
+          #testimonials .controls {
+            display: none;
+          }
+
+          #testimonials .carousel-stage {
+            width: 100%;
+          }
+
+          #testimonials .card {
+            padding: 2rem;
+            min-height: auto;
+          }
+        }
+      `}</style>
+
+      <div className="t-container">
+        <div className="intro-section">
+          <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white m-0">
+            Resultados que <br />
+            <span className="bg-gradient-to-br from-[#ff6b35] to-[#ff8c5a] bg-clip-text text-transparent">falam por si.</span>
           </h2>
-
-          <p className="mx-auto max-w-[500px] font-['Inter'] text-[17px] leading-[1.6] text-white/60">
-            Milhares de afiliados já transformaram sua operação com a Afiliado Analytics. Veja o que eles dizem.
+          <p className="font-['Inter'] text-[18px] leading-[1.8] text-white/50 m-0">
+            Nossa tecnologia já ajudou dezenas de empreendedores a escalarem suas operações com um ecossistema impecável e alta performance.
           </p>
-        </motion.div>
 
-        {/* ── CARROSSEL COM ANIMAÇÃO NO CONTAINER ── */}
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-          className="embla mt-12 md:mt-16" 
-          ref={emblaRef}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="embla__container flex">
-            {testimonials.map((testimonial) => (
-              <div className="embla__slide p-4 flex-[0_0_100%] min-w-0 md:flex-[0_0_50%] lg:flex-[0_0_33.333%]" key={testimonial.name}>
-                
-                {/* ── CARD ── */}
-                <div
-                  className="group relative flex h-full flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#23232A] p-8 shadow-sm transition-all duration-300 ease-out hover:-translate-y-[6px] hover:border-[#e24c30]/35 hover:shadow-[0_24px_50px_rgba(0,0,0,0.35),0_0_0_1px_rgba(226,76,48,0.18)]"
-                >
-                  <div
-                    className="absolute left-0 top-0 h-[3px] w-full"
-                    style={{
-                      background: `linear-gradient(90deg, ${testimonial.c1}, ${testimonial.c2})`,
-                    }}
-                  />
+          <div className="controls">
+            <button className="btn-nav" aria-label="Anterior" onClick={scrollPrev}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button className="btn-nav" aria-label="Próximo" onClick={scrollNext}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="rounded-full p-[2px]"
-                      style={{
-                        background: `linear-gradient(135deg, ${testimonial.c1}, ${testimonial.c2})`,
-                        boxShadow: `0 4px 18px ${testimonial.c1}40`,
-                      }}
-                    >
-                      <Image
-                        className="h-12 w-12 rounded-full object-cover"
-                        src={testimonial.avatarUrl}
-                        alt={testimonial.name}
-                        width={48}
-                        height={48}
-                      />
-                    </div>
-
-                    <div>
-                      <div className="font-['Inter'] text-[14.5px] font-bold text-white">
-                        {testimonial.name}
-                      </div>
-                      <div className="font-['Inter'] text-[12px] text-white/45">
-                        {testimonial.role}
-                      </div>
+        <div className="carousel-stage">
+          <div className="embla__viewport" ref={emblaRef}>
+            <div className="embla__container">
+              {testimonialsData.map((item) => (
+                <div className="card embla__slide" key={item.id}>
+                  <div className="quote-mark">&quot;</div>
+                  <p className="review-text">{item.quote}</p>
+                  <div className="client-info">
+                    <Image
+                      src={item.avatar}
+                      alt="Avatar"
+                      className="client-avatar"
+                      width={65}
+                      height={65}
+                      unoptimized
+                    />
+                    <div className="client-details">
+                      <h4>{item.name}</h4>
+                      <p>{item.role}</p>
                     </div>
                   </div>
-
-                  <div className="mt-6">
-                    <Stars />
-                  </div>
-
-                  <blockquote className="mt-[24px] flex-grow font-['Inter'] text-[14.5px] leading-[1.75] text-white/65">
-                    <p>“{testimonial.quote}”</p>
-                  </blockquote>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="indicators">
+            {scrollSnaps.map((_, index) => (
+              <div
+                key={index}
+                className={`dot ${index === selectedIndex ? 'active' : ''}`}
+                onClick={() => scrollTo(index)}
+              />
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   )
