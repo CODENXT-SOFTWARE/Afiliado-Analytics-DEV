@@ -8,6 +8,7 @@ import {
   Clock, PlusCircle, Info, Zap, Tag, RefreshCw,
   Play, Pause, Hash, Layers, X, ChevronLeft, ChevronRight, ChevronDown,
   List as ListIcon, User, Settings2, Smartphone, CheckCheck, Send, Pencil, Lock,
+  ArrowLeftRight, ShoppingCart,
 } from "lucide-react";
 import BuscarGruposModal, {
   type BuscarGruposPayload,
@@ -106,7 +107,11 @@ function Tooltip({ text, children, wide }: { text: string; children?: React.Reac
 
 // ─── FieldLabel ─────────────────────────────────────────────────────────────────
 function FieldLabel({ children }: { children: ReactNode }) {
-  return <label className="block text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5">{children}</label>;
+  return (
+    <label className="block text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5 light:text-zinc-500">
+      {children}
+    </label>
+  );
 }
 
 // ─── WizardStepper ──────────────────────────────────────────────────────────────
@@ -188,14 +193,23 @@ function DisparoCard({ c, togglingId, onToggle, onRemove, onEdit, onTestPulse, t
   const isActive = c.ativo;
   const hasShopeeList = !!c.listaOfertasId;
   const hasMlList = !!c.listaOfertasMlId;
-  const keywordsAsShopee = c.keywords.length > 0 && !hasShopeeList && !hasMlList;
+  const hasAmazonList = !!c.listaOfertasAmazonId;
+  const hasInfoList = !!c.listaOfertasInfoId;
+  const keywordsAsShopee =
+    c.keywords.length > 0 && !hasShopeeList && !hasMlList && !hasAmazonList && !hasInfoList;
   const showShopeeLogo = hasShopeeList || keywordsAsShopee;
   const showMlLogo = hasMlList;
-  const showPlatformLogos = showShopeeLogo || showMlLogo;
+  const showAmazonLogo = hasAmazonList;
+  const showInfoLogo = hasInfoList;
+  const showPlatformLogos = showShopeeLogo || showMlLogo || showAmazonLogo || showInfoLogo;
+  const activePlatforms = [
+    showShopeeLogo && "Shopee",
+    showMlLogo && "Mercado Livre",
+    showAmazonLogo && "Amazon",
+    showInfoLogo && "Infoprodutor",
+  ].filter(Boolean) as string[];
   const platformTitle =
-    showShopeeLogo && showMlLogo ? "Shopee e Mercado Livre"
-      : showMlLogo ? "Mercado Livre"
-        : "Shopee";
+    activePlatforms.length > 1 ? activePlatforms.join(" + ") : activePlatforms[0] ?? "Shopee";
   return (
     <div className={cn("bg-[#1c1c1f] border rounded-xl p-3 sm:p-3.5 flex flex-col gap-2.5 transition-all min-w-0",
       isActive ? "border-emerald-500/20 shadow-sm shadow-emerald-500/5" : "border-[#2c2c32] hover:border-[#3e3e3e]")}>
@@ -210,7 +224,7 @@ function DisparoCard({ c, togglingId, onToggle, onRemove, onEdit, onTestPulse, t
         )}
       </div>
       {showPlatformLogos && (
-        <div className="flex items-center gap-1.5" title={platformTitle}>
+        <div className="flex items-center gap-1.5 flex-wrap" title={platformTitle}>
           {showShopeeLogo && (
             <Image
               src="/logoshopee.png"
@@ -231,6 +245,30 @@ function DisparoCard({ c, togglingId, onToggle, onRemove, onEdit, onTestPulse, t
               height={22}
               className="h-[18px] w-auto max-w-[40px] object-contain"
             />
+          )}
+          {(showShopeeLogo || showMlLogo) && showAmazonLogo && (
+            <span className="text-[#5c5c5c] font-bold text-[9px]" aria-hidden>+</span>
+          )}
+          {showAmazonLogo && (
+            <Image
+              src="/amazonlogo.webp"
+              alt="Amazon"
+              width={48}
+              height={48}
+              className="h-[18px] w-[18px] object-contain shrink-0"
+            />
+          )}
+          {(showShopeeLogo || showMlLogo || showAmazonLogo) && showInfoLogo && (
+            <span className="text-[#5c5c5c] font-bold text-[9px]" aria-hidden>+</span>
+          )}
+          {showInfoLogo && (
+            <span
+              className="inline-flex items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-1 shrink-0 light:border-emerald-200/80 light:bg-emerald-100/90"
+              title="Infoprodutor"
+            >
+              <ShoppingCart className="h-[14px] w-[14px] text-emerald-500 light:text-emerald-800" strokeWidth={2.25} aria-hidden />
+              <span className="sr-only">Infoprodutor</span>
+            </span>
           )}
         </div>
       )}
@@ -266,6 +304,14 @@ function DisparoCard({ c, togglingId, onToggle, onRemove, onEdit, onTestPulse, t
             <Layers className="w-2.5 h-2.5 text-amber-400 shrink-0 mt-0.5 md:mt-0" />
             <span className="min-w-0 max-md:break-words md:truncate">
               Lista ML: <span className="text-white">{c.listaOfertasMlNome}</span>
+            </span>
+          </div>
+        )}
+        {c.listaOfertasAmazonNome && (
+          <div className="flex items-start md:items-center gap-1.5 text-[9px] text-[#a0a0a0] min-w-0">
+            <Layers className="w-2.5 h-2.5 text-orange-400 shrink-0 mt-0.5 md:mt-0" />
+            <span className="min-w-0 max-md:break-words md:truncate">
+              Lista Amazon: <span className="text-white">{c.listaOfertasAmazonNome}</span>
             </span>
           </div>
         )}
@@ -1864,11 +1910,12 @@ export default function GruposVendaPage() {
                           className={cn(
                             "flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-[10px] font-bold transition-all border-t sm:border-t-0 sm:border-l border-[#2c2c32] sm:flex-row sm:gap-2 sm:px-3 relative",
                             offerListSource === "crossover" && (canUseMlSource || canUseAmazonSource)
-                              ? "bg-gradient-to-br from-[#e24c30]/20 to-amber-500/15 text-white ring-1 ring-inset ring-amber-500/30"
-                              : "bg-[#222228] text-[#a0a0a0] hover:text-white",
+                              ? "bg-gradient-to-br from-[#e24c30]/20 to-amber-500/15 text-[#f0f0f2] ring-1 ring-inset ring-amber-500/30 light:from-orange-100/95 light:to-amber-50 light:ring-amber-200/70"
+                              : "bg-[#222228] text-[#a0a0a0] hover:text-white light:bg-zinc-100 light:text-zinc-600 light:hover:text-zinc-900",
                             !canUseMlSource && !canUseAmazonSource && "opacity-60 cursor-not-allowed",
                           )}
                         >
+                          <ArrowLeftRight className="w-3 h-3 shrink-0" aria-hidden />
                           <span className="text-center leading-tight">Crossover</span>
                           {!canUseMlSource && !canUseAmazonSource ? (
                             <Lock className="w-3 h-3 shrink-0 text-shopee-orange" aria-hidden="true" />
@@ -1891,11 +1938,12 @@ export default function GruposVendaPage() {
                           className={cn(
                             "flex items-center justify-center gap-2 px-3 py-2.5 text-[10px] font-bold transition-all border-t sm:border-t-0 border-l border-[#2c2c32] relative",
                             offerListSource === "infoprodutor" && canUseInfoSource
-                              ? "bg-emerald-500/15 text-emerald-400"
-                              : "bg-[#222228] text-[#a0a0a0] hover:text-white",
+                              ? "bg-emerald-500/15 text-emerald-400 light:bg-emerald-100/90 light:text-emerald-900"
+                              : "bg-[#222228] text-[#a0a0a0] hover:text-white light:bg-zinc-100 light:text-zinc-600 light:hover:text-zinc-900",
                             !canUseInfoSource && "opacity-60 cursor-not-allowed",
                           )}
                         >
+                          <ShoppingCart className="w-3 h-3 shrink-0" aria-hidden />
                           <span className="text-center leading-tight">Infoprodutor</span>
                           {!canUseInfoSource && (
                             <Lock className="w-3 h-3 shrink-0 text-shopee-orange" aria-hidden="true" />
@@ -1929,14 +1977,14 @@ export default function GruposVendaPage() {
                         <>
                           {offerListSource === "crossover" ? (
                             <div className="mb-3 min-w-0 space-y-2">
-                              <p className="text-[10px] text-[#a0a0a0] leading-relaxed">
+                              <p className="text-[10px] text-[#a0a0a0] leading-relaxed light:text-zinc-600">
                                 Selecione ao menos{" "}
-                                <span className="font-semibold text-[#f0f0f2]">2 listas</span>. O disparo só usa as fontes em que você escolher uma lista; as demais ficam de fora do rolê.
+                                <span className="font-semibold text-[#f0f0f2] light:text-zinc-900">2 listas</span>. O disparo só usa as fontes em que você escolher uma lista; as demais ficam de fora do rolê.
                               </p>
                               <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-                                <div className="min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3">
+                                <div className="min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm">
                                   <FieldLabel>Lista</FieldLabel>
-                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2">Shopee</p>
+                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2 light:text-zinc-900">Shopee</p>
                                   {loadingListasOfertas ? (
                                     <div className="flex items-center gap-2 text-[#a0a0a0] text-xs py-2">
                                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando…
@@ -1973,12 +2021,12 @@ export default function GruposVendaPage() {
                                 </div>
                                 <div
                                   className={cn(
-                                    "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3",
+                                    "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm",
                                     !canUseMlSource && "opacity-60",
                                   )}
                                 >
                                   <FieldLabel>Lista</FieldLabel>
-                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2 flex items-center gap-1">
+                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2 flex items-center gap-1 light:text-zinc-900">
                                     Mercado Livre
                                     {!canUseMlSource && <Lock className="w-3 h-3 text-shopee-orange" aria-hidden />}
                                   </p>
@@ -2005,12 +2053,12 @@ export default function GruposVendaPage() {
                                 </div>
                                 <div
                                   className={cn(
-                                    "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3",
+                                    "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm",
                                     !canUseAmazonSource && "opacity-60",
                                   )}
                                 >
                                   <FieldLabel>Lista</FieldLabel>
-                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2 flex items-center gap-1">
+                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2 flex items-center gap-1 light:text-zinc-900">
                                     Amazon
                                     {!canUseAmazonSource && <Lock className="w-3 h-3 text-shopee-orange" aria-hidden />}
                                   </p>
@@ -2037,12 +2085,12 @@ export default function GruposVendaPage() {
                                 </div>
                                 <div
                                   className={cn(
-                                    "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3",
+                                    "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm",
                                     !canUseInfoSource && "opacity-60",
                                   )}
                                 >
                                   <FieldLabel>Lista</FieldLabel>
-                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2 flex items-center gap-1">
+                                  <p className="text-[11px] font-semibold text-[#f0f0f2] mb-2 flex items-center gap-1 light:text-zinc-900">
                                     Infoprodutor
                                     {!canUseInfoSource && <Lock className="w-3 h-3 text-shopee-orange" aria-hidden />}
                                   </p>

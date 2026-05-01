@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
 import {
   Loader2,
   PlusCircle,
@@ -560,6 +561,28 @@ export default function EspelhamentoGruposPage() {
           </div>
           Espelhamento de grupos
         </h1>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[#a0a0a0] light:text-zinc-600">
+          <span className="inline-flex items-center gap-2">
+            <Image
+              src="/logoshopee.png"
+              alt="Shopee"
+              width={20}
+              height={20}
+              className="h-5 w-5 object-contain shrink-0"
+            />
+            <span className="text-[12px] font-medium">Apenas Shopee</span>
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <Image
+              src="/icons-integracoes/icon-mercado-livre.svg"
+              alt="Mercado Livre"
+              width={20}
+              height={20}
+              className="h-5 w-5 object-contain shrink-0"
+            />
+            <span className="text-[12px] font-medium">Em desenvolvimento</span>
+          </span>
+        </div>
         <p className="text-[11px] text-[#a0a0a0] mt-1 leading-relaxed max-w-2xl hidden">
           Copie ofertas do grupo <span className="text-white font-semibold">origem</span> para o{" "}
           <span className="text-white font-semibold">destino</span> trocando links Shopee pelos seus (afiliado). O n8n

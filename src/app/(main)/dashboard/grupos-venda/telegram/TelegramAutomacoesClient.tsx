@@ -31,6 +31,8 @@ import {
   Zap,
   Lock,
   ListChecks as ListIcon,
+  ArrowLeftRight,
+  ShoppingCart,
 } from "lucide-react";
 import { GeradorPaginationBar } from "@/app/components/shopee/GeradorPaginationBar";
 import MetaSearchablePicker from "@/app/components/meta/MetaSearchablePicker";
@@ -1267,9 +1269,18 @@ function DisparoCardTelegram({
               className="h-[18px] w-[18px] object-contain shrink-0"
             />
           )}
+          {(showShopee || showMl || showAmazon) && showInfo && (
+            <span className="text-[#5c5c5c] font-bold text-[9px] light:text-zinc-400" aria-hidden>
+              +
+            </span>
+          )}
           {showInfo && (
-            <span className="inline-flex items-center gap-1 text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
-              Infoprodutor
+            <span
+              className="inline-flex items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-1 shrink-0 light:border-emerald-200/80 light:bg-emerald-100/90"
+              title="Infoprodutor"
+            >
+              <ShoppingCart className="h-[14px] w-[14px] text-emerald-500 light:text-emerald-800" strokeWidth={2.25} aria-hidden />
+              <span className="sr-only">Infoprodutor</span>
             </span>
           )}
         </div>
@@ -2017,11 +2028,12 @@ function StepConteudo(p: WizardProps) {
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-[10px] font-bold transition-all border-t sm:border-t-0 sm:border-l border-[#2c2c32] sm:flex-row sm:gap-2 sm:px-3 relative",
                   p.offerSource === "crossover"
-                    ? "bg-gradient-to-br from-[#e24c30]/20 to-amber-500/15 text-white ring-1 ring-inset ring-amber-500/30"
-                    : "bg-[#222228] text-[#a0a0a0] hover:text-white",
+                    ? "bg-gradient-to-br from-[#e24c30]/20 to-amber-500/15 text-[#f0f0f2] ring-1 ring-inset ring-amber-500/30 light:from-orange-100/95 light:to-amber-50 light:ring-amber-200/70"
+                    : "bg-[#222228] text-[#a0a0a0] hover:text-white light:bg-zinc-100 light:text-zinc-600 light:hover:text-zinc-900",
                   !(p.canUseMlSource || p.canUseAmazonSource || p.canUseInfoSource) && "opacity-60 cursor-not-allowed"
                 )}
               >
+                <ArrowLeftRight className="w-3 h-3 shrink-0" aria-hidden />
                 <span className="text-center leading-tight">Crossover</span>
                 {!(p.canUseMlSource || p.canUseAmazonSource || p.canUseInfoSource) && (
                   <Lock className="w-3 h-3 shrink-0 text-shopee-orange" aria-hidden="true" />
@@ -2044,11 +2056,12 @@ function StepConteudo(p: WizardProps) {
                 className={cn(
                   "flex items-center justify-center gap-2 px-3 py-2.5 text-[10px] font-bold transition-all border-t sm:border-t-0 border-l border-[#2c2c32] relative",
                   p.offerSource === "infoprodutor" && p.canUseInfoSource
-                    ? "bg-emerald-500/15 text-emerald-400"
-                    : "bg-[#222228] text-[#a0a0a0] hover:text-white",
+                    ? "bg-emerald-500/15 text-emerald-400 light:bg-emerald-100/90 light:text-emerald-900"
+                    : "bg-[#222228] text-[#a0a0a0] hover:text-white light:bg-zinc-100 light:text-zinc-600 light:hover:text-zinc-900",
                   !p.canUseInfoSource && "opacity-60 cursor-not-allowed"
                 )}
               >
+                <ShoppingCart className="w-3 h-3 shrink-0" aria-hidden />
                 <span className="text-center leading-tight">Infoprodutor</span>
                 {!p.canUseInfoSource && (
                   <Lock className="w-3 h-3 shrink-0 text-shopee-orange" aria-hidden="true" />
@@ -2083,13 +2096,13 @@ function StepConteudo(p: WizardProps) {
               <>
                 {p.offerSource === "crossover" ? (
                   <div className="mb-3 min-w-0 space-y-2">
-                    <p className="text-[10px] text-[#a0a0a0] leading-relaxed">
-                      Selecione ao menos <span className="font-semibold text-white">2 listas</span>. Só entram no disparo as fontes em que você escolher uma lista.
+                    <p className="text-[10px] text-[#a0a0a0] leading-relaxed light:text-zinc-600">
+                      Selecione ao menos <span className="font-semibold text-white light:text-zinc-900">2 listas</span>. Só entram no disparo as fontes em que você escolher uma lista.
                     </p>
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-                      <div className="min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3">
+                      <div className="min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm">
                         <FormLabel>Lista</FormLabel>
-                        <p className="text-[11px] font-semibold text-white mb-2">Shopee</p>
+                        <p className="text-[11px] font-semibold text-white mb-2 light:text-zinc-900">Shopee</p>
                         {p.loadingShopee ? (
                           <div className="flex items-center gap-2 text-[#a0a0a0] text-xs py-2">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando…
@@ -2126,12 +2139,12 @@ function StepConteudo(p: WizardProps) {
                       </div>
                       <div
                         className={cn(
-                          "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3",
+                          "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm",
                           !p.canUseMlSource && "opacity-60",
                         )}
                       >
                         <FormLabel>Lista</FormLabel>
-                        <p className="text-[11px] font-semibold text-white mb-2 flex items-center gap-1">
+                        <p className="text-[11px] font-semibold text-white mb-2 flex items-center gap-1 light:text-zinc-900">
                           Mercado Livre
                           {!p.canUseMlSource && <Lock className="w-3 h-3 text-shopee-orange" aria-hidden />}
                         </p>
@@ -2169,12 +2182,12 @@ function StepConteudo(p: WizardProps) {
                       </div>
                       <div
                         className={cn(
-                          "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3",
+                          "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm",
                           !p.canUseAmazonSource && "opacity-60",
                         )}
                       >
                         <FormLabel>Lista</FormLabel>
-                        <p className="text-[11px] font-semibold text-white mb-2 flex items-center gap-1">
+                        <p className="text-[11px] font-semibold text-white mb-2 flex items-center gap-1 light:text-zinc-900">
                           Amazon
                           {!p.canUseAmazonSource && <Lock className="w-3 h-3 text-shopee-orange" aria-hidden />}
                         </p>
@@ -2212,12 +2225,12 @@ function StepConteudo(p: WizardProps) {
                       </div>
                       <div
                         className={cn(
-                          "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3",
+                          "min-w-0 rounded-lg border border-[#2c2c32] bg-[#18181c]/40 p-3 light:border-orange-200/80 light:bg-white light:shadow-sm",
                           !p.canUseInfoSource && "opacity-60",
                         )}
                       >
                         <FormLabel>Lista</FormLabel>
-                        <p className="text-[11px] font-semibold text-white mb-2 flex items-center gap-1">
+                        <p className="text-[11px] font-semibold text-white mb-2 flex items-center gap-1 light:text-zinc-900">
                           Infoprodutor
                           {!p.canUseInfoSource && <Lock className="w-3 h-3 text-shopee-orange" aria-hidden />}
                         </p>
@@ -2980,7 +2993,7 @@ function BuscarGruposTelegramModal({
 // ═══════════════════════════════════════════════════════════════════════════════
 function FormLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="block text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5">
+    <label className="block text-[9px] font-bold text-[#d8d8d8] uppercase tracking-widest mb-1.5 light:text-zinc-500">
       {children}
     </label>
   );
