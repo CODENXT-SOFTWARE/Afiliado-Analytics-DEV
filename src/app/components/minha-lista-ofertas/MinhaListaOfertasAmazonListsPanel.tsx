@@ -564,7 +564,7 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
             <p className="text-xs text-[#bebebe] mt-2 leading-relaxed">
               Crie listas e adicione ofertas na página{" "}
               <Link href="/dashboard/minha-lista-ofertas-ml" className="text-[#e24c30] font-semibold hover:underline">
-                Lista de Ofertas ML
+                Lista de Ofertas Amazon
               </Link>
               .
             </p>

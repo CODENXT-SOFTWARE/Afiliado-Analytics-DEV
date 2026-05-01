@@ -755,7 +755,7 @@ function MinhaListaOfertasMlPageInner() {
           if (seq !== mlSearchSeq.current) return;
           setMlSearchResults([
             {
-              itemId: String(d.resolvedId ?? "").trim() || "MLB",
+              itemId: String(d.resolvedId ?? "").trim() || "—",
               productName: String(d.productName ?? "Produto"),
               productLink: permalink,
               imageUrl: String(d.imageUrl ?? ""),
@@ -776,7 +776,11 @@ function MinhaListaOfertasMlPageInner() {
         const j = await res.json();
         if (!res.ok) throw new Error(j?.error ?? "Erro na busca");
         if (seq !== mlSearchSeq.current) return;
-        setMlSearchResults(Array.isArray(j.products) ? j.products : []);
+        const list = Array.isArray(j.products) ? j.products : [];
+        setMlSearchResults(list);
+        if (list.length === 0 && typeof j.message === "string" && j.message.trim()) {
+          setError(j.message.trim());
+        }
         goProdutoOnMobile();
       } catch (e) {
         if (seq === mlSearchSeq.current) {
@@ -848,7 +852,11 @@ function MinhaListaOfertasMlPageInner() {
         const j = await res.json();
         if (!res.ok) throw new Error(j?.error ?? "Erro na busca");
         if (seq !== mlSearchSeq.current) return;
-        setMlSearchResults(Array.isArray(j.products) ? j.products : []);
+        const list = Array.isArray(j.products) ? j.products : [];
+        setMlSearchResults(list);
+        if (list.length === 0 && typeof j.message === "string" && j.message.trim()) {
+          setError(j.message.trim());
+        }
         goProdutoOnMobile();
       } catch (e) {
         if (seq === mlSearchSeq.current) {
@@ -1569,7 +1577,7 @@ function MinhaListaOfertasMlPageInner() {
           </div>
           <div className="min-w-0">
             <span className="text-[13px] sm:text-sm font-bold tracking-tight text-[#f0f0f2] truncate block">
-              Lista de Ofertas ML
+              Lista de Ofertas Amazon
             </span>
         </div>
         </div>
@@ -1586,20 +1594,20 @@ function MinhaListaOfertasMlPageInner() {
             {amazonSessionToken.trim() && mlAffiliateTag.trim()
               ? "Token conectado"
               : !amazonSessionToken.trim() && !mlAffiliateTag.trim()
-                ? "ML não configurado"
+                ? "Amazon não configurada"
                 : !amazonSessionToken.trim()
-                  ? "Sem token ML"
-                  : "Sem etiqueta ML"}
+                  ? "Sem token Amazon"
+                  : "Sem etiqueta"}
           </span>
-          <span className="min-[360px]:hidden">ML</span>
+          <span className="min-[360px]:hidden">Amazon</span>
         </div>
       </header>
 
       {(!amazonSessionToken.trim() || !mlAffiliateTag.trim()) && (
         <div className="px-3 sm:px-4 py-3 border-b border-amber-500/35 bg-amber-950/35 text-[11px] text-amber-100/95 leading-relaxed flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 light:border-orange-200/80 light:bg-orange-100/70 light:text-amber-950">
           <p className="min-w-0">
-            Instale a extensão do Afiliado Analytics e salve a<span className="font-semibold">etiqueta</span> e{" "}
-            <span className="font-semibold">token</span> em Minha Conta para buscar e converter no ML.
+            Instale a extensão do Afiliado Analytics e salve a <span className="font-semibold">etiqueta</span> e o{" "}
+            <span className="font-semibold">token</span> em Minha Conta para buscar e converter na Amazon.
           </p>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <a
@@ -1611,7 +1619,7 @@ function MinhaListaOfertasMlPageInner() {
               Baixar extensão
             </a>
             <Link
-              href="/configuracoes?ml=1"
+              href="/configuracoes"
               className="inline-flex items-center justify-center rounded-lg bg-[#222228] hover:bg-[#2a2a30] border border-[#3e3e46] px-3 py-1.5 text-[11px] font-semibold text-[#f0f0f2] no-underline transition light:bg-white light:hover:bg-orange-50 light:border-orange-200/90 light:text-zinc-800"
             >
               Minha Conta
@@ -1637,7 +1645,7 @@ function MinhaListaOfertasMlPageInner() {
 
       <nav
         className="lg:hidden sticky top-12 z-20 border-b border-[#2c2c32] px-3 py-3 bg-[#1c1c1f] shadow-[0_4px_20px_rgba(0,0,0,0.25)]"
-        aria-label="Seções da lista ML"
+        aria-label="Seções da lista Amazon"
       >
         <div className="flex items-center justify-center w-full max-w-lg mx-auto px-2 py-1 gap-0">
           {ML_MOBILE_STEPS.map((step, idx) => {
@@ -2216,7 +2224,7 @@ function MinhaListaOfertasMlPageInner() {
             <div className="w-6 h-6 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
               <Link2 className="w-3 h-3 text-[#e24c30]" />
           </div>
-            <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Histórico de links ML</h2>
+            <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Histórico de links Amazon</h2>
             {mlHistoryTotal > 0 ? (
               <span className="text-[9px] text-[#bebebe] bg-[#232328] px-1.5 py-px rounded-full border border-[#3e3e3e] shrink-0">
                 {mlHistoryTotal} {mlHistoryTotal === 1 ? "link" : "links"}
