@@ -11,6 +11,10 @@ export type AmazonSerpProduct = {
   priceOriginal: number | null;
   pricePromo: number | null;
   discountRate: number | null;
+  /** % do cupom (1–99) quando o cupom é em percentual; null se ausente. */
+  couponPercent: number | null;
+  /** Valor em R$ do cupom quando é cupom de valor fixo; null se ausente. */
+  couponAmount: number | null;
 };
 
 const UA =
@@ -44,26 +48,133 @@ function discountFromPrices(promo: number, original: number): number | null {
   return null;
 }
 
-function extractTitle(chunk: string): string {
+/**
+ * Remove prefixos de patrocínio que a Amazon adiciona no título de
+ * resultados de Sponsored Ads. Exemplos vistos em produção:
+ *   "Anúncio patrocinado – Apple iPhone 16 ..."
+ *   "Anúncio Patrocinado - Camiseta ..."
+ *   "Sponsored: Headphone ..."
+ *   "Patrocinado: Notebook ..."
+ *
+ * Regra: se o nome inteiro for só o prefixo, devolve string vazia
+ * (cai pra próximo fallback no chamador).
+ */
+function stripSponsoredPrefix(raw: string): string {
+  let s = raw.trim();
+  // Roda algumas vezes pra cobrir prefixos duplos (raro mas possível).
+  for (let i = 0; i < 3; i++) {
+    const m = s.match(
+      /^(?:an[uú]ncio\s+patrocinado|sponsored|patrocinado)\s*[:\-–—]?\s*/i,
+    );
+    if (!m || m[0].length === 0) break;
+    s = s.slice(m[0].length).trim();
+  }
+  return s;
+}
+
+function cleanTitleText(raw: string): string {
+  const t = raw
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripSponsoredPrefix(decodeHtmlEntities(t));
+}
+
+/**
+ * Tenta extrair o nome real do produto do chunk da SERP.
+ *
+ * A Amazon BR mistura no mesmo card o brand (ex.: "Genérico", "Pequenas empresas")
+ * e o título completo do produto. O brand costuma vir num span com classes
+ * `a-size-medium a-color-base` ou `a-size-base-plus a-color-base` SOZINHO,
+ * enquanto o título completo está dentro do `<h2>` do link `/dp/ASIN`.
+ *
+ * Estratégia (em ordem):
+ *   1) `<h2 aria-label="...">` ou `<h2>` com `<span>` interno (preferido — é o título oficial).
+ *   2) Texto cru do `<h2>` (fallback se não tiver span dentro).
+ *   3) Atributo `aria-label` de um link `<a ... href=".../dp/ASIN...">`.
+ *   4) Span com classes `a-size-medium`/`a-size-base-plus` `a-color-base` (último recurso —
+ *      pode ser o brand, mas melhor que string vazia).
+ */
+function extractTitle(chunk: string, asin: string): string {
+  const h2Aria = chunk.match(/<h2[^>]*aria-label="([^"]{6,500})"/i);
+  if (h2Aria?.[1]) {
+    const t = cleanTitleText(h2Aria[1]);
+    if (t.length > 3) return t;
+  }
+
+  const h2Span = chunk.match(/<h2\b[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>[\s\S]*?<\/h2>/i);
+  if (h2Span?.[1]) {
+    const t = cleanTitleText(h2Span[1]);
+    if (t.length > 3) return t;
+  }
+
+  const h2Bare = chunk.match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/i);
+  if (h2Bare?.[1]) {
+    const t = cleanTitleText(h2Bare[1]);
+    if (t.length > 3) return t;
+  }
+
+  const dpAria = chunk.match(
+    new RegExp(`<a[^>]*href="[^"]*\\/dp\\/${asin}[^"]*"[^>]*aria-label="([^"]{6,500})"`, "i"),
+  );
+  if (dpAria?.[1]) {
+    const t = cleanTitleText(dpAria[1].replace(/\s+Pular para.*$/i, ""));
+    if (t.length > 3) return t;
+  }
+
   const spanMedium = chunk.match(
     /<span[^>]*class="[^"]*a-size-medium[^"]*a-color-base[^"]*"[^>]*>([\s\S]*?)<\/span>/i,
   );
   if (spanMedium?.[1]) {
-    const t = spanMedium[1].replace(/<[^>]+>/g, "").trim();
-    if (t.length > 3) return decodeHtmlEntities(t);
+    const t = cleanTitleText(spanMedium[1]);
+    if (t.length > 3) return t;
   }
   const spanBase = chunk.match(
     /<span[^>]*class="[^"]*a-size-base-plus[^"]*a-color-base[^"]*"[^>]*>([\s\S]*?)<\/span>/i,
   );
   if (spanBase?.[1]) {
-    const t = spanBase[1].replace(/<[^>]+>/g, "").trim();
-    if (t.length > 3) return decodeHtmlEntities(t);
+    const t = cleanTitleText(spanBase[1]);
+    if (t.length > 3) return t;
   }
+
   const aria = chunk.match(/aria-label="([^"]{12,500})"/i);
   if (aria) {
-    return decodeHtmlEntities(aria[1].replace(/\s+Pular para.*$/i, "").trim());
+    return cleanTitleText(aria[1].replace(/\s+Pular para.*$/i, ""));
   }
   return "";
+}
+
+/**
+ * Extrai info de cupom da SERP (quando aparece). A Amazon mostra cupons em
+ * vários formatos: "Cupom de 15%", "R$ 5 de desconto com cupom", "Aplicar
+ * cupom de 10%". Tentamos primeiro percent depois valor fixo.
+ */
+function extractCoupon(chunk: string): { percent: number | null; amount: number | null } {
+  const text = chunk.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  const pctNear = text.match(
+    /cupom[^.]{0,40}?(\d{1,2})\s*%|(\d{1,2})\s*%\s*(?:off|de\s*desconto)?\s*(?:com\s*)?cupom|aplicar\s*cupom\s*de\s*(\d{1,2})\s*%/i,
+  );
+  if (pctNear) {
+    const v = pctNear[1] ?? pctNear[2] ?? pctNear[3];
+    if (v) {
+      const n = parseInt(v, 10);
+      if (n > 0 && n < 100) return { percent: n, amount: null };
+    }
+  }
+
+  const amtNear = text.match(
+    /cupom[^.]{0,40}?R\$\s*(\d{1,4}(?:[.,]\d{2})?)|R\$\s*(\d{1,4}(?:[.,]\d{2})?)\s*(?:de\s*desconto\s*)?(?:com\s*)?cupom/i,
+  );
+  if (amtNear) {
+    const raw = amtNear[1] ?? amtNear[2];
+    if (raw) {
+      const n = parseBrMoney(`R$ ${raw.includes(",") ? raw : `${raw},00`}`);
+      if (n != null && n > 0) return { percent: null, amount: n };
+    }
+  }
+
+  return { percent: null, amount: null };
 }
 
 function extractImage(chunk: string): string {
@@ -126,13 +237,14 @@ function parseAmazonSerpHtml(html: string, limit: number): AmazonSerpProduct[] {
       continue;
     }
     seen.add(asin);
-    const title = extractTitle(chunk);
+    const title = extractTitle(chunk, asin);
     const imageUrl = extractImage(chunk);
     const { promo, original } = extractPrices(chunk);
     const dr =
       original != null && promo != null && original > promo
         ? discountFromPrices(promo, original)
         : null;
+    const coupon = extractCoupon(chunk);
     out.push({
       asin,
       productName: title,
@@ -141,6 +253,8 @@ function parseAmazonSerpHtml(html: string, limit: number): AmazonSerpProduct[] {
       priceOriginal: original,
       pricePromo: promo,
       discountRate: dr,
+      couponPercent: coupon.percent,
+      couponAmount: coupon.amount,
     });
     pos = i + marker.length;
   }

@@ -18,6 +18,10 @@ export type MlSiteSearchProduct = {
   discountRate: number | null;
   currencyId: string;
   affiliateCommissionPct?: number | null;
+  /** Cupom em % (1–99) quando aplicável; null se não houver. */
+  couponPercent?: number | null;
+  /** Cupom de valor fixo em R$ quando aplicável; null se não houver. */
+  couponAmount?: number | null;
 };
 
 export function filterValidMlSiteSearchProducts(

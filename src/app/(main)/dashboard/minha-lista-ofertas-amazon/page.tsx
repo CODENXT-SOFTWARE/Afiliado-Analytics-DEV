@@ -72,6 +72,9 @@ type MlHistoryEntry = {
   pricePromo: number | null;
   priceOriginal: number | null;
   discountRate: number | null;
+  couponPercent: number | null;
+  couponAmount: number | null;
+  affiliateCommissionPct: number | null;
   createdAt: string;
 };
 
@@ -113,6 +116,16 @@ function MlOfferRowCard({
   const commEst =
     pct != null && pct > 0 && p.price != null ? mlEstCommissionFromPromoPrice(p.price, pct) : null;
   const hasComm = commEst != null;
+  const hasOriginal =
+    p.priceOriginal != null && p.price != null && p.priceOriginal > p.price;
+  const couponPct = p.couponPercent ?? null;
+  const couponAmt = p.couponAmount ?? null;
+  const hasCoupon = (couponPct != null && couponPct > 0) || (couponAmt != null && couponAmt > 0);
+  const couponLabel = couponPct != null && couponPct > 0
+    ? `Cupom ${Math.round(couponPct)}%`
+    : couponAmt != null && couponAmt > 0
+      ? `Cupom ${formatCurrency(couponAmt)}`
+      : null;
 
   return (
     <button
@@ -144,7 +157,7 @@ function MlOfferRowCard({
         <p
           className={cn(
             "font-semibold text-[#f0f0f2] leading-[1.35] pr-1",
-            compact ? "text-[12px] line-clamp-2 min-[420px]:line-clamp-1" : "text-[13px] min-[360px]:text-xs line-clamp-2 min-[420px]:line-clamp-1",
+            compact ? "text-[12px] line-clamp-2 min-[420px]:line-clamp-2" : "text-[13px] min-[360px]:text-xs line-clamp-2",
           )}
         >
           {p.productName}
@@ -153,6 +166,16 @@ function MlOfferRowCard({
           {p.price != null ? (
             <span className={cn("font-bold text-[#e24c30]", compact ? "text-[10px]" : "text-[11px] min-[360px]:text-xs")}>
               {formatCurrency(p.price)}
+            </span>
+          ) : null}
+          {hasOriginal ? (
+            <span
+              className={cn(
+                "text-[#9c9c9c] line-through whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+            >
+              {formatCurrency(p.priceOriginal as number)}
             </span>
           ) : null}
           {p.discountRate != null && p.discountRate > 0 ? (
@@ -165,7 +188,18 @@ function MlOfferRowCard({
               {fmtMlDisc(p.discountRate)}
             </span>
           ) : null}
-          <span className={cn("text-[#d8d8d8] whitespace-nowrap", compact ? "text-[9px]" : "text-[10px]")}>
+          {hasCoupon && couponLabel ? (
+            <span
+              className={cn(
+                "font-bold text-amber-300 bg-amber-500/10 px-1.5 py-px rounded-md border border-amber-500/20 whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title="Cupom disponível na página do produto"
+            >
+              {couponLabel}
+            </span>
+          ) : null}
+          <span className={cn("text-[#9c9c9c] whitespace-nowrap font-mono", compact ? "text-[9px]" : "text-[10px]")}>
             {p.itemId}
           </span>
         </div>
@@ -966,6 +1000,9 @@ function MinhaListaOfertasMlPageInner() {
           pricePromo: selectedMlProduct.price,
           priceOriginal: selectedMlProduct.priceOriginal,
           discountRate: selectedMlProduct.discountRate,
+          couponPercent: selectedMlProduct.couponPercent ?? null,
+          couponAmount: selectedMlProduct.couponAmount ?? null,
+          affiliateCommissionPct: selectedMlProduct.affiliateCommissionPct ?? null,
         }),
       });
       const hj = await hist.json();
@@ -1093,6 +1130,9 @@ function MinhaListaOfertasMlPageInner() {
             priceOriginal: entry.priceOriginal,
             pricePromo: entry.pricePromo,
             discountRate: entry.discountRate,
+            couponPercent: entry.couponPercent,
+            couponAmount: entry.couponAmount,
+            affiliateCommissionPct: entry.affiliateCommissionPct,
           }),
         });
         if (!res.ok) {
@@ -1924,12 +1964,44 @@ function MinhaListaOfertasMlPageInner() {
                         {formatCurrency(selectedMlProduct.price)}
                       </span>
                     ) : null}
+                    {selectedMlProduct.priceOriginal != null &&
+                    selectedMlProduct.price != null &&
+                    selectedMlProduct.priceOriginal > selectedMlProduct.price ? (
+                      <span className="text-[10px] text-[#9c9c9c] line-through">
+                        {formatCurrency(selectedMlProduct.priceOriginal)}
+                      </span>
+                    ) : null}
                     {selectedMlProduct.discountRate != null && selectedMlProduct.discountRate > 0 ? (
                       <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                         {fmtMlDisc(selectedMlProduct.discountRate)}
                       </span>
                     ) : null}
+                    {selectedMlProduct.couponPercent != null && selectedMlProduct.couponPercent > 0 ? (
+                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                        Cupom {Math.round(selectedMlProduct.couponPercent)}%
+                      </span>
+                    ) : selectedMlProduct.couponAmount != null && selectedMlProduct.couponAmount > 0 ? (
+                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                        Cupom {formatCurrency(selectedMlProduct.couponAmount)}
+                      </span>
+                    ) : null}
                   </div>
+                  {selectedMlProduct.affiliateCommissionPct != null &&
+                  selectedMlProduct.affiliateCommissionPct > 0 &&
+                  selectedMlProduct.price != null ? (
+                    (() => {
+                      const comm = mlEstCommissionFromPromoPrice(
+                        selectedMlProduct.price,
+                        selectedMlProduct.affiliateCommissionPct,
+                      );
+                      return comm != null ? (
+                        <p className="text-[10px] text-emerald-300 mt-1.5">
+                          💸 Comissão estimada: <span className="font-bold">{formatCurrency(comm)}</span>
+                          <span className="text-[#9c9c9c]"> ({selectedMlProduct.affiliateCommissionPct.toFixed(1).replace(/\.0$/, "")}%)</span>
+                        </p>
+                      ) : null;
+                    })()
+                  ) : null}
                 </div>
               </div>
 

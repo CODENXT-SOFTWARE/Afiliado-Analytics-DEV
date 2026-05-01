@@ -5,6 +5,9 @@ import { gateAmazon } from "@/lib/require-entitlements";
 
 export const dynamic = "force-dynamic";
 
+const SELECT_COLS =
+  "id, lista_id, image_url, product_name, price_original, price_promo, discount_rate, coupon_percent, coupon_amount, affiliate_commission_pct, converter_link, product_page_url, created_at";
+
 function mapItem(r: Record<string, unknown>) {
   return {
     id: r.id,
@@ -14,10 +17,20 @@ function mapItem(r: Record<string, unknown>) {
     priceOriginal: r.price_original != null ? Number(r.price_original) : null,
     pricePromo: r.price_promo != null ? Number(r.price_promo) : null,
     discountRate: r.discount_rate != null ? Number(r.discount_rate) : null,
+    couponPercent: r.coupon_percent != null ? Number(r.coupon_percent) : null,
+    couponAmount: r.coupon_amount != null ? Number(r.coupon_amount) : null,
+    affiliateCommissionPct:
+      r.affiliate_commission_pct != null ? Number(r.affiliate_commission_pct) : null,
     converterLink: r.converter_link ?? "",
     productPageUrl: String(r.product_page_url ?? "").trim(),
     createdAt: r.created_at,
   };
+}
+
+function numOrNull(v: unknown): number | null {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 export async function GET(req: Request) {
@@ -33,9 +46,7 @@ export async function GET(req: Request) {
     if (listaId) {
       const { data: rows, error } = await supabase
         .from("minha_lista_ofertas_amazon")
-        .select(
-          "id, lista_id, image_url, product_name, price_original, price_promo, discount_rate, converter_link, product_page_url, created_at",
-        )
+        .select(SELECT_COLS)
         .eq("user_id", user.id)
         .eq("lista_id", listaId)
         .order("created_at", { ascending: true });
@@ -46,9 +57,7 @@ export async function GET(req: Request) {
 
     const { data: rows, error } = await supabase
       .from("minha_lista_ofertas_amazon")
-      .select(
-        "id, lista_id, image_url, product_name, price_original, price_promo, discount_rate, converter_link, product_page_url, created_at",
-      )
+      .select(SELECT_COLS)
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
@@ -90,6 +99,12 @@ export async function POST(req: Request) {
     const normalizedPromo = effectiveListaOfferPromoPrice(poFin, ppFin, drFin);
     if (normalizedPromo != null) pricePromo = normalizedPromo;
 
+    const couponPercent = numOrNull(body?.couponPercent ?? body?.coupon_percent);
+    const couponAmount = numOrNull(body?.couponAmount ?? body?.coupon_amount);
+    const affiliateCommissionPct = numOrNull(
+      body?.affiliateCommissionPct ?? body?.affiliate_commission_pct,
+    );
+
     const { data: row, error } = await supabase
       .from("minha_lista_ofertas_amazon")
       .insert({
@@ -100,12 +115,13 @@ export async function POST(req: Request) {
         price_original: Number.isFinite(priceOriginal as number) ? priceOriginal : null,
         price_promo: Number.isFinite(pricePromo as number) ? pricePromo : null,
         discount_rate: Number.isFinite(discountRate as number) ? discountRate : null,
+        coupon_percent: couponPercent,
+        coupon_amount: couponAmount,
+        affiliate_commission_pct: affiliateCommissionPct,
         converter_link: converterLink,
         product_page_url: productPageUrl,
       })
-      .select(
-        "id, lista_id, image_url, product_name, price_original, price_promo, discount_rate, converter_link, product_page_url, created_at",
-      )
+      .select(SELECT_COLS)
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -160,19 +176,38 @@ export async function PATCH(req: Request) {
     const normalizedPromo = effectiveListaOfferPromoPrice(poFin, ppFin, drFin);
     if (normalizedPromo != null) ppFin = normalizedPromo;
 
+    const couponPercent = numOrNull(body?.couponPercent ?? body?.coupon_percent);
+    const couponAmount = numOrNull(body?.couponAmount ?? body?.coupon_amount);
+    const affiliateCommissionPct = numOrNull(
+      body?.affiliateCommissionPct ?? body?.affiliate_commission_pct,
+    );
+    const updatePayload: Record<string, unknown> = {
+      product_name: String(body?.productName ?? body?.product_name ?? "").trim(),
+      price_original: poFin,
+      price_promo: ppFin,
+      discount_rate: drFin,
+    };
+    // Só atualizamos cupom/comissão quando o cliente realmente mandou no body —
+    // assim o PATCH "editar produto" antigo (que só envia preço) não zera campos.
+    if (Object.prototype.hasOwnProperty.call(body ?? {}, "couponPercent") ||
+        Object.prototype.hasOwnProperty.call(body ?? {}, "coupon_percent")) {
+      updatePayload.coupon_percent = couponPercent;
+    }
+    if (Object.prototype.hasOwnProperty.call(body ?? {}, "couponAmount") ||
+        Object.prototype.hasOwnProperty.call(body ?? {}, "coupon_amount")) {
+      updatePayload.coupon_amount = couponAmount;
+    }
+    if (Object.prototype.hasOwnProperty.call(body ?? {}, "affiliateCommissionPct") ||
+        Object.prototype.hasOwnProperty.call(body ?? {}, "affiliate_commission_pct")) {
+      updatePayload.affiliate_commission_pct = affiliateCommissionPct;
+    }
+
     const { data: row, error } = await supabase
       .from("minha_lista_ofertas_amazon")
-      .update({
-        product_name: String(body?.productName ?? body?.product_name ?? "").trim(),
-        price_original: poFin,
-        price_promo: ppFin,
-        discount_rate: drFin,
-      })
+      .update(updatePayload)
       .eq("id", id)
       .eq("user_id", user.id)
-      .select(
-        "id, lista_id, image_url, product_name, price_original, price_promo, discount_rate, converter_link, product_page_url, created_at",
-      )
+      .select(SELECT_COLS)
       .maybeSingle();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

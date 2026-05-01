@@ -6,12 +6,43 @@ import {
   type AmazonSerpProduct,
 } from "@/lib/amazon/amazon-serp-search";
 import { ML_LISTA_CATEGORY_OPTIONS, isMlListaCategorySlug } from "@/lib/amazon/ml-lista-category-slugs";
+import { amazonCommissionPctForCategory } from "@/lib/amazon/amazon-commission-rates";
+import { fetchAmazonPdpCoupon } from "@/lib/amazon/amazon-pdp-coupon";
+
+/**
+ * Quantos itens do topo da SERP a gente enriquece batendo na PDP pra pegar
+ * cupom real. Acima disso, o usuário ainda vê o produto, só não vê cupom.
+ * Mantém o tempo total da request controlado.
+ */
+const PDP_COUPON_ENRICH_LIMIT = 12;
+const PDP_COUPON_TIMEOUT_MS = 4500;
+
+async function enrichWithPdpCoupons(
+  products: AmazonSerpProduct[],
+  cookieHeader: string,
+): Promise<void> {
+  const targets = products
+    .slice(0, PDP_COUPON_ENRICH_LIMIT)
+    .filter((p) => p.couponPercent == null && p.couponAmount == null && /^[A-Z0-9]{10}$/.test(p.asin));
+  if (targets.length === 0) return;
+  await Promise.all(
+    targets.map(async (p) => {
+      const coupon = await fetchAmazonPdpCoupon({
+        asin: p.asin,
+        cookieHeader,
+        timeoutMs: PDP_COUPON_TIMEOUT_MS,
+      });
+      if (coupon.percent != null) p.couponPercent = coupon.percent;
+      if (coupon.amount != null) p.couponAmount = coupon.amount;
+    }),
+  );
+}
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /** Mesmo formato que `/api/mercadolivre/product-search` → UI do gerador (clone ML). */
-function mapToClientProduct(p: AmazonSerpProduct) {
+function mapToClientProduct(p: AmazonSerpProduct, commissionPct: number) {
   const promo = p.pricePromo ?? null;
   const orig = p.priceOriginal ?? null;
   let dr = p.discountRate;
@@ -27,6 +58,9 @@ function mapToClientProduct(p: AmazonSerpProduct) {
     priceOriginal: orig,
     discountRate: dr,
     currencyId: "BRL",
+    affiliateCommissionPct: commissionPct,
+    couponPercent: p.couponPercent ?? null,
+    couponAmount: p.couponAmount ?? null,
   };
 }
 
@@ -76,7 +110,9 @@ async function runSearch(args: { keyword: string; categorySlug: string; limit: n
       limit: args.limit,
       cookieHeader: args.cookieHeader,
     });
-    const products = raw.map(mapToClientProduct);
+    await enrichWithPdpCoupons(raw, args.cookieHeader);
+    const commissionPct = amazonCommissionPctForCategory(cat);
+    const products = raw.map((p) => mapToClientProduct(p, commissionPct));
     if (products.length === 0) {
       return NextResponse.json({
         products: [],

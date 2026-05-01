@@ -44,6 +44,9 @@ type Item = {
   priceOriginal: number | null;
   pricePromo: number | null;
   discountRate: number | null;
+  couponPercent: number | null;
+  couponAmount: number | null;
+  affiliateCommissionPct: number | null;
   converterLink: string;
   productPageUrl?: string;
   createdAt: string;
@@ -349,6 +352,9 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
       priceOriginal: item.priceOriginal,
       pricePromo: item.pricePromo,
       discountRate: item.discountRate,
+      couponPercent: item.couponPercent,
+      couponAmount: item.couponAmount,
+      commissionPct: item.affiliateCommissionPct,
       converterLink: item.converterLink,
       formatCurrency,
     });
@@ -718,13 +724,63 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
                                           </button>
                                         </div>
                                       </div>
-                                      <p className="text-sm text-text-secondary mt-1">
-                                        💰 Preço:{" "}
-                                        {item.discountRate != null && item.discountRate > 0 && (
-                                          <span className="text-red-400 font-medium">-{Math.round(item.discountRate)}% </span>
-                                        )}
-                                        <span className="text-emerald-400 font-medium">✅ {displayPrecoPorLista(item)}</span>
+                                      <p className="text-sm text-text-secondary mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                        <span className="shrink-0">💰 Preço:</span>
+                                        {item.discountRate != null && item.discountRate > 0 ? (
+                                          <span className="text-red-400 font-semibold">-{Math.round(item.discountRate)}%</span>
+                                        ) : null}
+                                        {item.priceOriginal != null &&
+                                        Number.isFinite(item.priceOriginal) &&
+                                        (effectiveListaOfferPromoPrice(item.priceOriginal, item.pricePromo, item.discountRate) ?? item.pricePromo) != null &&
+                                        item.priceOriginal >
+                                          (effectiveListaOfferPromoPrice(item.priceOriginal, item.pricePromo, item.discountRate) ?? item.pricePromo ?? 0) ? (
+                                          <span className="text-[#9c9c9c] line-through">
+                                            🔴 {formatCurrency(item.priceOriginal)}
+                                          </span>
+                                        ) : null}
+                                        <span className="text-text-secondary">por</span>
+                                        <span className="text-emerald-400 font-bold">✅ {displayPrecoPorLista(item)}</span>
                                       </p>
+                                      {item.couponPercent != null && item.couponPercent > 0 ? (
+                                        <p className="text-xs text-amber-300 mt-1 flex items-center gap-1.5">
+                                          <span>🎟️</span>
+                                          <span className="font-semibold">Cupom de {Math.round(item.couponPercent)}%</span>
+                                          <span className="text-[#9c9c9c]">no checkout</span>
+                                        </p>
+                                      ) : item.couponAmount != null && item.couponAmount > 0 ? (
+                                        <p className="text-xs text-amber-300 mt-1 flex items-center gap-1.5">
+                                          <span>🎟️</span>
+                                          <span className="font-semibold">Cupom de {formatCurrency(item.couponAmount)}</span>
+                                          <span className="text-[#9c9c9c]">no checkout</span>
+                                        </p>
+                                      ) : null}
+                                      {item.affiliateCommissionPct != null && item.affiliateCommissionPct > 0 ? (
+                                        (() => {
+                                          const promo =
+                                            effectiveListaOfferPromoPrice(item.priceOriginal, item.pricePromo, item.discountRate) ??
+                                            item.pricePromo;
+                                          const comm =
+                                            promo != null && Number.isFinite(promo)
+                                              ? Math.round(promo * (item.affiliateCommissionPct / 100) * 100) / 100
+                                              : null;
+                                          return comm != null ? (
+                                            <p className="text-xs text-emerald-300 mt-1 flex items-center gap-1.5">
+                                              <span>💸</span>
+                                              <span className="font-semibold">Comissão Amazon: {item.affiliateCommissionPct.toFixed(1).replace(/\.0$/, "")}%</span>
+                                              <span className="text-emerald-400">· {formatCurrency(comm)}</span>
+                                            </p>
+                                          ) : null;
+                                        })()
+                                      ) : null}
+                                      <p className="text-[11px] text-text-secondary mt-1.5 flex items-start gap-1.5">
+                                        <span className="shrink-0">🏷️</span>
+                                        <span className="text-[#bebebe]">PROMOÇÃO - CLIQUE NO LINK 👇</span>
+                                      </p>
+                                      {item.converterLink ? (
+                                        <p className="text-[11px] text-emerald-400 mt-0.5 break-all font-mono leading-tight">
+                                          {item.converterLink}
+                                        </p>
+                                      ) : null}
                                       <div className="flex flex-wrap items-center gap-1 mt-2">
                                         <IconBtn
                                           title={copiedItemId === item.id ? "Copiado!" : "Copiar link"}

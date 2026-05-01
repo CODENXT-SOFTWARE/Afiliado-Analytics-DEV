@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from("amazon_link_history")
       .select(
-        "id, short_link, origin_url, product_name, image_url, item_id, price_promo, price_original, discount_rate, created_at",
+        "id, short_link, origin_url, product_name, image_url, item_id, price_promo, price_original, discount_rate, coupon_percent, coupon_amount, affiliate_commission_pct, created_at",
         { count: "exact" },
       )
       .eq("user_id", userId)
@@ -57,6 +57,10 @@ export async function GET(req: Request) {
       pricePromo: r.price_promo != null ? Number(r.price_promo) : null,
       priceOriginal: r.price_original != null ? Number(r.price_original) : null,
       discountRate: r.discount_rate != null ? Number(r.discount_rate) : null,
+      couponPercent: r.coupon_percent != null ? Number(r.coupon_percent) : null,
+      couponAmount: r.coupon_amount != null ? Number(r.coupon_amount) : null,
+      affiliateCommissionPct:
+        r.affiliate_commission_pct != null ? Number(r.affiliate_commission_pct) : null,
       createdAt: r.created_at,
     }));
 
@@ -83,6 +87,11 @@ export async function POST(req: Request) {
       );
     }
 
+    const num = (v: unknown) => {
+      if (v == null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
     const { error } = await supabase.from("amazon_link_history").insert({
       user_id: userId,
       short_link: shortLink,
@@ -90,9 +99,12 @@ export async function POST(req: Request) {
       product_name: String(body?.productName ?? "").trim(),
       image_url: String(body?.imageUrl ?? "").trim(),
       item_id: String(body?.itemId ?? body?.asin ?? "").trim(),
-      price_promo: body?.pricePromo != null ? Number(body.pricePromo) : null,
-      price_original: body?.priceOriginal != null ? Number(body.priceOriginal) : null,
-      discount_rate: body?.discountRate != null ? Number(body.discountRate) : null,
+      price_promo: num(body?.pricePromo),
+      price_original: num(body?.priceOriginal),
+      discount_rate: num(body?.discountRate),
+      coupon_percent: num(body?.couponPercent),
+      coupon_amount: num(body?.couponAmount),
+      affiliate_commission_pct: num(body?.affiliateCommissionPct),
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
