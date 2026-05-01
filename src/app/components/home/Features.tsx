@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
+import NasaParticles from "./NasaParticles";
 
 const features = [
   {
@@ -193,16 +194,18 @@ function FeatureCard({ feature, isMobile, inFocus, index }: { feature: (typeof f
           }}
         />
         <div className={`absolute inset-0 rounded-[24px] z-[1] pointer-events-none transition-all duration-500 ${active
-          ? "shadow-[inset_0_0_0_1.5px_rgba(255,107,0,0.5)]"
-          : "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)] group-hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.13)]"
+          ? "shadow-[inset_0_0_0_1.5px_rgba(255,107,0,0.5)] light:shadow-[inset_0_0_0_1.5px_rgba(234,88,12,0.35)]"
+          : "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)] group-hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.13)] light:shadow-[inset_0_0_0_1px_rgba(234,88,12,0.14)] light:group-hover:shadow-[inset_0_0_0_1px_rgba(234,88,12,0.26)]"
           }`} />
 
-        <div className={`relative z-[2] flex h-full flex-col rounded-[22.5px] overflow-hidden transition-colors duration-700 ${active ? "bg-[#1e1e24]" : "bg-[#16161c] group-hover:bg-[#1c1c24]"
+        <div className={`relative z-[2] flex h-full flex-col rounded-[22.5px] overflow-hidden transition-colors duration-700 ${active
+          ? "bg-[#1e1e24] light:bg-white light:shadow-[0_14px_44px_-12px_rgba(234,88,12,0.18)] light:ring-1 light:ring-orange-200/55"
+          : "bg-[#16161c] group-hover:bg-[#1c1c24] light:bg-white light:group-hover:bg-[#fffdfb] light:shadow-md light:shadow-orange-200/25 light:ring-1 light:ring-orange-100/70"
           }`}>
           <div className="relative flex flex-col h-full p-7 lg:p-9">
             <div className={`absolute top-3 right-5 lg:top-4 lg:right-7 font-[var(--font-space-grotesk)] text-[5rem] lg:text-[7rem] font-black leading-none select-none pointer-events-none transition-all duration-700 ${active
-              ? "text-[#FF6B00]/[0.06]"
-              : "text-white/[0.02] group-hover:text-white/[0.04]"
+              ? "text-[#FF6B00]/[0.06] light:text-[#ea580c]/[0.09]"
+              : "text-white/[0.02] group-hover:text-white/[0.04] light:text-zinc-400/[0.35] light:group-hover:text-zinc-400/[0.45]"
               }`}>
               {displayIndex}
             </div>
@@ -221,14 +224,14 @@ function FeatureCard({ feature, isMobile, inFocus, index }: { feature: (typeof f
             <div className="relative z-10 flex flex-col h-full gap-5">
               <div className="flex items-center justify-between">
                 <span className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-[2px] transition-all duration-500 ${active
-                  ? "bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/30"
-                  : "bg-white/[0.03] text-white/30 border border-white/[0.06] group-hover:text-white/45 group-hover:border-white/10"
+                  ? "bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/30 light:bg-orange-50 light:text-orange-700 light:border-orange-300/70"
+                  : "bg-white/[0.03] text-white/30 border border-white/[0.06] group-hover:text-white/45 group-hover:border-white/10 light:bg-orange-50/90 light:text-orange-800 light:border-orange-200/90 light:group-hover:text-orange-900 light:group-hover:border-orange-300"
                   }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${active ? "bg-[#FF6B00] shadow-[0_0_6px_rgba(255,107,0,0.6)]" : "bg-white/20"
+                  <span className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${active ? "bg-[#FF6B00] shadow-[0_0_6px_rgba(255,107,0,0.6)] light:bg-orange-500" : "bg-white/20 light:bg-orange-400"
                     }`} />
                   {feature.tag}
                 </span>
-                <span className={`font-[var(--font-space-grotesk)] text-[11px] font-semibold tracking-[3px] transition-colors duration-500 ${active ? "text-[#FF6B00]/40" : "text-white/10 group-hover:text-white/15"
+                <span className={`font-[var(--font-space-grotesk)] text-[11px] font-semibold tracking-[3px] transition-colors duration-500 ${active ? "text-[#FF6B00]/40 light:text-orange-600/50" : "text-white/10 group-hover:text-white/15 light:text-zinc-400 light:group-hover:text-zinc-500"
                   }`}>
                   {displayIndex}/{String(features.length).padStart(2, "0")}
                 </span>
@@ -237,12 +240,12 @@ function FeatureCard({ feature, isMobile, inFocus, index }: { feature: (typeof f
               <div className="flex items-center gap-5 mt-1">
                 <div className="relative flex-shrink-0">
                   <div
-                    className={`relative flex h-[56px] w-[56px] items-center justify-center rounded-full border transition-all duration-700 ${active ? "scale-110 border-[#FF6B00]/40 shadow-[0_0_20px_rgba(255,107,0,0.2)]" : "border-white/[0.08] group-hover:border-[#FF6B00]/30"
+                    className={`relative flex h-[56px] w-[56px] items-center justify-center rounded-full border transition-all duration-700 ${active ? "scale-110 border-[#FF6B00]/40 shadow-[0_0_20px_rgba(255,107,0,0.2)] light:border-orange-300 light:shadow-[0_0_18px_rgba(251,146,60,0.35)]" : "border-white/[0.08] group-hover:border-[#FF6B00]/30 light:border-orange-200 light:bg-orange-50/60"
                       }`}
                   >
                     <div className={`absolute inset-0 rounded-full transition-all duration-700 ${active
-                      ? "bg-gradient-to-br from-[#FF6B00]/25 to-[#FF6B00]/5"
-                      : "bg-gradient-to-br from-white/[0.06] to-white/[0.02] group-hover:from-[#FF6B00]/12 group-hover:to-[#FF6B00]/3"
+                      ? "bg-gradient-to-br from-[#FF6B00]/25 to-[#FF6B00]/5 light:from-orange-100 light:to-orange-50"
+                      : "bg-gradient-to-br from-white/[0.06] to-white/[0.02] group-hover:from-[#FF6B00]/12 group-hover:to-[#FF6B00]/3 light:from-orange-100/90 light:to-orange-50/50 light:group-hover:from-orange-100 light:group-hover:to-orange-50"
                       }`} />
                     <Icon className="h-6 w-6 text-[#FF6B00] relative z-10" strokeWidth={1.8} />
                   </div>
@@ -250,7 +253,7 @@ function FeatureCard({ feature, isMobile, inFocus, index }: { feature: (typeof f
                     }`} />
                 </div>
 
-                <h3 className={`font-[var(--font-space-grotesk)] text-[1.35rem] lg:text-[1.65rem] font-bold tracking-[-0.03em] leading-[1.15] transition-colors duration-500 ${active ? "text-white" : "text-white/80 group-hover:text-white"
+                <h3 className={`font-[var(--font-space-grotesk)] text-[1.35rem] lg:text-[1.65rem] font-bold tracking-[-0.03em] leading-[1.15] transition-colors duration-500 ${active ? "text-white light:text-zinc-900" : "text-white/80 group-hover:text-white light:text-zinc-800 light:group-hover:text-zinc-950"
                   }`}>
                   {feature.title}
                 </h3>
@@ -261,7 +264,7 @@ function FeatureCard({ feature, isMobile, inFocus, index }: { feature: (typeof f
                   }`} />
               </div>
 
-              <p className={`text-[0.98rem] lg:text-[1.05rem] leading-[1.75] tracking-[0.005em] transition-all duration-500 ${active ? "text-white/70" : "text-[#6b6b78] group-hover:text-white/50"
+              <p className={`text-[0.98rem] lg:text-[1.05rem] leading-[1.75] tracking-[0.005em] transition-all duration-500 ${active ? "text-white/70 light:text-zinc-600" : "text-[#6b6b78] group-hover:text-white/50 light:text-zinc-600 light:group-hover:text-zinc-700"
                 }`}>
                 {feature.description}
               </p>
@@ -284,21 +287,35 @@ export default function FeaturesHybrid() {
   ]);
 
   return (
-    <section id="features" className="relative bg-dark-bg text-white font-['Inter'] scroll-mt-24 overflow-x-clip transition-colors duration-500">
+    <section id="features" className="relative bg-dark-bg light:bg-[#faf9f7] text-white light:text-zinc-900 font-['Inter'] scroll-mt-24 overflow-x-clip transition-colors duration-500">
+      <div className="pointer-events-none absolute inset-0 z-0 min-h-full overflow-hidden">
+        <div
+          className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,107,53,0.06),transparent_45%)] light:bg-[radial-gradient(ellipse_at_30%_20%,rgba(234,88,12,0.07),transparent_50%)]"
+          aria-hidden
+        />
+        <NasaParticles id="tsparticles-features" />
+      </div>
+
+      {/* Mistura com a section anterior: partículas só aparecem depois do degradê (Tailwind: gradiente multi-stop em classe arbitrária) */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-[8] h-[clamp(7rem,22vw,15rem)] bg-[linear-gradient(180deg,#0f0f0f_0%,rgba(15,15,15,0.93)_22%,rgba(15,15,15,0.55)_52%,transparent_100%)] light:bg-[linear-gradient(180deg,#faf9f7_0%,rgba(250,249,247,0.94)_24%,rgba(250,249,247,0.52)_54%,transparent_100%)]"
+        aria-hidden
+      />
+
       <div className="container relative mx-auto px-6 flex flex-col lg:flex-row z-10 max-w-[1400px]">
         {/* TITULO E DESCRIÇÃO - Centralizados no mobile */}
         <div className="w-full lg:w-[50%] h-auto lg:h-screen lg:sticky lg:top-0 flex flex-col items-center lg:items-start justify-center pt-16 pb-8 lg:pt-0 lg:pb-0 lg:pr-16 z-10">
           <div className="space-y-8 text-center lg:text-left">
             <div className="inline-flex flex-col">
-              <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white">
+              <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white light:text-zinc-900">
                 Um arsenal completo<br />
                 <span className="text-[#ff6b35]">para afiliados sérios.</span>
               </h2>
             </div>
 
             <div className="space-y-6">
-              <p className="font-['Inter'] text-[16px] leading-[1.8] text-white/60 max-w-[400px] mx-auto lg:mx-0">
-                Analytics, automação, IA e links — tudo integrado para você escalar suas vendas na Shopee sem abrir 12 abas differentes.
+              <p className="font-['Inter'] text-[16px] leading-[1.8] text-white/60 light:text-zinc-600 max-w-[400px] mx-auto lg:mx-0">
+                Analytics, automação, IA e links — tudo integrado para você escalar suas vendas na Shopee sem abrir 12 abas diferentes.
               </p>
             </div>
           </div>

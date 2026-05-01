@@ -47,7 +47,8 @@ html.light {
   --background: #FFFFFF;
   --foreground: #171717;
 
-  --color-dark-bg: #F4F4F5;
+  /* Mesmo tom das sections da landing (#faf9f7) para não haver “degrau” entre Mockup, Features, Depoimentos e Pricing */
+  --color-dark-bg: #faf9f7;
   --color-dark-card: #FFFFFF;
   --color-dark-border: #E4E4E7;
   --color-dark-tooltip: #FFFFFF;
@@ -124,7 +125,7 @@ html.light .bg-neutral-900\/95,
 html.light .bg-black,
 html.light .bg-black\/80,
 html.light .bg-black\/90 {
-  background-color: #F4F4F5 !important;
+  background-color: #faf9f7 !important;
 }
 
 html.light .hover\:bg-zinc-800\/98:hover,
@@ -179,7 +180,7 @@ html.light .hover\:bg-zinc-700:hover,
 html.light .hover\:bg-slate-800:hover,
 html.light .hover\:bg-gray-800:hover,
 html.light .hover\:bg-neutral-800:hover {
-  background-color: #F4F4F5 !important;
+  background-color: #faf9f7 !important;
 }
 
 /* —— Borders escuras → cinza claro —— */
@@ -397,38 +398,97 @@ html.light .placeholder\:text-gray-600::placeholder {
 /* —— Scrollbar fina no modo claro —— */
 html.light .scrollbar-thin {
   color-scheme: light;
-  scrollbar-color: #A1A1AA #F4F4F5;
+  scrollbar-color: #ee4d2d #ffedd5;
 }
 
 html.light .scrollbar-thin::-webkit-scrollbar-track {
-  background: #F4F4F5;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
 }
 
 html.light .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #A1A1AA;
-  border-color: #F4F4F5;
+  background: linear-gradient(180deg, #ff8f6b 0%, #ee4d2d 100%);
+  border-color: #ffedd5;
 }
 
 html.light .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #EE4D2D;
+  background: #ee4d2d;
 }
 
 /* —— Scrollbar Shopee no modo claro —— */
 html.light .scrollbar-shopee {
-  scrollbar-color: #EE4D2D #F4F4F5;
+  scrollbar-color: #ee4d2d #ffedd5;
 }
 
 html.light .scrollbar-shopee::-webkit-scrollbar-track {
-  background: #F4F4F5;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
 }
 
 html.light .scrollbar-shopee::-webkit-scrollbar-thumb {
-  border-color: #F4F4F5;
+  border-color: #ffedd5;
 }
 
 /* —— color-scheme no modo claro: controles nativos (checkbox/radio/date) —— */
 html.light {
   color-scheme: light;
+}
+
+/* —— Barra de rolagem da página (viewport) — tema claro: trilho laranja clarinho + thumb Shopee —— */
+@media (pointer: fine) {
+  html.light {
+    scrollbar-width: thin;
+    scrollbar-color: #ee4d2d #ffedd5;
+  }
+
+  html.light::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  html.light::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 55%, #fed7aa 100%);
+    border-radius: 10px;
+  }
+
+  html.light::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ff8f6b 0%, #ee4d2d 55%, #e7381a 100%);
+    border-radius: 10px;
+    border: 2px solid #ffedd5;
+    box-shadow: 0 0 10px rgba(238, 77, 45, 0.25);
+  }
+
+  html.light::-webkit-scrollbar-thumb:hover {
+    background: #ee4d2d;
+    border-color: #fdba74;
+  }
+
+  html.light::-webkit-scrollbar-button:single-button {
+    display: block;
+    height: 14px;
+    width: 12px;
+    background: #ffedd5;
+  }
+
+  html.light::-webkit-scrollbar-button:vertical:decrement {
+    display: block;
+    height: 14px;
+    width: 12px;
+    background-color: #ffedd5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%23EE4D2D' d='M6 4L2 8h8L6 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    border: none;
+  }
+
+  html.light::-webkit-scrollbar-button:vertical:increment {
+    display: block;
+    height: 14px;
+    width: 12px;
+    background-color: #ffedd5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%23EE4D2D' d='M6 8l4-4H2l4 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    border: none;
+  }
 }
 
 /* —— Toolist trigger (bolinha com ícone "i") ——
@@ -844,7 +904,7 @@ html.light .ring-offset-zinc-950,
 html.light .ring-offset-zinc-900,
 html.light .focus-visible\:ring-offset-zinc-950:focus-visible,
 html.light .focus-visible\:ring-offset-zinc-900:focus-visible {
-  --tw-ring-offset-color: #F4F4F5 !important;
+  --tw-ring-offset-color: #faf9f7 !important;
 }
 
 /* —— Date picker nativo: força color-scheme light no claro ——
@@ -920,6 +980,76 @@ body {
 @media (min-width: 768px) {
   .embla__slide {
     flex: 0 0 33.33%;
+  }
+}
+
+/* ── Landing: halos / “blobs” de luz — movimento flutuante suave ── */
+@keyframes landing-glow-drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(18px, -14px) scale(1.02);
+  }
+  66% {
+    transform: translate(-14px, 12px) scale(1);
+  }
+}
+
+@keyframes landing-glow-drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-20px, 16px) scale(1.03);
+  }
+}
+
+@keyframes landing-glow-drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(16px, -18px);
+  }
+}
+
+.animate-landing-glow-a {
+  animation: landing-glow-drift-a 12s ease-in-out infinite;
+}
+
+.animate-landing-glow-a-slow {
+  animation: landing-glow-drift-a 22s ease-in-out infinite;
+}
+
+.animate-landing-glow-b {
+  animation: landing-glow-drift-b 15s ease-in-out infinite reverse;
+}
+
+.animate-landing-glow-b-slow {
+  animation: landing-glow-drift-b 26s ease-in-out infinite reverse;
+}
+
+.animate-landing-glow-c {
+  animation: landing-glow-drift-c 14s ease-in-out infinite;
+}
+
+.animate-landing-glow-c-slow {
+  animation: landing-glow-drift-c 20s ease-in-out infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .animate-landing-glow-a,
+  .animate-landing-glow-a-slow,
+  .animate-landing-glow-b,
+  .animate-landing-glow-b-slow,
+  .animate-landing-glow-c,
+  .animate-landing-glow-c-slow {
+    animation: none !important;
   }
 }
 

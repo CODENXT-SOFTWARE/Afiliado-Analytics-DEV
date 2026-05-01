@@ -1687,8 +1687,10 @@ function StepLista(p: WizardProps) {
 // ─── Step 3: Conteúdo + Sub IDs ────────────────────────────────────────────────
 function StepConteudo(p: WizardProps) {
   const keywordCount = p.keywords.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean).length;
+  const showSubIdsRastreamento =
+    p.contentMode === "keywords" || (p.contentMode === "list" && p.offerSource === "shopee");
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+    <div className={cn("grid grid-cols-1 gap-4 sm:gap-6", showSubIdsRastreamento && "md:grid-cols-2")}>
       <div className="flex flex-col gap-3 min-w-0">
         <FormLabel>Tipo de Conteúdo</FormLabel>
         <div className="flex flex-col sm:flex-row rounded-xl overflow-hidden border border-[#2c2c32]">
@@ -1912,25 +1914,12 @@ function StepConteudo(p: WizardProps) {
                 )}
               </>
             )}
-            <p className="text-[9px] text-[#a0a0a0] mt-2 leading-relaxed">
-              {p.offerSource === "crossover" ? (
-                <>
-                  <span className="text-amber-400/90 font-semibold">Crossover:</span> Shopee + ML viram uma única fila no mesmo bot.
-                </>
-              ) : p.offerSource === "infoprodutor" ? (
-                <>
-                  <span className="text-emerald-400/90 font-semibold">Infoprodutor:</span> seus produtos próprios (imagem, título, link) enviados pelo bot.
-                </>
-              ) : (
-                <>A lista substitui as keywords: na automação, um produto por vez em rotação.</>
-              )}
-            </p>
           </div>
         )}
       </div>
 
-      {/* Sub IDs (apenas em modo keywords ou listas não-shopee) */}
-      {(p.contentMode === "keywords" || p.offerSource !== "shopee") && (
+      {/* Sub IDs (keywords ou lista Shopee apenas) */}
+      {showSubIdsRastreamento && (
         <div className="flex flex-col gap-3 min-w-0">
           <FormLabel>
             <span className="inline-flex items-center gap-1 flex-wrap">

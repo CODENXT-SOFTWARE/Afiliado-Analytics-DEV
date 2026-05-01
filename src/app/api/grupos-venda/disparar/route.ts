@@ -15,6 +15,7 @@ import {
   resolveGruposVendaListaWebhookUrl,
 } from "@/lib/grupos-venda-webhook";
 import { effectiveListaOfferPromoPrice } from "@/lib/lista-ofertas-effective-promo";
+import { interleaveCrossover } from "@/lib/grupos-venda-crossover";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -109,11 +110,10 @@ export async function POST(req: Request) {
     const crossoverLista = !!listaOfertasId && !!listaOfertasMlId;
     const listaWebhookUrl = resolveGruposVendaListaWebhookUrl(crossoverLista);
 
-    const dispararListaSalva = async (
+    const carregarItensListaSalva = async (
       table: "minha_lista_ofertas" | "minha_lista_ofertas_ml",
       fk: string,
-      webhookUrl: string,
-    ) => {
+    ): Promise<SavedOfferRow[]> => {
       const { data: itens, error: qErr } = await supabase
         .from(table)
         .select("product_name, image_url, price_original, price_promo, discount_rate, converter_link")
@@ -122,51 +122,87 @@ export async function POST(req: Request) {
         .order("created_at", { ascending: true });
       if (qErr) {
         errors.push({ keyword: "(lista)", error: qErr.message });
+        return [];
+      }
+      return (itens ?? []) as SavedOfferRow[];
+    };
+
+    const dispararItemListaSalva = async (
+      item: SavedOfferRow,
+      fallbackLabel: string,
+      webhookUrl: string,
+    ) => {
+      const linkAfiliado = item.converter_link?.trim() || "";
+      const label = item.product_name?.trim() || fallbackLabel;
+      if (!linkAfiliado) {
+        errors.push({ keyword: label, error: "Sem link de afiliado" });
         return;
       }
-      const items = (itens ?? []) as SavedOfferRow[];
+      const rate = item.discount_rate ?? 0;
+      const precoPorResolved =
+        effectiveListaOfferPromoPrice(item.price_original, item.price_promo, item.discount_rate) ??
+        item.price_promo ??
+        0;
+      const precoPor = precoPorResolved || 0;
+      let precoRiscado = (item.price_original ?? 0) || 0;
+      if (precoRiscado <= 0 && precoPor > 0) precoRiscado = precoPor;
+      const payload = buildListaOfferWebhookPayload({
+        instanceName,
+        hash,
+        groupIds,
+        nomeProduto: item.product_name ?? "",
+        imageUrl: item.image_url ?? "",
+        precoPor,
+        precoRiscado,
+        discountRate: rate,
+        linkAfiliado,
+      });
+      const whRes = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!whRes.ok) {
+        const whText = await whRes.text();
+        errors.push({ keyword: label, error: `Webhook ${whRes.status}: ${whText.slice(0, 100)}` });
+        return;
+      }
+      sent.push({ keyword: label.slice(0, 40), productName: label.slice(0, 50), link: linkAfiliado });
+    };
+
+    const dispararListaSalva = async (
+      table: "minha_lista_ofertas" | "minha_lista_ofertas_ml",
+      fk: string,
+      webhookUrl: string,
+    ) => {
+      const items = await carregarItensListaSalva(table, fk);
       if (items.length === 0) {
         errors.push({ keyword: "(lista)", error: "Lista vazia" });
         return;
       }
       for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const linkAfiliado = item.converter_link?.trim() || "";
-        const label = item.product_name?.trim() || `item ${i + 1}`;
-        if (!linkAfiliado) {
-          errors.push({ keyword: label, error: "Sem link de afiliado" });
-          continue;
-        }
-        const rate = item.discount_rate ?? 0;
-        const precoPorResolved =
-          effectiveListaOfferPromoPrice(item.price_original, item.price_promo, item.discount_rate) ??
-          item.price_promo ??
-          0;
-        const precoPor = precoPorResolved || 0;
-        let precoRiscado = (item.price_original ?? 0) || 0;
-        if (precoRiscado <= 0 && precoPor > 0) precoRiscado = precoPor;
-        const payload = buildListaOfferWebhookPayload({
-          instanceName,
-          hash,
-          groupIds,
-          nomeProduto: item.product_name ?? "",
-          imageUrl: item.image_url ?? "",
-          precoPor,
-          precoRiscado,
-          discountRate: rate,
-          linkAfiliado,
-        });
-        const whRes = await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!whRes.ok) {
-          const whText = await whRes.text();
-          errors.push({ keyword: label, error: `Webhook ${whRes.status}: ${whText.slice(0, 100)}` });
-          continue;
-        }
-        sent.push({ keyword: label.slice(0, 40), productName: label.slice(0, 50), link: linkAfiliado });
+        await dispararItemListaSalva(items[i], `item ${i + 1}`, webhookUrl);
+      }
+    };
+
+    const dispararListaCrossover = async (
+      shopeeFk: string,
+      mlFk: string,
+      webhookUrl: string,
+    ) => {
+      const [shopeeItems, mlItems] = await Promise.all([
+        carregarItensListaSalva("minha_lista_ofertas", shopeeFk),
+        carregarItensListaSalva("minha_lista_ofertas_ml", mlFk),
+      ]);
+      if (shopeeItems.length === 0 && mlItems.length === 0) {
+        errors.push({ keyword: "(lista)", error: "Listas vazias" });
+        return;
+      }
+      // Crossover: alterna 1 Shopee, 1 ML, 1 Shopee, 1 ML… preservando a
+      // ordem original dentro de cada lista. Sobra da maior vai pro final.
+      const items = interleaveCrossover(shopeeItems, mlItems);
+      for (let i = 0; i < items.length; i++) {
+        await dispararItemListaSalva(items[i], `item ${i + 1}`, webhookUrl);
       }
     };
 
@@ -239,10 +275,11 @@ export async function POST(req: Request) {
       }
     };
 
-    if (listaOfertasId) {
+    if (listaOfertasId && listaOfertasMlId) {
+      await dispararListaCrossover(listaOfertasId, listaOfertasMlId, listaWebhookUrl);
+    } else if (listaOfertasId) {
       await dispararListaSalva("minha_lista_ofertas", listaOfertasId, listaWebhookUrl);
-    }
-    if (listaOfertasMlId) {
+    } else if (listaOfertasMlId) {
       await dispararListaSalva("minha_lista_ofertas_ml", listaOfertasMlId, listaWebhookUrl);
     }
     if (listaOfertasInfoId) {

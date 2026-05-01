@@ -6,11 +6,16 @@ import { loadFull } from "tsparticles";
 import type { ISourceOptions } from "@tsparticles/engine";
 import { useTheme } from "../theme/ThemeProvider";
 
+type NasaParticlesProps = {
+  /** Evita id duplicado quando há mais de uma instância na página */
+  id?: string;
+};
+
 /**
  * NasaParticles - Componente que implementa o fundo "NASA" da biblioteca particles.js
  * utilizando a versão moderna tsparticles para React.
  */
-export default function NasaParticles() {
+export default function NasaParticles({ id = "tsparticles-nasa" }: NasaParticlesProps) {
   const [init, setInit] = useState(false);
   const { theme } = useTheme();
   const isLight = theme === 'light';
@@ -101,12 +106,14 @@ export default function NasaParticles() {
   if (init) {
     return (
       <Particles
-        id="tsparticles-nasa"
+        id={id}
         className="absolute inset-0 z-0 h-full w-full pointer-events-none transition-opacity duration-1000"
         options={options}
       />
     );
   }
 
-  return <div className="absolute inset-0 z-0 bg-dark-bg transition-colors duration-500" />;
+  return (
+    <div className="absolute inset-0 z-0 bg-dark-bg transition-colors duration-500 light:bg-[#faf9f7]" aria-hidden />
+  );
 }

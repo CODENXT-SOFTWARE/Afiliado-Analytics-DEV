@@ -856,6 +856,9 @@ export default function GruposVendaPage() {
     .split(/[\n,;]+/)
     .map((k) => k.trim())
     .filter(Boolean).length;
+  /** Passo 3: Sub IDs ocultos para lista ML / crossover / infoprodutor (por ora). */
+  const showSubIdsRastreamentoStep3 =
+    contentMode === "keywords" || (contentMode === "list" && offerListSource === "shopee");
   const janelaPreviewText = useMemo(() => {
     if (!horaInicio?.trim() || !horaFim?.trim()) return null;
     const msg = mensagemErroJanela(horaInicio, horaFim);
@@ -1489,7 +1492,12 @@ export default function GruposVendaPage() {
 
             {/* Step 3: Conteúdo + Sub IDs */}
             {wizardStep === 3 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div
+                className={cn(
+                  "grid grid-cols-1 gap-4 sm:gap-6",
+                  showSubIdsRastreamentoStep3 && "md:grid-cols-2",
+                )}
+              >
                 <div className="flex flex-col gap-3 min-w-0">
                   <FieldLabel>Tipo de Conteúdo</FieldLabel>
                   <div className="flex flex-col sm:flex-row rounded-xl overflow-hidden border border-[#2c2c32]">
@@ -1661,31 +1669,14 @@ export default function GruposVendaPage() {
                               )}
                             </div>
                           )}
-                          <p className="text-[9px] text-[#a0a0a0] mt-2 leading-relaxed">
-                            {offerListSource === "crossover" ? (
-                              <>
-                                <span className="text-amber-400/90 font-semibold">Crossover:</span> itens Shopee e ML viram{" "}
-                                <strong className="text-white">uma única fila</strong> (Shopee primeiro, depois ML, cada um na ordem da lista). O cron envia{" "}
-                                <strong className="text-white">um produto por tick</strong>, no mesmo formato de payload do n8n que você já usa para Shopee.
-                              </>
-                            ) : offerListSource === "infoprodutor" ? (
-                              <>
-                                <span className="text-emerald-400/90 font-semibold">Infoprodutor:</span> seus próprios produtos (imagem, título, descrição e link) são enviados pelo mesmo webhook do n8n, sem depender de API de afiliados.
-                              </>
-                            ) : (
-                              <>
-                                A lista substitui as keywords: na automação, um produto por vez em rotação; no disparo manual, todos os itens são enviados em sequência.
-                              </>
-                            )}
-                          </p>
                         </>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* Sub IDs — desktop: sempre expandido (apenas em modo keywords ou listas não-shopee) */}
-                {(contentMode === "keywords" || offerListSource !== "shopee") && (
+                {/* Sub IDs — desktop (keywords ou lista Shopee apenas) */}
+                {showSubIdsRastreamentoStep3 && (
                   <div className="hidden md:flex flex-col gap-3 min-w-0">
                     <FieldLabel>
                       <span className="inline-flex items-center gap-1 flex-wrap">
@@ -1708,8 +1699,8 @@ export default function GruposVendaPage() {
                   </div>
                 )}
 
-                {/* Sub IDs — mobile: dropdown estilo instância, começa recolhido (apenas em modo keywords ou listas não-shopee) */}
-                {(contentMode === "keywords" || offerListSource !== "shopee") && (
+                {/* Sub IDs — mobile (keywords ou lista Shopee apenas) */}
+                {showSubIdsRastreamentoStep3 && (
                   <div className="md:hidden min-w-0 flex flex-col gap-2">
                     <button
                       type="button"

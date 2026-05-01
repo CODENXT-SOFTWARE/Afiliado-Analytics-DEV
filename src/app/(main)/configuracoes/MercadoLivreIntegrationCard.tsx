@@ -9,8 +9,6 @@ import {
 import { dispatchMlAffiliateSettingsChanged } from "@/lib/mercadolivre/use-ml-affiliate-local-settings";
 import Toolist from "@/app/components/ui/Toolist";
 
-const LINKBUILDER = "https://www.mercadolivre.com.br/afiliados/linkbuilder#hub";
-
 /** Afiliado Analytics na Chrome Web Store (token ML no navegador). */
 const AFILIADO_ANALYTICS_CHROME_WEB_STORE_URL =
   "https://chromewebstore.google.com/detail/afiliado-analytics/ogfmdnpbcglgppaakmiemaohgofailal";
@@ -180,15 +178,6 @@ export default function MercadoLivreIntegrationCard({
               wide
               text="Abra a extensão no Mercado Livre e copie o token. Obrigatório para o servidor simular sua sessão de afiliado no Mercado Livre."
             />
-            <a
-              href={AFILIADO_ANALYTICS_CHROME_WEB_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-shopee-orange hover:underline"
-            >
-              Abrir na Chrome Web Store
-              <ExternalLink className="h-3 w-3 shrink-0" />
-            </a>
           </div>
           <input
             id="ml-config-ext-session-token"
@@ -343,16 +332,7 @@ export default function MercadoLivreIntegrationCard({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-shopee-orange hover:underline"
           >
-            Instalar extensão Afiliado Analytics (Chrome)
-            <ExternalLink className="h-3 w-3 shrink-0" />
-          </a>
-          <a
-            href={LINKBUILDER}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-shopee-orange hover:underline"
-          >
-            Painel Afiliados — Mercado Livre
+            Instalar extensão
             <ExternalLink className="h-3 w-3 shrink-0" />
           </a>
         </div>

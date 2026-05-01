@@ -157,7 +157,7 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         /* ============================================= */
         .scrollbar-custom {
           scrollbar-width: thin;
-          scrollbar-color: #f97316 ${isLight ? '#F4F4F5' : '#18181B'};
+          scrollbar-color: #f97316 ${isLight ? '#faf9f7' : '#18181B'};
         }
 
         /* Webkit browsers (Chrome, Safari, Edge) */
@@ -166,7 +166,7 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         }
 
         .scrollbar-custom::-webkit-scrollbar-track {
-          background: ${isLight ? '#F4F4F5' : '#0F0F11'};
+          background: ${isLight ? '#faf9f7' : '#0F0F11'};
           border-radius: 5px;
           margin-left: ${!isMobile ? '200px' : '0px'}; /* Começa após a coluna sticky */
         }
@@ -185,7 +185,7 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         /* Background diferenciado para coluna Sub_ID */
         /* ============================================= */
         .sticky-column-header {
-          background: ${isLight ? '#F4F4F5' : '#141416'};
+          background: ${isLight ? '#faf9f7' : '#141416'};
           z-index: 20;
         }
 
@@ -196,7 +196,7 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
 
         /* Background para mobile (sem sticky) */
         .mobile-column-header {
-          background: ${isLight ? '#F4F4F5' : '#141416'};
+          background: ${isLight ? '#faf9f7' : '#141416'};
         }
 
         .mobile-column-body {
@@ -207,7 +207,7 @@ export default function CampaignPerformanceTable({ data, headers }: CampaignPerf
         /* Background diferenciado para coluna TOTAL */
         /* ============================================= */
         .total-column-header {
-          background: ${isLight ? '#F4F4F5' : '#18181B'};
+          background: ${isLight ? '#faf9f7' : '#18181B'};
         }
 
         .total-column-body {

@@ -19,35 +19,35 @@ const testimonialsData: Testimonial[] = [
     quote: 'Automatizar ofertas no WhatsApp e saber meu lucro exato por lead mudou o jogo. A Calculadora GPL é surreal!',
     name: 'Ana Silva',
     role: 'Afiliada Profissional',
-    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Ana',
+    avatar: '/dep/ana.png',
   },
   {
     id: 2,
     quote: 'O termômetro da ATIA me fez parar de queimar dinheiro. Ele cruza Meta e Shopee e diz na hora qual criativo escalar.',
     name: 'Carlos Oliveira',
     role: 'Especialista em E-commerce',
-    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Carlos',
+    avatar: '/dep/carlos.png',
   },
   {
     id: 3,
     quote: 'Fim do trabalho manual. Agora eu gerencio minhas listas e disparo ofertas para os meus grupos de WhatsApp no piloto automático.',
     name: 'Juliana Pereira',
     role: 'Influenciadora Digital',
-    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Juliana',
+    avatar: '/dep/juliana.png',
   },
   {
     id: 4,
     quote: 'Escalar campanhas ficou muito mais seguro. A ATIA valida meus anúncios e a Calculadora GPL me dá o teto exato por clique.',
     name: 'Ricardo Mendes',
     role: 'Gestor de Tráfego',
-    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Ricardo',
+    avatar: '/dep/ricardo.png',
   },
   {
     id: 5,
     quote: 'Ficar travada sem programador, nunca mais. Agora crio minhas próprias páginas de captura de alta conversão em minutos.',
     name: 'Beatriz Costa',
     role: 'Iniciante em Afiliados',
-    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=Beatriz',
+    avatar: '/dep/beatriz.png',
   },
 ]
 
@@ -94,7 +94,7 @@ export default function Testimonials() {
   }, [emblaApi, onInit, onSelect])
 
   return (
-    <section id="testimonials" className="relative py-20 sm:py-32 bg-dark-bg transition-colors duration-500">
+    <section id="testimonials" className="relative py-20 sm:py-32 bg-dark-bg light:bg-[#faf9f7] transition-colors duration-500">
       {/* ── BLEED TOP GLOW (Matching Mockup/Theme) ── */}
       <div
         className="pointer-events-none absolute top-0 left-[2%] h-[600px] w-[600px] z-0"
@@ -113,6 +113,7 @@ export default function Testimonials() {
           --card-bg: rgba(255, 255, 255, 0.03);
           --card-border: rgba(255, 255, 255, 0.06);
           --accent: #ff6b35;
+          --slide-gap: clamp(0.75rem, 2vw, 1.25rem);
           
           color: var(--text-primary);
           display: flex;
@@ -196,10 +197,17 @@ export default function Testimonials() {
         #testimonials .embla__container {
           display: flex;
           width: 100%;
+          margin-left: calc(var(--slide-gap) * -1);
+        }
+
+        #testimonials .embla__slide {
+          flex: 0 0 100%;
+          min-width: 0;
+          padding-left: var(--slide-gap);
+          box-sizing: border-box;
         }
 
         #testimonials .card {
-          flex: 0 0 100%;
           background: var(--card-bg);
           border: 1px solid var(--card-border);
           padding: 4rem;
@@ -309,15 +317,45 @@ export default function Testimonials() {
             min-height: auto;
           }
         }
+
+        .light #testimonials {
+          --text-primary: #18181b;
+          --text-secondary: rgba(63, 63, 70, 0.75);
+          --card-bg: #ffffff;
+          --card-border: rgba(234, 88, 12, 0.28);
+          --accent: #ea580c;
+          color: var(--text-primary);
+        }
+        .light #testimonials .review-text {
+          color: #3f3f46;
+        }
+        .light #testimonials .client-details h4 {
+          color: #18181b;
+        }
+        .light #testimonials .btn-nav {
+          border-color: rgba(24, 24, 27, 0.14);
+          background: rgba(255, 255, 255, 0.98);
+          color: #27272a;
+        }
+        .light #testimonials .btn-nav:hover {
+          color: #ffffff;
+        }
+        .light #testimonials .client-avatar {
+          background: #f4f4f5;
+          border-color: rgba(234, 88, 12, 0.28);
+        }
+        .light #testimonials .dot:not(.active) {
+          background: rgba(39, 39, 42, 0.18);
+        }
       `}</style>
 
       <div className="t-container">
         <div className="intro-section">
-          <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white m-0">
+          <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white light:text-zinc-900 m-0">
             Resultados que <br />
             <span className="bg-gradient-to-br from-[#ff6b35] to-[#ff8c5a] bg-clip-text text-transparent">falam por si.</span>
           </h2>
-          <p className="font-['Inter'] text-[18px] leading-[1.8] text-white/50 m-0">
+          <p className="font-['Inter'] text-[18px] leading-[1.8] text-white/50 light:text-zinc-600 m-0">
             Nossa tecnologia já ajudou dezenas de empreendedores a escalarem suas operações com um ecossistema impecável e alta performance.
           </p>
 
@@ -339,21 +377,22 @@ export default function Testimonials() {
           <div className="embla__viewport" ref={emblaRef}>
             <div className="embla__container">
               {testimonialsData.map((item) => (
-                <div className="card embla__slide" key={item.id}>
-                  <div className="quote-mark">&quot;</div>
-                  <p className="review-text">{item.quote}</p>
-                  <div className="client-info">
-                    <Image
-                      src={item.avatar}
-                      alt="Avatar"
-                      className="client-avatar"
-                      width={65}
-                      height={65}
-                      unoptimized
-                    />
-                    <div className="client-details">
-                      <h4>{item.name}</h4>
-                      <p>{item.role}</p>
+                <div className="embla__slide" key={item.id}>
+                  <div className="card">
+                    <div className="quote-mark">&quot;</div>
+                    <p className="review-text">{item.quote}</p>
+                    <div className="client-info">
+                      <Image
+                        src={item.avatar}
+                        alt={item.name}
+                        className="client-avatar"
+                        width={65}
+                        height={65}
+                      />
+                      <div className="client-details">
+                        <h4>{item.name}</h4>
+                        <p>{item.role}</p>
+                      </div>
                     </div>
                   </div>
                 </div>

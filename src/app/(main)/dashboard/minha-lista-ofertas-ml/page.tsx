@@ -549,7 +549,7 @@ export default function MinhaListaOfertasMlPage() {
   const [mlAddToListLoading, setMlAddToListLoading] = useState(false);
   const [mlAddToListFeedback, setMlAddToListFeedback] = useState<string | null>(null);
   const [linksInMlOfferList, setLinksInMlOfferList] = useState<Set<string>>(new Set());
-  const [selectedMlHistoryIds, setSelectedMlHistoryIds] = useState<Set<string>>(new Set());
+  const [selectedMlHistoryMap, setSelectedMlHistoryMap] = useState<Record<string, MlHistoryEntry>>({});
   const [copiedMlHistoryId, setCopiedMlHistoryId] = useState<string | null>(null);
 
   const applyBulkPairs = useCallback((pairs: { product: string; affiliate: string }[]) => {
@@ -980,6 +980,12 @@ export default function MinhaListaOfertasMlPage() {
           method: "DELETE",
         });
         if (!res.ok) throw new Error("Erro ao excluir");
+        setSelectedMlHistoryMap((prev) => {
+          if (!prev[id]) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
         await loadMlHistory(mlHistoryPage, mlHistorySearchDebounced);
       } catch {
         /* ignore */
@@ -1001,31 +1007,36 @@ export default function MinhaListaOfertasMlPage() {
     setMlHistModalNovaLista("");
   }, []);
 
-  const toggleMlHistorySelect = useCallback((id: string) => {
-    setSelectedMlHistoryIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const toggleMlHistorySelect = useCallback((h: MlHistoryEntry) => {
+    setSelectedMlHistoryMap((prev) => {
+      const next = { ...prev };
+      if (next[h.id]) delete next[h.id];
+      else next[h.id] = h;
       return next;
     });
   }, []);
 
   const allMlHistoryIds = mlHistory.map((h) => h.id);
+  const selectedMlHistoryCount = Object.keys(selectedMlHistoryMap).length;
   const allMlHistorySelected =
-    allMlHistoryIds.length > 0 && allMlHistoryIds.every((id) => selectedMlHistoryIds.has(id));
-  const someMlHistorySelected = selectedMlHistoryIds.size > 0;
+    allMlHistoryIds.length > 0 && allMlHistoryIds.every((id) => Boolean(selectedMlHistoryMap[id]));
+  const someMlHistorySelected = selectedMlHistoryCount > 0;
 
   const toggleAllMlHistory = useCallback(() => {
-    setSelectedMlHistoryIds((prev) => {
-      const next = new Set(prev);
+    setSelectedMlHistoryMap((prev) => {
+      const next = { ...prev };
       if (allMlHistorySelected) {
-        allMlHistoryIds.forEach((id) => next.delete(id));
+        allMlHistoryIds.forEach((id) => {
+          delete next[id];
+        });
       } else {
-        allMlHistoryIds.forEach((id) => next.add(id));
+        mlHistory.forEach((h) => {
+          next[h.id] = h;
+        });
       }
       return next;
     });
-  }, [allMlHistoryIds, allMlHistorySelected]);
+  }, [allMlHistoryIds, allMlHistorySelected, mlHistory]);
 
   const confirmMlAddToList = useCallback(async () => {
     const entries = mlAddToListModal.entries;
@@ -1075,9 +1086,11 @@ export default function MinhaListaOfertasMlPage() {
         added++;
       }
       setMlAddToListModal({ open: false, entries: [] });
-      setSelectedMlHistoryIds((prev) => {
-        const next = new Set(prev);
-        entries.forEach((e) => next.delete(e.id));
+      setSelectedMlHistoryMap((prev) => {
+        const next = { ...prev };
+        entries.forEach((e) => {
+          delete next[e.id];
+        });
         return next;
       });
       setMlAddToListFeedback(added === 1 ? "Adicionado à lista!" : `${added} produtos adicionados!`);
@@ -2232,7 +2245,7 @@ export default function MinhaListaOfertasMlPage() {
             className="flex items-center gap-2 cursor-pointer select-none group shrink-0"
             aria-label={
               someMlHistorySelected
-                ? `${selectedMlHistoryIds.size} selecionados`
+                ? `${selectedMlHistoryCount} selecionados`
                 : "Selecionar todos do histórico"
             }
           >
@@ -2262,7 +2275,7 @@ export default function MinhaListaOfertasMlPage() {
             </div>
             <span className="hidden lg:inline text-[11px] font-medium text-[#bebebe] group-hover:text-[#e0e0e0] transition">
               {someMlHistorySelected
-                ? `${selectedMlHistoryIds.size} selecionado${selectedMlHistoryIds.size > 1 ? "s" : ""}`
+                ? `${selectedMlHistoryCount} selecionado${selectedMlHistoryCount > 1 ? "s" : ""}`
                 : "Selecionar todos"}
                       </span>
           </label>
@@ -2274,7 +2287,7 @@ export default function MinhaListaOfertasMlPage() {
           >
                           <button
                             type="button"
-              onClick={() => setSelectedMlHistoryIds(new Set())}
+              onClick={() => setSelectedMlHistoryMap({})}
               className="flex items-center justify-center gap-1.5 text-[11px] text-[#a0a0a0] hover:text-[#f0f0f2] font-medium transition bg-[#222228] border border-[#2c2c32] rounded-lg p-2.5 lg:p-0 lg:bg-transparent lg:border-0"
             >
               <X className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
@@ -2282,23 +2295,23 @@ export default function MinhaListaOfertasMlPage() {
                           </button>
                         <button
                           type="button"
-              onClick={() => openMlAddToListModal(mlHistory.filter((h) => selectedMlHistoryIds.has(h.id)))}
+              onClick={() => openMlAddToListModal(Object.values(selectedMlHistoryMap))}
               className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/20 rounded-lg p-2.5 lg:px-2.5 lg:py-1 transition"
             >
               <ListPlus className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
-              <span className="hidden lg:inline whitespace-nowrap">Adicionar à lista ({selectedMlHistoryIds.size})</span>
+              <span className="hidden lg:inline whitespace-nowrap">Adicionar à lista ({selectedMlHistoryCount})</span>
                         </button>
                         <button
                           type="button"
               onClick={async () => {
-                const ids = Array.from(selectedMlHistoryIds);
+                const ids = Object.keys(selectedMlHistoryMap);
                 for (const id of ids) await handleDeleteMlHistory(id);
-                setSelectedMlHistoryIds(new Set());
+                setSelectedMlHistoryMap({});
               }}
               className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-red-400 hover:text-red-300 bg-red-500/8 hover:bg-red-500/15 border border-red-500/20 rounded-lg p-2.5 lg:px-2.5 lg:py-1 transition"
             >
               <Trash2 className="w-4 h-4 lg:w-3 lg:h-3 shrink-0" />
-              <span className="hidden lg:inline whitespace-nowrap">Excluir {selectedMlHistoryIds.size}</span>
+              <span className="hidden lg:inline whitespace-nowrap">Excluir {selectedMlHistoryCount}</span>
                         </button>
                           </div>
         </div>
@@ -2329,12 +2342,12 @@ export default function MinhaListaOfertasMlPage() {
           ) : (
             mlHistory.map((h) => {
               const inList = linksInMlOfferList.has(h.shortLink ?? "");
-              const isSelected = selectedMlHistoryIds.has(h.id);
+              const isSelected = Boolean(selectedMlHistoryMap[h.id]);
               const isCopied = copiedMlHistoryId === h.id;
               return (
                 <div
                   key={h.id}
-                  onClick={() => toggleMlHistorySelect(h.id)}
+                  onClick={() => toggleMlHistorySelect(h)}
                   className={cn(
                     "px-3 sm:px-5 py-3.5 border-l-[3px] transition cursor-pointer",
                     isSelected
@@ -2349,13 +2362,13 @@ export default function MinhaListaOfertasMlPage() {
                       tabIndex={0}
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleMlHistorySelect(h.id);
+                        toggleMlHistorySelect(h);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === " " || e.key === "Enter") {
                           e.preventDefault();
                           e.stopPropagation();
-                          toggleMlHistorySelect(h.id);
+                          toggleMlHistorySelect(h);
                         }
                       }}
                       className={cn(

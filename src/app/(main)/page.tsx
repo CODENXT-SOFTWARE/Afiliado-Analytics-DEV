@@ -253,8 +253,12 @@ export default function HomePage() {
 
 
 
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[52%] w-[110%] lg:w-[125%] aspect-square bg-[#ff6b35]/25 light:bg-[#ff6b35]/15 rounded-full blur-[45px] lg:blur-[60px] z-0" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[52%] w-[75%] aspect-square bg-orange-500/40 light:bg-orange-500/20 rounded-full blur-[15px] z-0 shadow-[0_0_30px_rgba(255,107,53,0.3)]" />
+                  <div className="pointer-events-none absolute top-1/2 left-1/2 z-0 flex aspect-square w-[110%] -translate-x-1/2 -translate-y-[52%] items-center justify-center lg:w-[125%]">
+                    <div className="h-full w-full rounded-full bg-[#ff6b35]/25 blur-[45px] light:bg-[#ff6b35]/15 lg:blur-[60px] animate-landing-glow-a will-change-transform" />
+                  </div>
+                  <div className="pointer-events-none absolute top-1/2 left-1/2 z-0 flex aspect-square w-[75%] -translate-x-1/2 -translate-y-[52%] items-center justify-center">
+                    <div className="h-full w-full rounded-full bg-orange-500/40 shadow-[0_0_30px_rgba(255,107,53,0.3)] blur-[15px] light:bg-orange-500/20 animate-landing-glow-b will-change-transform" />
+                  </div>
                 </motion.div>
 
                 {/* PERSONAGEM: Movimento lento e fluido (Foco total da GPU aqui) */}
@@ -269,7 +273,9 @@ export default function HomePage() {
                   className="relative w-full h-full flex items-center justify-center"
                   style={{ willChange: 'transform, opacity' }}
                 >
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] w-[55%] h-[75%] bg-black/30 light:bg-black/5 rounded-full blur-[50px] z-0 pointer-events-none" />
+                  <div className="pointer-events-none absolute top-1/2 left-1/2 z-0 flex h-[75%] w-[55%] -translate-x-1/2 -translate-y-[45%] items-center justify-center">
+                    <div className="h-full w-full rounded-full bg-black/30 blur-[50px] light:bg-black/5 animate-landing-glow-a-slow will-change-transform" />
+                  </div>
 
                   <Image
                     src="/hero/corpo hero.webp"
@@ -337,26 +343,31 @@ export default function HomePage() {
       {/* ══════ SEÇÃO DEMO (THE NEURAL DECK) ══════ */}
       <section
         id="demo"
-        className="relative py-32 sm:py-48 z-20"
+        className="relative z-20 overflow-hidden bg-dark-bg py-32 sm:py-48"
       >
-        {/* Radial Glow — posicionado para sangrar na próxima seção */}
+        {/* Radial Glow — sangria moderada (evita “mancha” atravessando o corte da próxima section) */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 -bottom-48"
+          className="pointer-events-none absolute inset-x-0 top-0 -bottom-24 light:-bottom-16"
           style={{ background: 'radial-gradient(circle at 72% 40%, rgba(255,80,20,.15), transparent 38%)' }}
         />
 
         {/* Fundo Cinemático Complexo */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 -bottom-48">
-          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#e24c30]/05 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#a855f7]/03 rounded-full blur-[150px]" />
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] contrast-150" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 -bottom-24 light:-bottom-16">
+          <div className="absolute top-1/4 left-1/4 h-[500px] w-[500px] rounded-full bg-[#e24c30]/05 blur-[120px] light:opacity-70 animate-landing-glow-b-slow will-change-transform" />
+          <div className="absolute bottom-1/4 right-1/4 h-[600px] w-[600px] rounded-full bg-[#a855f7]/03 blur-[150px] light:opacity-60 animate-landing-glow-c-slow will-change-transform" />
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] contrast-150 light:opacity-[0.035]" />
         </div>
 
-        <div className="container relative z-10 mx-auto px-6 max-w-[1400px]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+        {/* Degradê de saída: várias paradas para encontrar o topo do Features (mesmo tom sólido #0f / #faf9f7) */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[clamp(7rem,20vw,14rem)] bg-[linear-gradient(180deg,transparent_0%,rgba(15,15,15,0.28)_22%,rgba(15,15,15,0.68)_52%,#0f0f0f_100%)] light:bg-[linear-gradient(180deg,transparent_0%,rgba(250,249,247,0.35)_22%,rgba(250,249,247,0.82)_52%,#faf9f7_100%)]"
+          aria-hidden
+        />
 
-            {/* Esquerda: Painel de Controle HUD */}
-            <div className="lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left">
+        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-6">
+          <div className="flex flex-col lg:flex-row lg:justify-center lg:items-start gap-16 lg:gap-12 xl:gap-16">
+            {/* Esquerda: texto — largura fixa para o par texto+vídeo ficar centralizado na section */}
+            <div className="flex w-full max-w-xl shrink-0 flex-col items-center text-center lg:max-w-[440px] lg:flex-none lg:items-start lg:text-left xl:max-w-[460px]">
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -365,22 +376,22 @@ export default function HomePage() {
                 className="space-y-8"
               >
                 <div className="flex flex-col text-center lg:text-left">
-                  <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white">
+                  <h2 className="font-[var(--font-space-grotesk)] text-[clamp(2.5rem,5vw,3.5rem)] font-black leading-[1.1] tracking-[-0.04em] text-white light:text-zinc-900">
                     <span className="lg:whitespace-nowrap">A Plataforma que</span> <br />
                     <span className="text-[#ff6b35]">Transforma seu Resultado.</span>
                   </h2>
                 </div>
 
                 <div className="space-y-6">
-                  <p className="font-['Inter'] text-[16px] leading-[1.8] text-white/60">
+                  <p className="font-['Inter'] text-[16px] leading-[1.8] text-white/60 light:text-zinc-600">
                     Assista ao vídeo e descubra como o Afiliado Analytics utiliza dados em tempo real para escalar sua operação com precisão cirúrgica.
                   </p>
                 </div>
               </motion.div>
             </div>
 
-            {/* Direita: O Player (Estilo Consistente com o Hero) */}
-            <div className="lg:col-span-7 relative">
+            {/* Direita: vídeo — proporção similar ao antigo 7/12, bloco centrado com a coluna de texto */}
+            <div className="relative w-full min-w-0 shrink-0 lg:max-w-[760px] xl:max-w-[820px] lg:flex-none">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -388,12 +399,14 @@ export default function HomePage() {
                 transition={{ duration: 1, ease: "easeOut" }}
                 className="relative z-10"
               >
-                {/* Aura Laranja (Mesma do Hero) */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] aspect-square bg-[#ff6b35]/12 rounded-full blur-[90px] pointer-events-none -z-10" />
+                {/* Aura atrás do player — centro mais alto e halo menor para não sangrar na section seguinte */}
+                <div className="pointer-events-none absolute top-[34%] left-1/2 -z-10 flex aspect-square w-[72%] max-w-[560px] -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+                  <div className="h-full w-full rounded-full bg-[#ff6b35]/08 blur-[56px] animate-landing-glow-c will-change-transform" />
+                </div>
 
                 {/* Container Principal do Vídeo */}
                 <div className="relative group">
-                  <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-black shadow-[0_30px_80px_rgba(0,0,0,0.8)] transition-all duration-500 group-hover:border-[#ff6b35]/30">
+                  <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-black shadow-[0_30px_80px_rgba(0,0,0,0.8)] light:border-orange-200/40 light:shadow-[0_28px_70px_rgba(251,146,60,0.28),0_12px_36px_rgba(254,215,170,0.35)] transition-all duration-500 group-hover:border-[#ff6b35]/30 light:group-hover:border-orange-300/60">
                     {/* Vídeo */}
                     <div className="relative z-10 w-full pb-[56.25%] overflow-hidden">
                       <div ref={vturbContainerRef} className="absolute inset-0 h-full w-full" />
@@ -401,7 +414,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Badge de Tour */}
-                  <div className="absolute -top-4 -left-4 bg-[#ff6b35] text-black font-black text-[10px] px-4 py-2 rounded-lg uppercase tracking-tighter shadow-xl z-20">
+                  <div className="absolute -top-4 -left-4 bg-[#ff6b35] text-white font-black text-[10px] px-4 py-2 rounded-lg uppercase tracking-tighter z-20 shadow-[0_10px_28px_rgba(234,88,12,0.4)]">
                     Tour da Plataforma
                   </div>
                 </div>
@@ -494,7 +507,7 @@ function FloatingBubble({ src, alt, className, sizeClass = "w-[75px] lg:w-[100px
 
 
 
-      className={`absolute z-20 aspect-square rounded-full bg-[#ff6b35]/20 backdrop-blur-[8px] border border-[#ff6b35]/30 shadow-[inset_0_4px_12px_rgba(255,255,255,0.25),0_15px_35px_rgba(0,0,0,0.5),0_0_20px_rgba(255,107,53,0.15)] flex items-center justify-center overflow-hidden transition-all duration-500 hover:scale-110 hover:bg-[#ff6b35]/30 hover:shadow-[0_0_30px_rgba(255,107,53,0.3)] ${sizeClass} ${className} ${animateClass}`}
+      className={`absolute z-20 aspect-square rounded-full bg-[#ff6b35]/20 backdrop-blur-[8px] border border-[#ff6b35]/30 shadow-[inset_0_4px_12px_rgba(255,255,255,0.25),0_15px_35px_rgba(0,0,0,0.5),0_0_20px_rgba(255,107,53,0.15)] light:border-orange-300/50 light:bg-orange-50/90 light:shadow-[inset_0_2px_10px_rgba(255,255,255,0.9),0_12px_28px_rgba(251,146,60,0.28),0_0_24px_rgba(254,215,170,0.5)] flex items-center justify-center overflow-hidden transition-all duration-500 hover:scale-110 hover:bg-[#ff6b35]/30 hover:shadow-[0_0_30px_rgba(255,107,53,0.3)] light:hover:bg-orange-100/95 light:hover:shadow-[0_0_28px_rgba(251,146,60,0.42),0_14px_34px_rgba(253,186,116,0.35)] ${sizeClass} ${className} ${animateClass}`}
       style={{ willChange: 'transform, opacity' }}
     >
       <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
@@ -502,7 +515,7 @@ function FloatingBubble({ src, alt, className, sizeClass = "w-[75px] lg:w-[100px
       <img
         src={src}
         alt={alt}
-        className="w-[65%] h-[65%] object-contain relative z-10 drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]"
+        className="w-[65%] h-[65%] object-contain relative z-10 drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)] light:drop-shadow-[0_6px_16px_rgba(251,146,60,0.35)]"
       />
     </motion.div>
   );

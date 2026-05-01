@@ -16,7 +16,7 @@ export default function IntegrationsMarquee() {
   return (
     <section className="relative z-20 py-5 md:py-6 overflow-hidden">
       {/* Background Deck */}
-      <div className="absolute inset-0 bg-[#FD6834]" />
+      <div className="absolute inset-0 bg-[#e24c30]" />
 
       {/* Noise Texture Overlay */}
       <div className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
@@ -27,7 +27,7 @@ export default function IntegrationsMarquee() {
       />
 
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-0 md:px-6 relative z-10">
         <div className="flex flex-col items-center">
           {/* Header */}
           <motion.div

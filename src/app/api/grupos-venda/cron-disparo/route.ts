@@ -15,6 +15,7 @@ import {
   resolveGruposVendaListaWebhookUrl,
 } from "@/lib/grupos-venda-webhook";
 import { effectiveListaOfferPromoPrice } from "@/lib/lista-ofertas-effective-promo";
+import { interleaveCrossover } from "@/lib/grupos-venda-crossover";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 55;
@@ -222,7 +223,8 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
           discount_rate: number | null;
           converter_link: string;
         };
-        const items: ListaRow[] = [];
+        const shopeeItems: ListaRow[] = [];
+        const mlItems: ListaRow[] = [];
         if (listaOfertasId) {
           const { data: itensS } = await supabase
             .from("minha_lista_ofertas")
@@ -230,7 +232,7 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
             .eq("lista_id", listaOfertasId)
             .eq("user_id", userId)
             .order("created_at", { ascending: true });
-          items.push(...((itensS ?? []) as ListaRow[]));
+          shopeeItems.push(...((itensS ?? []) as ListaRow[]));
         }
         if (listaOfertasMlId) {
           const { data: itensM } = await supabase
@@ -239,8 +241,16 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
             .eq("lista_id", listaOfertasMlId)
             .eq("user_id", userId)
             .order("created_at", { ascending: true });
-          items.push(...((itensM ?? []) as ListaRow[]));
+          mlItems.push(...((itensM ?? []) as ListaRow[]));
         }
+        // Crossover: alterna 1 Shopee, 1 ML, 1 Shopee, 1 ML… O `proximoIndice`
+        // do `grupos_venda_continuo` percorre essa fila intercalada, então cada
+        // tick de 10 min envia o próximo item — Shopee/ML/Shopee/ML — sem
+        // precisar de outro estado.
+        const items: ListaRow[] =
+          shopeeItems.length > 0 && mlItems.length > 0
+            ? interleaveCrossover(shopeeItems, mlItems)
+            : [...shopeeItems, ...mlItems];
         if (items.length === 0) {
           results.push({ userId, ok: false, error: "Lista de ofertas vazia" });
           continue;
