@@ -40,7 +40,6 @@ import { ML_LISTA_CATEGORY_OPTIONS } from "@/lib/amazon/ml-lista-category-slugs"
 import Toolist from "@/app/components/ui/Toolist";
 import { extractAsinFromUrl, looksLikeAmazonProductUrl } from "@/lib/amazon/extract-asin";
 import { effectiveListaOfferPromoPrice } from "@/lib/lista-ofertas-effective-promo";
-import { mlEstCommissionFromPromoPrice } from "@/lib/amazon/ml-lista-automation-text";
 import { useAmazonAffiliateLocalSettings } from "@/lib/amazon/use-amazon-affiliate-local-settings";
 import { AMAZON_UX_COMING_SOON } from "@/lib/amazon-ux-coming-soon";
 import MlEmBreveSplash from "@/app/components/amazon/AmazonEmptyStub";
@@ -112,10 +111,6 @@ function MlOfferRowCard({
   selected?: boolean;
   compact?: boolean;
 }) {
-  const pct = p.affiliateCommissionPct;
-  const commEst =
-    pct != null && pct > 0 && p.price != null ? mlEstCommissionFromPromoPrice(p.price, pct) : null;
-  const hasComm = commEst != null;
   const hasOriginal =
     p.priceOriginal != null && p.price != null && p.priceOriginal > p.price;
   const couponPct = p.couponPercent ?? null;
@@ -126,6 +121,8 @@ function MlOfferRowCard({
     : couponAmt != null && couponAmt > 0
       ? `Cupom ${formatCurrency(couponAmt)}`
       : null;
+  const primePct = p.primeDiscountPercent ?? null;
+  const hasPrime = primePct != null && primePct > 0;
 
   return (
     <button
@@ -199,6 +196,17 @@ function MlOfferRowCard({
               {couponLabel}
             </span>
           ) : null}
+          {hasPrime ? (
+            <span
+              className={cn(
+                "font-bold text-sky-300 bg-sky-500/10 px-1.5 py-px rounded-md border border-sky-500/20 whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title="Desconto exclusivo Amazon Prime"
+            >
+              Prime {Math.round(primePct as number)}%
+            </span>
+          ) : null}
           <span className={cn("text-[#9c9c9c] whitespace-nowrap font-mono", compact ? "text-[9px]" : "text-[10px]")}>
             {p.itemId}
           </span>
@@ -206,31 +214,15 @@ function MlOfferRowCard({
       </div>
       <div
         className={cn(
-          "flex items-start justify-between gap-3 shrink-0 min-[420px]:items-center min-[420px]:justify-start",
-          !hasComm && "justify-end min-[420px]:justify-end",
+          "flex items-center justify-end gap-3 shrink-0",
           compact
             ? "w-full pl-[52px] pt-2 mt-1 border-t border-[#2c2c32] min-[420px]:w-auto min-[420px]:pl-0 min-[420px]:pt-0 min-[420px]:mt-0 min-[420px]:border-t-0"
             : "w-full pl-[60px] min-[360px]:pl-[68px] pt-2 mt-1 border-t border-[#2c2c32] min-[420px]:w-auto min-[420px]:pl-0 min-[420px]:pt-0 min-[420px]:mt-0 min-[420px]:border-t-0",
         )}
       >
-        {hasComm ? (
-          <div className="text-left min-[420px]:text-right">
-            <p
-              className={cn(
-                "font-bold leading-none text-emerald-400",
-                compact ? "text-[13px]" : "text-[15px] min-[360px]:text-sm",
-              )}
-            >
-              {formatCurrency(commEst)}
-            </p>
-            <p className={cn("text-[#bebebe] mt-2", compact ? "text-[9px]" : "text-[10px]")}>
-              {`${pct!.toFixed(1)}% comissão`}
-            </p>
-          </div>
-        ) : null}
         <ExternalLink
           className={cn(
-            "text-[#e24c30] shrink-0 opacity-100 min-[420px]:opacity-50 min-[420px]:group-hover:opacity-100 transition-opacity mt-0.5 min-[420px]:mt-0",
+            "text-[#e24c30] shrink-0 opacity-100 min-[420px]:opacity-50 min-[420px]:group-hover:opacity-100 transition-opacity",
             compact ? "w-3 h-3" : "w-3.5 h-3.5",
           )}
           aria-hidden
@@ -560,6 +552,30 @@ function MinhaListaOfertasMlPageInner() {
 
   const [mlSearchQuery, setMlSearchQuery] = useState("");
   const [mlSearchLoading, setMlSearchLoading] = useState(false);
+  /** Filtro "Só ofertas": quando ativo, só lista produtos com cupom ou desconto. */
+  const [onlyDeals, setOnlyDeals] = useState(false);
+
+  // Carrega preferência do toggle do localStorage no mount.
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage.getItem("aa_amazon_only_deals") === "1") {
+        setOnlyDeals(true);
+      }
+    } catch {
+      /* ignora indisponibilidade do localStorage */
+    }
+  }, []);
+
+  // Persiste a cada mudança.
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("aa_amazon_only_deals", onlyDeals ? "1" : "0");
+      }
+    } catch {
+      /* ignora */
+    }
+  }, [onlyDeals]);
   const [mlListSourceLabel, setMlListSourceLabel] = useState<string | null>(null);
   const [mlSearchResults, setMlSearchResults] = useState<MlSiteSearchProduct[]>([]);
   const [mlSearchPage, setMlSearchPage] = useState(1);
@@ -805,7 +821,12 @@ function MinhaListaOfertasMlPageInner() {
         const res = await fetch("/api/amazon/product-search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ q: raw, limit: 30, amazonSessionToken: amazonSessionToken.trim() }),
+          body: JSON.stringify({
+            q: raw,
+            limit: 30,
+            onlyDeals,
+            amazonSessionToken: amazonSessionToken.trim(),
+          }),
         });
         const j = await res.json();
         if (!res.ok) throw new Error(j?.error ?? "Erro na busca");
@@ -825,7 +846,7 @@ function MinhaListaOfertasMlPageInner() {
         if (seq === mlSearchSeq.current) setMlSearchLoading(false);
       }
     },
-    [amazonSessionToken, mlSessionBody, goProdutoOnMobile],
+    [amazonSessionToken, mlSessionBody, goProdutoOnMobile, onlyDeals],
   );
 
   const handleMlSearch = useCallback(() => {
@@ -841,6 +862,7 @@ function MinhaListaOfertasMlPageInner() {
     void runMlSearchFromString(mlSearchQuery);
   }, [mlSearchQuery, amazonSessionToken, runMlSearchFromString]);
 
+  // Re-dispara a busca quando o toggle "Só ofertas" muda (com query ativa).
   useEffect(() => {
     const q = mlSearchQuery.trim();
     if (!q) return;
@@ -1762,6 +1784,40 @@ function MinhaListaOfertasMlPageInner() {
               </div>
             </FieldGroup>
 
+            <button
+              type="button"
+              role="switch"
+              aria-checked={onlyDeals}
+              onClick={() => setOnlyDeals((v) => !v)}
+              className={cn(
+                "flex items-center gap-2.5 w-full px-3 py-2 rounded-xl border transition text-left",
+                onlyDeals
+                  ? "border-amber-500/40 bg-amber-500/5"
+                  : "border-[#3e3e3e] bg-[#1c1c1f] hover:border-[#585858]",
+              )}
+              title="Quando ativo, mostra só produtos com cupom da Amazon ou preço com desconto."
+            >
+              <span
+                className={cn(
+                  "relative inline-flex shrink-0 h-4 w-7 rounded-full transition-colors",
+                  onlyDeals ? "bg-amber-500/70" : "bg-[#3e3e3e]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white transition-transform",
+                    onlyDeals ? "translate-x-3" : "translate-x-0",
+                  )}
+                />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className={cn("block text-[9px] font-semibold", onlyDeals ? "text-amber-300" : "text-[#d2d2d2]")}>
+                  Só com Cupom ou Desconto
+                </span>
+                
+              </span>
+            </button>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               <button
                 type="button"
@@ -1840,13 +1896,7 @@ function MinhaListaOfertasMlPageInner() {
               </button>
             </FieldGroup>
 
-            <button
-              type="button"
-              onClick={() => setListasMenuModalOpen(true)}
-              className="text-left text-[10px] font-medium text-[#8b8b96] hover:text-[#e24c30] transition underline underline-offset-2 decoration-[#3e3e46] hover:decoration-[#e24c30]/50"
-            >
-              Gerenciar listas de ofertas
-            </button>
+       
           </div>
         </aside>
 
@@ -1985,23 +2035,12 @@ function MinhaListaOfertasMlPageInner() {
                         Cupom {formatCurrency(selectedMlProduct.couponAmount)}
                       </span>
                     ) : null}
+                    {selectedMlProduct.primeDiscountPercent != null && selectedMlProduct.primeDiscountPercent > 0 ? (
+                      <span className="text-[9px] font-bold text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20">
+                        Prime {Math.round(selectedMlProduct.primeDiscountPercent)}%
+                      </span>
+                    ) : null}
                   </div>
-                  {selectedMlProduct.affiliateCommissionPct != null &&
-                  selectedMlProduct.affiliateCommissionPct > 0 &&
-                  selectedMlProduct.price != null ? (
-                    (() => {
-                      const comm = mlEstCommissionFromPromoPrice(
-                        selectedMlProduct.price,
-                        selectedMlProduct.affiliateCommissionPct,
-                      );
-                      return comm != null ? (
-                        <p className="text-[10px] text-emerald-300 mt-1.5">
-                          💸 Comissão estimada: <span className="font-bold">{formatCurrency(comm)}</span>
-                          <span className="text-[#9c9c9c]"> ({selectedMlProduct.affiliateCommissionPct.toFixed(1).replace(/\.0$/, "")}%)</span>
-                        </p>
-                      ) : null;
-                    })()
-                  ) : null}
                 </div>
               </div>
 
@@ -2487,7 +2526,13 @@ function MinhaListaOfertasMlPageInner() {
                               1500,
                             );
                           }}
-                          onOpen={() => window.open(h.shortLink, "_blank", "noopener,noreferrer")}
+                          onOpen={() =>
+                            window.open(
+                              (h.originUrl && h.originUrl.trim()) || h.shortLink,
+                              "_blank",
+                              "noopener,noreferrer",
+                            )
+                          }
                           onAddToList={() => openMlAddToListModal([h])}
                           onDelete={() => void handleDeleteMlHistory(h.id)}
                         />

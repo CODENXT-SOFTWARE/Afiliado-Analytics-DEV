@@ -13,6 +13,10 @@ import Toolist from "@/app/components/ui/Toolist";
 const AFILIADO_ANALYTICS_CHROME_WEB_STORE_URL =
   "https://chromewebstore.google.com/detail/afiliado-analytics/ogfmdnpbcglgppaakmiemaohgofailal";
 
+/** Painel oficial da Amazon Associates BR — Ferramentas → Product Advertising API. */
+const AMAZON_PA_API_CREDENTIALS_URL =
+  "https://afiliados.amazon.com.br/assoc-credentials/home";
+
 export default function AmazonIntegrationCard() {
   const [affiliateTag, setAffiliateTag] = useState("");
   const [sessionToken, setSessionToken] = useState("");
@@ -145,6 +149,16 @@ export default function AmazonIntegrationCard() {
             className="inline-flex items-center gap-1.5 text-xs font-medium text-shopee-orange hover:underline"
           >
             Instalar extensão
+            <ExternalLink className="h-3 w-3 shrink-0" />
+          </a>
+          <a
+            href={AMAZON_PA_API_CREDENTIALS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Painel oficial — Ferramentas → Product Advertising API. Requer ter feito ao menos 3 vendas qualificadas em 180 dias."
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-shopee-orange hover:underline"
+          >
+            Gerar PA-API
             <ExternalLink className="h-3 w-3 shrink-0" />
           </a>
           <a

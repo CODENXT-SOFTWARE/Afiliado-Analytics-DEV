@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { gateAmazon } from "@/lib/require-entitlements";
 import { buildAmazonAffiliateShortLink } from "@/lib/amazon/build-affiliate-link";
 import { looksLikeAmazonProductUrl } from "@/lib/amazon/extract-asin";
+import { parseAmazonExtensionSessionToCookieHeader } from "@/lib/amazon/amazon-session-cookie";
+import {
+  fetchAmazonSitestripeShortUrl,
+  getCachedSitestripeShortUrl,
+  setCachedSitestripeShortUrl,
+} from "@/lib/amazon/amazon-sitestripe";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +65,68 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ shortLink: result.shortLink, asin: result.asin });
+    /**
+     * Tenta encurtar via Site Stripe (painel afiliados.amazon.com.br) usando
+     * o cookie da extensão. Se falhar (timeout, sem token, http != 200,
+     * sessão expirada) retornamos o link canônico — atribuição de comissão
+     * funciona igual nos dois formatos.
+     */
+    let finalLink = result.shortLink;
+    let shortened = false;
+    let shortenDebug: Record<string, unknown> = {};
+
+    const tokenRaw = body?.amazonSessionToken ?? body?.amazon_session_token;
+    if (typeof tokenRaw !== "string" || !tokenRaw.trim()) {
+      shortenDebug = { stage: "no-token" };
+    } else {
+      const cookie = parseAmazonExtensionSessionToCookieHeader(tokenRaw.trim());
+      if (!cookie) {
+        shortenDebug = { stage: "invalid-token" };
+      } else {
+        const cookieKeys = cookie
+          .split(";")
+          .map((c) => c.split("=")[0]?.trim())
+          .filter(Boolean);
+        const cached = getCachedSitestripeShortUrl(result.asin, affiliateTag);
+        if (cached) {
+          finalLink = cached;
+          shortened = true;
+          shortenDebug = { stage: "cache-hit", cookieKeys };
+        } else {
+          const r = await fetchAmazonSitestripeShortUrl({
+            asin: result.asin,
+            affiliateTag,
+            cookieHeader: cookie,
+          });
+          if (r.shortUrl) {
+            setCachedSitestripeShortUrl(result.asin, affiliateTag, r.shortUrl);
+            finalLink = r.shortUrl;
+            shortened = true;
+            shortenDebug = { stage: "ok", cookieKeys };
+          } else {
+            shortenDebug = {
+              stage: "amazon-fail",
+              reason: r.reason,
+              status: r.status,
+              body: r.body,
+              cookieKeys,
+            };
+          }
+        }
+      }
+    }
+
+    // Log no servidor pra diagnóstico em dev. Aparece no terminal do `npm run dev`.
+    // eslint-disable-next-line no-console
+    console.log("[amazon] sitestripe:", { asin: result.asin, shortened, ...shortenDebug });
+
+    return NextResponse.json({
+      shortLink: finalLink,
+      asin: result.asin,
+      shortened,
+      canonicalLink: result.shortLink,
+      sitestripeDebug: shortenDebug,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao gerar link";
     return NextResponse.json({ error: msg }, { status: 502 });

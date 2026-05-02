@@ -2422,7 +2422,13 @@ function MinhaListaOfertasMlPageInner() {
                               1500,
                             );
                           }}
-                          onOpen={() => window.open(h.shortLink, "_blank", "noopener,noreferrer")}
+                          onOpen={() =>
+                            window.open(
+                              (h.originUrl && h.originUrl.trim()) || h.shortLink,
+                              "_blank",
+                              "noopener,noreferrer",
+                            )
+                          }
                           onAddToList={() => openMlAddToListModal([h])}
                           onDelete={() => void handleDeleteMlHistory(h.id)}
                         />
@@ -2443,7 +2449,13 @@ function MinhaListaOfertasMlPageInner() {
                             1500,
                           );
                         }}
-                        onOpen={() => window.open(h.shortLink, "_blank", "noopener,noreferrer")}
+                        onOpen={() =>
+                          window.open(
+                            (h.originUrl && h.originUrl.trim()) || h.shortLink,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
                         onAddToList={() => openMlAddToListModal([h])}
                         onDelete={() => void handleDeleteMlHistory(h.id)}
                       />

@@ -18,8 +18,6 @@ export type MlListaAutomationInput = {
   pricePromo: number | null;
   discountRate: number | null;
   converterLink: string;
-  /** Percentual 0–100 da comissão Amazon Associates pra essa categoria; opcional. */
-  commissionPct?: number | null;
   /** Cupom em % aplicável ao produto (ex.: 15 → "Cupom de 15%"). Opcional. */
   couponPercent?: number | null;
   /** Cupom de valor fixo em R$ (ex.: 5 → "Cupom de R$ 5,00"). Opcional. */
@@ -44,15 +42,6 @@ export function buildMlListaAutomationText(p: MlListaAutomationInput): string {
     lines.push(`🎟️ Cupom de ${p.formatCurrency(p.couponAmount)} no checkout`);
   }
 
-  const pct = p.commissionPct;
-  if (pct != null && pct > 0) {
-    const comm = mlEstCommissionFromPromoPrice(promo, pct);
-    if (comm != null) {
-      lines.push(
-        `💸 Comissão Amazon: ${pct.toFixed(1).replace(/\.0$/, "")}% · ${p.formatCurrency(comm)}`,
-      );
-    }
-  }
   lines.push("🏷️ PROMOÇÃO - CLIQUE NO LINK 👇");
   lines.push((p.converterLink || "").trim());
   return lines.join("\n");

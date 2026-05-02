@@ -7,35 +7,66 @@ import {
 } from "@/lib/amazon/amazon-serp-search";
 import { ML_LISTA_CATEGORY_OPTIONS, isMlListaCategorySlug } from "@/lib/amazon/ml-lista-category-slugs";
 import { amazonCommissionPctForCategory } from "@/lib/amazon/amazon-commission-rates";
-import { fetchAmazonPdpCoupon } from "@/lib/amazon/amazon-pdp-coupon";
+import { fetchAmazonPdpDetails } from "@/lib/amazon/amazon-pdp-coupon";
 
 /**
  * Quantos itens do topo da SERP a gente enriquece batendo na PDP pra pegar
- * cupom real. Acima disso, o usuário ainda vê o produto, só não vê cupom.
- * Mantém o tempo total da request controlado.
+ * cupom + preço original riscado + desconto Prime. Acima disso, o usuário
+ * ainda vê o produto, só sem esses dados extras.
+ *
+ * Quando o filtro "Só ofertas" está ligado a gente sobe pra `_DEALS` pra
+ * descobrir mais produtos com promoção (e compensar que muitos serão filtrados).
  */
-const PDP_COUPON_ENRICH_LIMIT = 12;
-const PDP_COUPON_TIMEOUT_MS = 4500;
+const PDP_ENRICH_LIMIT_NORMAL = 12;
+const PDP_ENRICH_LIMIT_DEALS = 30;
+const PDP_TIMEOUT_MS = 4500;
 
-async function enrichWithPdpCoupons(
+async function enrichWithPdpDetails(
   products: AmazonSerpProduct[],
   cookieHeader: string,
+  enrichLimit: number,
 ): Promise<void> {
   const targets = products
-    .slice(0, PDP_COUPON_ENRICH_LIMIT)
-    .filter((p) => p.couponPercent == null && p.couponAmount == null && /^[A-Z0-9]{10}$/.test(p.asin));
+    .slice(0, enrichLimit)
+    .filter((p) => /^[A-Z0-9]{10}$/.test(p.asin));
   if (targets.length === 0) return;
   await Promise.all(
     targets.map(async (p) => {
-      const coupon = await fetchAmazonPdpCoupon({
+      const d = await fetchAmazonPdpDetails({
         asin: p.asin,
         cookieHeader,
-        timeoutMs: PDP_COUPON_TIMEOUT_MS,
+        timeoutMs: PDP_TIMEOUT_MS,
       });
-      if (coupon.percent != null) p.couponPercent = coupon.percent;
-      if (coupon.amount != null) p.couponAmount = coupon.amount;
+      // Cupom: só aplica se SERP não trouxe.
+      if (p.couponPercent == null && d.couponPercent != null) p.couponPercent = d.couponPercent;
+      if (p.couponAmount == null && d.couponAmount != null) p.couponAmount = d.couponAmount;
+      // Prime discount: nunca vem da SERP, sempre da PDP.
+      if (d.primeDiscountPercent != null) p.primeDiscountPercent = d.primeDiscountPercent;
+      // Preço original riscado: aplica se SERP não trouxe E o valor PDP for
+      // maior que o preço promo atual (sanity).
+      if (
+        p.priceOriginal == null &&
+        d.priceOriginal != null &&
+        p.pricePromo != null &&
+        d.priceOriginal > p.pricePromo
+      ) {
+        p.priceOriginal = d.priceOriginal;
+        const dr = Math.round((1 - p.pricePromo / d.priceOriginal) * 10000) / 100;
+        // Mesma sanity check do parser principal: descontos absurdos quase
+        // sempre indicam parsing errado, não promoção real.
+        if (dr > 0 && dr < 92) p.discountRate = dr;
+      }
     }),
   );
+}
+
+/** True se o produto tem cupom (% ou R$), desconto na SERP, ou Prime discount. */
+function hasDeal(p: AmazonSerpProduct): boolean {
+  if (p.couponPercent != null && p.couponPercent > 0) return true;
+  if (p.couponAmount != null && p.couponAmount > 0) return true;
+  if (p.discountRate != null && p.discountRate > 0) return true;
+  if (p.primeDiscountPercent != null && p.primeDiscountPercent > 0) return true;
+  return false;
 }
 
 export const dynamic = "force-dynamic";
@@ -61,6 +92,7 @@ function mapToClientProduct(p: AmazonSerpProduct, commissionPct: number) {
     affiliateCommissionPct: commissionPct,
     couponPercent: p.couponPercent ?? null,
     couponAmount: p.couponAmount ?? null,
+    primeDiscountPercent: p.primeDiscountPercent ?? null,
   };
 }
 
@@ -91,7 +123,13 @@ function badTokenResponse(reason: "missing" | "invalid", forPost: boolean): Next
   return NextResponse.json({ error: msg }, { status: 400 });
 }
 
-async function runSearch(args: { keyword: string; categorySlug: string; limit: number; cookieHeader: string }) {
+async function runSearch(args: {
+  keyword: string;
+  categorySlug: string;
+  limit: number;
+  cookieHeader: string;
+  onlyDeals: boolean;
+}) {
   let q = args.keyword.trim();
   const cat = args.categorySlug.trim().toLowerCase();
   if (!q && cat && isMlListaCategorySlug(cat)) {
@@ -104,20 +142,29 @@ async function runSearch(args: { keyword: string; categorySlug: string; limit: n
     );
   }
 
+  // Em "só ofertas" buscamos mais resultados na SERP pra compensar a filtragem.
+  const serpLimit = args.onlyDeals ? Math.min(60, args.limit * 2) : args.limit;
+  const enrichLimit = args.onlyDeals ? PDP_ENRICH_LIMIT_DEALS : PDP_ENRICH_LIMIT_NORMAL;
+
   try {
     const raw = await fetchAmazonSerpProducts({
       keyword: q,
-      limit: args.limit,
+      limit: serpLimit,
       cookieHeader: args.cookieHeader,
     });
-    await enrichWithPdpCoupons(raw, args.cookieHeader);
+    await enrichWithPdpDetails(raw, args.cookieHeader, enrichLimit);
+
+    const filtered = args.onlyDeals ? raw.filter(hasDeal) : raw;
+    const trimmed = filtered.slice(0, args.limit);
+
     const commissionPct = amazonCommissionPctForCategory(cat);
-    const products = raw.map((p) => mapToClientProduct(p, commissionPct));
+    const products = trimmed.map((p) => mapToClientProduct(p, commissionPct));
     if (products.length === 0) {
       return NextResponse.json({
         products: [],
-        message:
-          "Nenhum resultado nesta busca. Tente outro termo ou cole a URL do produto (aba Converter).",
+        message: args.onlyDeals
+          ? "Nenhum produto com cupom ou desconto nessa busca. Desative \"Só ofertas\" pra ver todos os produtos."
+          : "Nenhum resultado nesta busca. Tente outro termo ou cole a URL do produto (aba Converter).",
       });
     }
     return NextResponse.json({ products });
@@ -147,11 +194,15 @@ export async function GET(req: Request) {
     const cookieRes = cookieFromToken(rawTok);
     if (!cookieRes.ok) return badTokenResponse(cookieRes.reason, false);
 
+    const onlyDealsParam = url.searchParams.get("onlyDeals") ?? url.searchParams.get("only_deals");
+    const onlyDeals = onlyDealsParam === "1" || onlyDealsParam === "true";
+
     return await runSearch({
       keyword,
       categorySlug: category,
       limit,
       cookieHeader: cookieRes.cookie,
+      onlyDeals,
     });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
@@ -159,7 +210,7 @@ export async function GET(req: Request) {
 }
 
 /**
- * POST JSON: { q?, keyword?, categoria?, limit?, amazonSessionToken? }
+ * POST JSON: { q?, keyword?, categoria?, limit?, onlyDeals?, amazonSessionToken? }
  */
 export async function POST(req: Request) {
   try {
@@ -176,11 +227,15 @@ export async function POST(req: Request) {
     const cookieRes = cookieFromToken(rawTok);
     if (!cookieRes.ok) return badTokenResponse(cookieRes.reason, true);
 
+    const onlyDeals =
+      body?.onlyDeals === true || body?.only_deals === true || body?.onlyDeals === "1";
+
     return await runSearch({
       keyword,
       categorySlug: category,
       limit,
       cookieHeader: cookieRes.cookie,
+      onlyDeals,
     });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });

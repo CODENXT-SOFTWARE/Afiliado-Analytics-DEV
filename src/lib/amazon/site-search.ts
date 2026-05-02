@@ -22,6 +22,8 @@ export type MlSiteSearchProduct = {
   couponPercent?: number | null;
   /** Cupom de valor fixo em R$ quando aplicável; null se não houver. */
   couponAmount?: number | null;
+  /** % de desconto Prime (1ª compra, exclusivo). null se ausente. */
+  primeDiscountPercent?: number | null;
 };
 
 export function filterValidMlSiteSearchProducts(

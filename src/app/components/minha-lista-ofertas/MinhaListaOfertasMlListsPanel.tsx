@@ -741,8 +741,15 @@ export function MinhaListaOfertasMlListsPanel({ className }: { className?: strin
                                           Copiar texto grupo
                                         </button>
                                         <IconBtn
-                                          title="Abrir"
-                                          onClick={() => window.open(item.converterLink, "_blank", "noopener,noreferrer")}
+                                          title="Abrir no Mercado Livre"
+                                          onClick={() =>
+                                            window.open(
+                                              (item.productPageUrl && item.productPageUrl.trim()) ||
+                                                item.converterLink,
+                                              "_blank",
+                                              "noopener,noreferrer",
+                                            )
+                                          }
                                         >
                                           <ExternalLink className="w-3.5 h-3.5" />
                                         </IconBtn>

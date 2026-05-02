@@ -91,7 +91,24 @@ async function init() {
     ui.status.textContent = "Buscando sessão...";
     ui.navLinks.style.display = "none";
 
-    const TARGET_COOKIES = ["ubid-acbbr", "x-acbbr", "at-acbbr"];
+    // Cookies necessários pro app:
+    //   - SERP (busca de produtos): basta `at-acbbr` + `ubid-acbbr` + `x-acbbr`.
+    //   - SiteStripe (encurtador `amzn.to`): precisa também de `session-id`,
+    //     `session-token` e `sst-acbbr` (server-side token); senão a Amazon
+    //     deixa a request pendurada até o timeout.
+    const TARGET_COOKIES = [
+      "session-id",
+      "session-id-time",
+      "session-token",
+      "ubid-acbbr",
+      "x-acbbr",
+      "at-acbbr",
+      "sess-at-acbbr",
+      "sst-acbbr",
+      "lc-acbbr",
+      "i18n-prefs",
+      "sso-state-acbbr",
+    ];
     const found = await fetchMultipleCookies("https://www.amazon.com.br/", TARGET_COOKIES);
 
     if (!found["ubid-acbbr"] && !found["at-acbbr"]) {
@@ -102,14 +119,31 @@ async function init() {
       return;
     }
 
+    // Alguns cookies vêm com aspas no value original (x-acbbr, session-token).
+    // Mantemos as aspas pra que o header `Cookie:` reflita exatamente o que a
+    // Amazon devolveu — caso contrário a validação CSRF do SiteStripe falha.
+    const QUOTE_VALUE = new Set(["x-acbbr", "session-token"]);
     const parts = [];
-    if (found["ubid-acbbr"]) parts.push(`ubid-acbbr=${found["ubid-acbbr"]}`);
-    if (found["x-acbbr"])    parts.push(`x-acbbr="${found["x-acbbr"]}"`);
-    if (found["at-acbbr"])   parts.push(`at-acbbr=${found["at-acbbr"]}`);
+    for (const name of TARGET_COOKIES) {
+      const v = found[name];
+      if (!v) continue;
+      const value = QUOTE_VALUE.has(name) && !v.startsWith('"') ? `"${v}"` : v;
+      parts.push(`${name}=${value}`);
+    }
 
+    const missingForSitestripe = ["session-id", "session-token", "sst-acbbr"].filter(
+      (n) => !found[n],
+    );
     ui.output.value     = encodeSessionToken(parts.join("; "));
     ui.copyBtn.disabled = false;
-    ui.status.textContent = "✓ Token da Amazon gerado.";
+    if (missingForSitestripe.length > 0) {
+      ui.status.textContent =
+        "✓ Token gerado, mas faltam cookies (" +
+        missingForSitestripe.join(", ") +
+        "). Encurtador amzn.to pode falhar — re-logue na Amazon.";
+    } else {
+      ui.status.textContent = "✓ Token completo da Amazon gerado.";
+    }
     return;
   }
 

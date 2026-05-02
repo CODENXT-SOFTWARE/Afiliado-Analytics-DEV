@@ -354,7 +354,6 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
       discountRate: item.discountRate,
       couponPercent: item.couponPercent,
       couponAmount: item.couponAmount,
-      commissionPct: item.affiliateCommissionPct,
       converterLink: item.converterLink,
       formatCurrency,
     });
@@ -534,7 +533,7 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
           <div className="w-6 h-6 rounded-lg bg-[#e24c30]/15 border border-[#e24c30]/25 flex items-center justify-center shrink-0">
             <ListChecks className="w-3 h-3 text-[#e24c30]" />
           </div>
-          <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Minhas listas e produtos (ML)</h2>
+          <h2 className="text-sm font-bold text-[#f0f0f2] truncate">Minhas listas e produtos (Amazon)</h2>
           {listas.length > 0 && (
             <span className="text-[9px] text-[#bebebe] bg-[#232328] px-1.5 py-px rounded-full border border-[#3e3e3e] shrink-0">
               {listas.length} {listas.length === 1 ? "lista" : "listas"}
@@ -542,10 +541,10 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
           )}
         </div>
         <Link
-          href="/dashboard/minha-lista-ofertas-ml"
+          href="/dashboard/minha-lista-ofertas-amazon"
           className="text-[11px] font-medium text-[#e24c30] hover:underline shrink-0"
         >
-          Buscar / histórico ML →
+          Buscar / histórico Amazon →
         </Link>
       </div>
 
@@ -754,24 +753,6 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
                                           <span className="text-[#9c9c9c]">no checkout</span>
                                         </p>
                                       ) : null}
-                                      {item.affiliateCommissionPct != null && item.affiliateCommissionPct > 0 ? (
-                                        (() => {
-                                          const promo =
-                                            effectiveListaOfferPromoPrice(item.priceOriginal, item.pricePromo, item.discountRate) ??
-                                            item.pricePromo;
-                                          const comm =
-                                            promo != null && Number.isFinite(promo)
-                                              ? Math.round(promo * (item.affiliateCommissionPct / 100) * 100) / 100
-                                              : null;
-                                          return comm != null ? (
-                                            <p className="text-xs text-emerald-300 mt-1 flex items-center gap-1.5">
-                                              <span>💸</span>
-                                              <span className="font-semibold">Comissão Amazon: {item.affiliateCommissionPct.toFixed(1).replace(/\.0$/, "")}%</span>
-                                              <span className="text-emerald-400">· {formatCurrency(comm)}</span>
-                                            </p>
-                                          ) : null;
-                                        })()
-                                      ) : null}
                                       <p className="text-[11px] text-text-secondary mt-1.5 flex items-start gap-1.5">
                                         <span className="shrink-0">🏷️</span>
                                         <span className="text-[#bebebe]">PROMOÇÃO - CLIQUE NO LINK 👇</span>
@@ -797,8 +778,15 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
                                           Copiar texto grupo
                                         </button>
                                         <IconBtn
-                                          title="Abrir"
-                                          onClick={() => window.open(item.converterLink, "_blank", "noopener,noreferrer")}
+                                          title="Abrir na Amazon"
+                                          onClick={() =>
+                                            window.open(
+                                              (item.productPageUrl && item.productPageUrl.trim()) ||
+                                                item.converterLink,
+                                              "_blank",
+                                              "noopener,noreferrer",
+                                            )
+                                          }
                                         >
                                           <ExternalLink className="w-3.5 h-3.5" />
                                         </IconBtn>
