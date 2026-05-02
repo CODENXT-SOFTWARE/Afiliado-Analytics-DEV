@@ -192,6 +192,10 @@ async function runCronDisparoTelegram(opts?: CronRunOptions): Promise<CronResult
           price_promo: number | null;
           discount_rate: number | null;
           converter_link: string;
+          // Campos extras Amazon (null em Shopee/ML — colunas não existem nessas tabelas).
+          coupon_percent?: number | null;
+          coupon_amount?: number | null;
+          prime_discount_percent?: number | null;
         };
         type InfoRow = {
           product_name: string;
@@ -201,18 +205,30 @@ async function runCronDisparoTelegram(opts?: CronRunOptions): Promise<CronResult
           price: number | string | null;
           price_old: number | string | null;
         };
+        // `kind` distingue Shopee/ML/Amazon dentro de "lista" — usado pra
+        // decidir se passa cupom/Prime pro builder (só vale pra Amazon hoje).
         type QueueItem =
-          | { source: "lista"; row: ListaRow }
+          | { source: "lista"; kind: "shopee" | "ml" | "amazon"; row: ListaRow }
           | { source: "info"; row: InfoRow };
 
-        const fetchLista = async (table: string, listaId: string): Promise<ListaRow[]> => {
+        const fetchLista = async (
+          table: "minha_lista_ofertas" | "minha_lista_ofertas_ml" | "minha_lista_ofertas_amazon",
+          listaId: string,
+        ): Promise<ListaRow[]> => {
+          // Amazon tem colunas extras (cupom + Prime); Shopee/ML não têm.
+          const cols =
+            table === "minha_lista_ofertas_amazon"
+              ? "id, product_name, image_url, price_original, price_promo, discount_rate, converter_link, coupon_percent, coupon_amount, prime_discount_percent"
+              : "id, product_name, image_url, price_original, price_promo, discount_rate, converter_link";
           const { data } = await supabase
             .from(table)
-            .select("id, product_name, image_url, price_original, price_promo, discount_rate, converter_link")
+            .select(cols)
             .eq("lista_id", listaId)
             .eq("user_id", userId)
             .order("created_at", { ascending: true });
-          return (data ?? []) as ListaRow[];
+          // Cast via unknown porque o Supabase TypeScript não consegue inferir
+          // colunas a partir de uma string condicional.
+          return (data ?? []) as unknown as ListaRow[];
         };
         const [shopeeItems, mlItems, amazonItems, infoItemsRaw] = await Promise.all([
           listaOfertasId ? fetchLista("minha_lista_ofertas", listaOfertasId) : Promise.resolve([] as ListaRow[]),
@@ -229,9 +245,9 @@ async function runCronDisparoTelegram(opts?: CronRunOptions): Promise<CronResult
             : Promise.resolve([] as InfoRow[]),
         ]);
 
-        const shopeeQ: QueueItem[] = shopeeItems.map((row) => ({ source: "lista", row }));
-        const mlQ: QueueItem[] = mlItems.map((row) => ({ source: "lista", row }));
-        const amazonQ: QueueItem[] = amazonItems.map((row) => ({ source: "lista", row }));
+        const shopeeQ: QueueItem[] = shopeeItems.map((row) => ({ source: "lista", kind: "shopee", row }));
+        const mlQ: QueueItem[] = mlItems.map((row) => ({ source: "lista", kind: "ml", row }));
+        const amazonQ: QueueItem[] = amazonItems.map((row) => ({ source: "lista", kind: "amazon", row }));
         const infoQ: QueueItem[] = infoItemsRaw.map((row) => ({ source: "info", row }));
 
         const queue = interleaveCrossoverN<QueueItem>(shopeeQ, mlQ, amazonQ, infoQ);
@@ -291,12 +307,18 @@ async function runCronDisparoTelegram(opts?: CronRunOptions): Promise<CronResult
             0;
           const precoPor = precoPorResolved || 0;
           const precoRiscado = (r.price_original ?? precoPor) || 0;
+          // Cupom e Prime só vêm da tabela Amazon (campos selecionados
+          // condicionalmente em `fetchLista`).
+          const isAmazon = item.kind === "amazon";
           text = buildListaOfferMessage({
             nomeProduto,
             precoPor,
             precoRiscado,
             discountRate: rate,
             linkAfiliado,
+            couponPercent: isAmazon ? r.coupon_percent ?? null : null,
+            couponAmount: isAmazon ? r.coupon_amount ?? null : null,
+            primeDiscountPercent: isAmazon ? r.prime_discount_percent ?? null : null,
           });
           imageUrl = r.image_url?.trim() || undefined;
           nomeKeyword = nomeProduto.slice(0, 30);

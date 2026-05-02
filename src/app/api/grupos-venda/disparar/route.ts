@@ -34,6 +34,10 @@ type SavedOfferRow = {
   price_promo: number | null;
   discount_rate: number | null;
   converter_link: string;
+  // Campos extras Amazon (null em Shopee/ML — colunas não existem nessas tabelas).
+  coupon_percent?: number | null;
+  coupon_amount?: number | null;
+  prime_discount_percent?: number | null;
 };
 
 export async function POST(req: Request) {
@@ -135,9 +139,15 @@ export async function POST(req: Request) {
       table: AffiliateOfferTable,
       fk: string,
     ): Promise<SavedOfferRow[]> => {
+      // Amazon tem colunas extras (cupom + Prime); Shopee/ML não têm.
+      // Selecionamos os extras só pra Amazon, evitando "column does not exist".
+      const cols =
+        table === "minha_lista_ofertas_amazon"
+          ? "product_name, image_url, price_original, price_promo, discount_rate, converter_link, coupon_percent, coupon_amount, prime_discount_percent"
+          : "product_name, image_url, price_original, price_promo, discount_rate, converter_link";
       const { data: itens, error: qErr } = await supabase
         .from(table)
-        .select("product_name, image_url, price_original, price_promo, discount_rate, converter_link")
+        .select(cols)
         .eq("lista_id", fk)
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
@@ -145,7 +155,9 @@ export async function POST(req: Request) {
         errors.push({ keyword: "(lista)", error: qErr.message });
         return [];
       }
-      return (itens ?? []) as SavedOfferRow[];
+      // Cast via unknown porque o Supabase TypeScript não consegue inferir
+      // colunas a partir de uma string condicional (cols varia por tabela).
+      return (itens ?? []) as unknown as SavedOfferRow[];
     };
 
     type InfoRow = {
@@ -242,6 +254,10 @@ export async function POST(req: Request) {
       const precoPor = precoPorResolved || 0;
       let precoRiscado = (row.price_original ?? 0) || 0;
       if (precoRiscado <= 0 && precoPor > 0) precoRiscado = precoPor;
+      // Cupom e Prime só existem no row vindo da tabela Amazon (campos
+      // selecionados condicionalmente em `carregarItensListaSalva`). Pra
+      // ML/Shopee vêm undefined e o builder ignora.
+      const isAmazon = item.source === "amazon";
       const payload = buildListaOfferWebhookPayload({
         instanceName,
         hash,
@@ -252,6 +268,9 @@ export async function POST(req: Request) {
         precoRiscado,
         discountRate: rate,
         linkAfiliado,
+        couponPercent: isAmazon ? row.coupon_percent ?? null : null,
+        couponAmount: isAmazon ? row.coupon_amount ?? null : null,
+        primeDiscountPercent: isAmazon ? row.prime_discount_percent ?? null : null,
       });
       const whRes = await fetch(listaWebhookUrl, {
         method: "POST",

@@ -27,24 +27,82 @@ export type ListaOfferWebhookInput = {
   precoRiscado: number;
   discountRate: number;
   linkAfiliado: string;
+  /**
+   * Amazon: cupom em percentual (ex.: 14 → "Cupom de 14% OFF"). Opcional —
+   * Shopee/ML não usam essa info hoje, mas o campo é tolerado e ignorado
+   * quando ausente. Aparece na descrição e como `couponPercent` no JSON.
+   */
+  couponPercent?: number | null;
+  /**
+   * Amazon: cupom em valor fixo R$ (ex.: 5.00 → "Cupom de R$ 5,00 OFF").
+   * Mutuamente exclusivo com `couponPercent`; só um aparece na descrição.
+   */
+  couponAmount?: number | null;
+  /**
+   * Amazon: desconto exclusivo Prime em % (ex.: 30 → "Prime: 30% OFF").
+   * Linha separada na descrição abaixo do cupom.
+   */
+  primeDiscountPercent?: number | null;
 };
 
 const formatBRL = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 }).format(n);
 
 export function buildListaOfferDescription(input: ListaOfferWebhookInput): string {
-  const { nomeProduto, precoPor, precoRiscado, discountRate, linkAfiliado } = input;
+  const { nomeProduto, precoPor, precoRiscado, discountRate, linkAfiliado, couponPercent, couponAmount, primeDiscountPercent } = input;
   const rate = discountRate;
-  return (
-    `✨ ${nomeProduto}\n` +
-    `💰 APROVEITE:${rate > 0 ? ` _${Math.round(rate)}% de DESCONTO!!!!_` : ""} \n🔴 De: ~${formatBRL(precoRiscado)}~ \n🔥 Por: *${formatBRL(precoPor)}* 😱\n` +
-    `🏷️ PROMOÇÃO - CLIQUE NO LINK 👇\n` +
-    linkAfiliado
-  );
+
+  const hasCoupon =
+    (couponPercent != null && couponPercent > 0) || (couponAmount != null && couponAmount > 0);
+  const hasPrime = primeDiscountPercent != null && primeDiscountPercent > 0;
+
+  const lines: string[] = [];
+  // Bloco 1: nome + uma linha em branco pro título respirar.
+  lines.push(`✨ ${nomeProduto}`);
+  lines.push("");
+
+  // Bloco 2: preço.
+  lines.push(`💰 APROVEITE:${rate > 0 ? ` _${Math.round(rate)}% de DESCONTO!!!!_` : ""} `);
+  lines.push(`🔴 De: ~${formatBRL(precoRiscado)}~ `);
+  lines.push(`🔥 Por: *${formatBRL(precoPor)}* 😱💸`);
+
+  // Bloco 3: cupom + Prime (Amazon) — só renderiza quando há algum, separado
+  // por uma linha em branco pra destacar visualmente do preço acima.
+  if (hasCoupon || hasPrime) {
+    lines.push("");
+    if (couponPercent != null && couponPercent > 0) {
+      lines.push(`🎟️ Cupom de ${Math.round(couponPercent)}% OFF`);
+    } else if (couponAmount != null && couponAmount > 0) {
+      lines.push(`🎟️ Cupom de ${formatBRL(couponAmount)} OFF`);
+    }
+    if (hasPrime) {
+      lines.push(`💻 Prime: ${Math.round(primeDiscountPercent as number)}% OFF`);
+    }
+  }
+
+  // Bloco 4: chamada pra ação + link, sempre com uma linha em branco antes
+  // pra separar visualmente do conteúdo informativo acima.
+  lines.push("");
+  lines.push(`🏷️ PROMOÇÃO - CLIQUE NO LINK 👇`);
+  lines.push(linkAfiliado);
+
+  return lines.join("\n");
 }
 
 export function buildListaOfferWebhookPayload(input: ListaOfferWebhookInput) {
-  const { precoPor, precoRiscado, discountRate, linkAfiliado, imageUrl, instanceName, hash, groupIds } = input;
+  const {
+    precoPor,
+    precoRiscado,
+    discountRate,
+    linkAfiliado,
+    imageUrl,
+    instanceName,
+    hash,
+    groupIds,
+    couponPercent,
+    couponAmount,
+    primeDiscountPercent,
+  } = input;
   const descricao = buildListaOfferDescription(input);
   const rate = discountRate;
   return {
@@ -58,6 +116,12 @@ export function buildListaOfferWebhookPayload(input: ListaOfferWebhookInput) {
     desconto: rate > 0 ? Math.round(rate) : null,
     precoRiscado: precoRiscado > 0 ? precoRiscado : null,
     precoPor: precoPor > 0 ? precoPor : null,
+    // Campos Amazon — null quando não há cupom/Prime ou quando a fonte é
+    // Shopee/ML (que ainda não populam esses campos).
+    couponPercent: couponPercent != null && couponPercent > 0 ? Math.round(couponPercent) : null,
+    couponAmount: couponAmount != null && couponAmount > 0 ? couponAmount : null,
+    primeDiscountPercent:
+      primeDiscountPercent != null && primeDiscountPercent > 0 ? Math.round(primeDiscountPercent) : null,
   };
 }
 

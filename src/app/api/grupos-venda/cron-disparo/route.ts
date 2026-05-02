@@ -156,6 +156,10 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
           price_promo: number | null;
           discount_rate: number | null;
           converter_link: string;
+          // Campos extras Amazon (null em Shopee/ML — colunas não existem nessas tabelas).
+          coupon_percent?: number | null;
+          coupon_amount?: number | null;
+          prime_discount_percent?: number | null;
         };
         type InfoRow = {
           product_name: string;
@@ -173,13 +177,20 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
           table: "minha_lista_ofertas" | "minha_lista_ofertas_ml" | "minha_lista_ofertas_amazon",
           fk: string,
         ): Promise<AffiliateOfferRow[]> => {
+          // Amazon tem colunas extras (cupom + Prime); Shopee/ML não têm.
+          const cols =
+            table === "minha_lista_ofertas_amazon"
+              ? "product_name, image_url, price_original, price_promo, discount_rate, converter_link, coupon_percent, coupon_amount, prime_discount_percent"
+              : "product_name, image_url, price_original, price_promo, discount_rate, converter_link";
           const { data: items } = await supabase
             .from(table)
-            .select("product_name, image_url, price_original, price_promo, discount_rate, converter_link")
+            .select(cols)
             .eq("lista_id", fk)
             .eq("user_id", userId)
             .order("created_at", { ascending: true });
-          return (items ?? []) as AffiliateOfferRow[];
+          // Cast via unknown porque o Supabase TypeScript não consegue inferir
+          // colunas a partir de uma string condicional.
+          return (items ?? []) as unknown as AffiliateOfferRow[];
         };
 
         const [shopeeRows, mlRows, amazonRows, infoRows] = await Promise.all([
@@ -287,6 +298,9 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
               0;
             const precoPor = precoPorResolved || 0;
             const precoRiscado = (row.price_original ?? precoPor) || 0;
+            // Cupom e Prime só vêm da tabela Amazon (campos selecionados
+            // condicionalmente em `loadAffiliate`).
+            const isAmazon = item.source === "amazon";
             const payloadBody = buildListaOfferWebhookPayload({
               instanceName,
               hash,
@@ -297,6 +311,9 @@ async function runCronDisparo(opts?: CronRunOptions): Promise<CronResultBody> {
               precoRiscado,
               discountRate: rate,
               linkAfiliado,
+              couponPercent: isAmazon ? row.coupon_percent ?? null : null,
+              couponAmount: isAmazon ? row.coupon_amount ?? null : null,
+              primeDiscountPercent: isAmazon ? row.prime_discount_percent ?? null : null,
             });
             const whRes = await fetch(listaWebhookUrl, {
               method: "POST",

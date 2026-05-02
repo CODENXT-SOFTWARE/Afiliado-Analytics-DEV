@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from("amazon_link_history")
       .select(
-        "id, short_link, origin_url, product_name, image_url, item_id, price_promo, price_original, discount_rate, coupon_percent, coupon_amount, affiliate_commission_pct, created_at",
+        "id, short_link, origin_url, product_name, image_url, item_id, price_promo, price_original, discount_rate, coupon_percent, coupon_amount, affiliate_commission_pct, prime_discount_percent, created_at",
         { count: "exact" },
       )
       .eq("user_id", userId)
@@ -61,6 +61,8 @@ export async function GET(req: Request) {
       couponAmount: r.coupon_amount != null ? Number(r.coupon_amount) : null,
       affiliateCommissionPct:
         r.affiliate_commission_pct != null ? Number(r.affiliate_commission_pct) : null,
+      primeDiscountPercent:
+        r.prime_discount_percent != null ? Number(r.prime_discount_percent) : null,
       createdAt: r.created_at,
     }));
 
@@ -105,6 +107,7 @@ export async function POST(req: Request) {
       coupon_percent: num(body?.couponPercent),
       coupon_amount: num(body?.couponAmount),
       affiliate_commission_pct: num(body?.affiliateCommissionPct),
+      prime_discount_percent: num(body?.primeDiscountPercent),
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

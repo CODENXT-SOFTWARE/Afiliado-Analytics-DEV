@@ -18,10 +18,16 @@ export type ShopeeKeywordMessageInput = {
   precoRiscado: number;
   discountRate: number;
   linkAfiliado: string;
+  /** Amazon: cupom em % (ex.: 14). Opcional. */
+  couponPercent?: number | null;
+  /** Amazon: cupom em valor R$. Opcional. */
+  couponAmount?: number | null;
+  /** Amazon: desconto exclusivo Prime em %. Opcional. */
+  primeDiscountPercent?: number | null;
 };
 
 export function buildShopeeKeywordMessage(input: ShopeeKeywordMessageInput): string {
-  const { nomeProduto, precoPor, precoRiscado, discountRate, linkAfiliado } = input;
+  const { nomeProduto, precoPor, precoRiscado, discountRate, linkAfiliado, couponPercent, couponAmount, primeDiscountPercent } = input;
   const rate = discountRate;
   const lines: string[] = [];
   lines.push(`✨ ${nomeProduto}`);
@@ -31,13 +37,24 @@ export function buildShopeeKeywordMessage(input: ShopeeKeywordMessageInput): str
     lines.push(`🔴 De: ${formatBRL(precoRiscado)}`);
   }
   lines.push(`🔥 Por: ${formatBRL(precoPor)} 😱`);
+
+  // Linhas extras Amazon — só renderizam quando os campos estão presentes.
+  if (couponPercent != null && couponPercent > 0) {
+    lines.push(`🎟️ Cupom de ${Math.round(couponPercent)}% OFF`);
+  } else if (couponAmount != null && couponAmount > 0) {
+    lines.push(`🎟️ Cupom de ${formatBRL(couponAmount)} OFF`);
+  }
+  if (primeDiscountPercent != null && primeDiscountPercent > 0) {
+    lines.push(`💻 Prime: ${Math.round(primeDiscountPercent)}% OFF`);
+  }
+
   lines.push("");
   lines.push(`🏷️ PROMOÇÃO - CLIQUE NO LINK 👇`);
   lines.push(linkAfiliado);
   return lines.join("\n");
 }
 
-// ── Modo lista de ofertas (Shopee/ML pré-salvas) ────────────────────────────────
+// ── Modo lista de ofertas (Shopee/ML/Amazon pré-salvas) ─────────────────────────
 
 export type ListaOfferMessageInput = {
   nomeProduto: string;
@@ -45,10 +62,16 @@ export type ListaOfferMessageInput = {
   precoRiscado: number;
   discountRate: number;
   linkAfiliado: string;
+  /** Amazon: cupom em %. Opcional. */
+  couponPercent?: number | null;
+  /** Amazon: cupom em R$. Opcional. */
+  couponAmount?: number | null;
+  /** Amazon: % desconto Prime. Opcional. */
+  primeDiscountPercent?: number | null;
 };
 
 export function buildListaOfferMessage(input: ListaOfferMessageInput): string {
-  // Mesmo formato do modo keywords — produto Shopee/ML estruturado igual
+  // Mesmo formato do modo keywords — produto Shopee/ML/Amazon estruturado igual
   return buildShopeeKeywordMessage(input);
 }
 

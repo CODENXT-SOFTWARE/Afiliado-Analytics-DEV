@@ -47,6 +47,7 @@ type Item = {
   couponPercent: number | null;
   couponAmount: number | null;
   affiliateCommissionPct: number | null;
+  primeDiscountPercent: number | null;
   converterLink: string;
   productPageUrl?: string;
   createdAt: string;
@@ -354,6 +355,7 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
       discountRate: item.discountRate,
       couponPercent: item.couponPercent,
       couponAmount: item.couponAmount,
+      primeDiscountPercent: item.primeDiscountPercent,
       converterLink: item.converterLink,
       formatCurrency,
     });
@@ -743,14 +745,18 @@ export function MinhaListaOfertasAmazonListsPanel({ className }: { className?: s
                                       {item.couponPercent != null && item.couponPercent > 0 ? (
                                         <p className="text-xs text-amber-300 mt-1 flex items-center gap-1.5">
                                           <span>🎟️</span>
-                                          <span className="font-semibold">Cupom de {Math.round(item.couponPercent)}%</span>
-                                          <span className="text-[#9c9c9c]">no checkout</span>
+                                          <span className="font-semibold">Cupom de {Math.round(item.couponPercent)}% OFF</span>
                                         </p>
                                       ) : item.couponAmount != null && item.couponAmount > 0 ? (
                                         <p className="text-xs text-amber-300 mt-1 flex items-center gap-1.5">
                                           <span>🎟️</span>
-                                          <span className="font-semibold">Cupom de {formatCurrency(item.couponAmount)}</span>
-                                          <span className="text-[#9c9c9c]">no checkout</span>
+                                          <span className="font-semibold">Cupom de {formatCurrency(item.couponAmount)} OFF</span>
+                                        </p>
+                                      ) : null}
+                                      {item.primeDiscountPercent != null && item.primeDiscountPercent > 0 ? (
+                                        <p className="text-xs text-sky-300 mt-1 flex items-center gap-1.5" title="Desconto exclusivo Amazon Prime">
+                                          <span>💻</span>
+                                          <span className="font-semibold">Prime: {Math.round(item.primeDiscountPercent)}% OFF</span>
                                         </p>
                                       ) : null}
                                       <p className="text-[11px] text-text-secondary mt-1.5 flex items-start gap-1.5">

@@ -6,7 +6,7 @@ import { gateAmazon } from "@/lib/require-entitlements";
 export const dynamic = "force-dynamic";
 
 const SELECT_COLS =
-  "id, lista_id, image_url, product_name, price_original, price_promo, discount_rate, coupon_percent, coupon_amount, affiliate_commission_pct, converter_link, product_page_url, created_at";
+  "id, lista_id, image_url, product_name, price_original, price_promo, discount_rate, coupon_percent, coupon_amount, affiliate_commission_pct, prime_discount_percent, converter_link, product_page_url, created_at";
 
 function mapItem(r: Record<string, unknown>) {
   return {
@@ -21,6 +21,8 @@ function mapItem(r: Record<string, unknown>) {
     couponAmount: r.coupon_amount != null ? Number(r.coupon_amount) : null,
     affiliateCommissionPct:
       r.affiliate_commission_pct != null ? Number(r.affiliate_commission_pct) : null,
+    primeDiscountPercent:
+      r.prime_discount_percent != null ? Number(r.prime_discount_percent) : null,
     converterLink: r.converter_link ?? "",
     productPageUrl: String(r.product_page_url ?? "").trim(),
     createdAt: r.created_at,
@@ -104,6 +106,9 @@ export async function POST(req: Request) {
     const affiliateCommissionPct = numOrNull(
       body?.affiliateCommissionPct ?? body?.affiliate_commission_pct,
     );
+    const primeDiscountPercent = numOrNull(
+      body?.primeDiscountPercent ?? body?.prime_discount_percent,
+    );
 
     const { data: row, error } = await supabase
       .from("minha_lista_ofertas_amazon")
@@ -118,6 +123,7 @@ export async function POST(req: Request) {
         coupon_percent: couponPercent,
         coupon_amount: couponAmount,
         affiliate_commission_pct: affiliateCommissionPct,
+        prime_discount_percent: primeDiscountPercent,
         converter_link: converterLink,
         product_page_url: productPageUrl,
       })
@@ -200,6 +206,12 @@ export async function PATCH(req: Request) {
     if (Object.prototype.hasOwnProperty.call(body ?? {}, "affiliateCommissionPct") ||
         Object.prototype.hasOwnProperty.call(body ?? {}, "affiliate_commission_pct")) {
       updatePayload.affiliate_commission_pct = affiliateCommissionPct;
+    }
+    if (Object.prototype.hasOwnProperty.call(body ?? {}, "primeDiscountPercent") ||
+        Object.prototype.hasOwnProperty.call(body ?? {}, "prime_discount_percent")) {
+      updatePayload.prime_discount_percent = numOrNull(
+        body?.primeDiscountPercent ?? body?.prime_discount_percent,
+      );
     }
 
     const { data: row, error } = await supabase

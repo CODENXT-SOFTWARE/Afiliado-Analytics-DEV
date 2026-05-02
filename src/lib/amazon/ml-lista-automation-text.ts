@@ -18,10 +18,12 @@ export type MlListaAutomationInput = {
   pricePromo: number | null;
   discountRate: number | null;
   converterLink: string;
-  /** Cupom em % aplicável ao produto (ex.: 15 → "Cupom de 15%"). Opcional. */
+  /** Cupom em % aplicável ao produto (ex.: 15 → "Cupom de 15% OFF"). Opcional. */
   couponPercent?: number | null;
-  /** Cupom de valor fixo em R$ (ex.: 5 → "Cupom de R$ 5,00"). Opcional. */
+  /** Cupom de valor fixo em R$ (ex.: 5 → "Cupom de R$ 5,00 OFF"). Opcional. */
   couponAmount?: number | null;
+  /** % de desconto exclusivo Amazon Prime (ex.: 30 → "Prime: 30% OFF"). Opcional. */
+  primeDiscountPercent?: number | null;
   formatCurrency: (v: number) => string;
 };
 
@@ -37,9 +39,13 @@ export function buildMlListaAutomationText(p: MlListaAutomationInput): string {
   lines.push(`💰 Preço: ${disc}🔴 ${orig} por ✅ ${por}`);
 
   if (p.couponPercent != null && p.couponPercent > 0) {
-    lines.push(`🎟️ Cupom de ${Math.round(p.couponPercent)}% no checkout`);
+    lines.push(`🎟️ Cupom de ${Math.round(p.couponPercent)}% OFF`);
   } else if (p.couponAmount != null && p.couponAmount > 0) {
-    lines.push(`🎟️ Cupom de ${p.formatCurrency(p.couponAmount)} no checkout`);
+    lines.push(`🎟️ Cupom de ${p.formatCurrency(p.couponAmount)} OFF`);
+  }
+
+  if (p.primeDiscountPercent != null && p.primeDiscountPercent > 0) {
+    lines.push(`💻 Prime: ${Math.round(p.primeDiscountPercent)}% OFF`);
   }
 
   lines.push("🏷️ PROMOÇÃO - CLIQUE NO LINK 👇");

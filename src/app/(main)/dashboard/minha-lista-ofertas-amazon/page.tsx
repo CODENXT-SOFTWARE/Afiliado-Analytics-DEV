@@ -74,6 +74,7 @@ type MlHistoryEntry = {
   couponPercent: number | null;
   couponAmount: number | null;
   affiliateCommissionPct: number | null;
+  primeDiscountPercent: number | null;
   createdAt: string;
 };
 
@@ -1025,6 +1026,7 @@ function MinhaListaOfertasMlPageInner() {
           couponPercent: selectedMlProduct.couponPercent ?? null,
           couponAmount: selectedMlProduct.couponAmount ?? null,
           affiliateCommissionPct: selectedMlProduct.affiliateCommissionPct ?? null,
+          primeDiscountPercent: selectedMlProduct.primeDiscountPercent ?? null,
         }),
       });
       const hj = await hist.json();
@@ -1155,6 +1157,7 @@ function MinhaListaOfertasMlPageInner() {
             couponPercent: entry.couponPercent,
             couponAmount: entry.couponAmount,
             affiliateCommissionPct: entry.affiliateCommissionPct,
+            primeDiscountPercent: entry.primeDiscountPercent,
           }),
         });
         if (!res.ok) {
@@ -2502,12 +2505,31 @@ function MinhaListaOfertasMlPageInner() {
                             </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[#f0f0f2] line-clamp-2">{h.productName || "Link"}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <span className="text-[9px] text-[#a0a0a0]">
                           {new Date(h.createdAt).toLocaleDateString("pt-BR")}
                         </span>
                         {h.pricePromo != null ? (
                           <span className="text-[9px] font-semibold text-[#e24c30]">{formatCurrency(h.pricePromo)}</span>
+                        ) : null}
+                        {h.discountRate != null && h.discountRate > 0 ? (
+                          <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-px rounded-md border border-emerald-500/15">
+                            -{Math.round(h.discountRate)}%
+                          </span>
+                        ) : null}
+                        {h.couponPercent != null && h.couponPercent > 0 ? (
+                          <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-px rounded-md border border-amber-500/20" title="Cupom no checkout">
+                            🎟️ {Math.round(h.couponPercent)}% OFF
+                          </span>
+                        ) : h.couponAmount != null && h.couponAmount > 0 ? (
+                          <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-px rounded-md border border-amber-500/20" title="Cupom no checkout">
+                            🎟️ {formatCurrency(h.couponAmount)} OFF
+                          </span>
+                        ) : null}
+                        {h.primeDiscountPercent != null && h.primeDiscountPercent > 0 ? (
+                          <span className="text-[9px] font-bold text-sky-300 bg-sky-500/10 px-1.5 py-px rounded-md border border-sky-500/20" title="Desconto exclusivo Amazon Prime">
+                            💻 Prime {Math.round(h.primeDiscountPercent)}% OFF
+                          </span>
                         ) : null}
                       </div>
                       <p className="text-[10px] text-[#e24c30] font-mono break-all mt-1 line-clamp-2">{h.shortLink}</p>
