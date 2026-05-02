@@ -43,18 +43,52 @@ export type ListaOfferWebhookInput = {
    * Linha separada na descrição abaixo do cupom.
    */
   primeDiscountPercent?: number | null;
+  /** ML: desconto exclusivo Pix em % (ex.: 4 → "no Pix 4% OFF"). */
+  pixDiscountPercent?: number | null;
+  /** ML: produto entrega via FULL (logística ML — chega rápido). */
+  isFull?: boolean | null;
+  /** ML/Shopee: frete grátis disponível. */
+  freeShipping?: boolean | null;
+  /** ML: quantidade de parcelas sem juros (ex.: 4). */
+  installmentsCount?: number | null;
+  /** ML: valor de cada parcela em R$. */
+  installmentAmount?: number | null;
+  /** ML: true se as parcelas são sem juros. */
+  installmentsFreeInterest?: boolean | null;
 };
 
 const formatBRL = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 }).format(n);
 
 export function buildListaOfferDescription(input: ListaOfferWebhookInput): string {
-  const { nomeProduto, precoPor, precoRiscado, discountRate, linkAfiliado, couponPercent, couponAmount, primeDiscountPercent } = input;
+  const {
+    nomeProduto,
+    precoPor,
+    precoRiscado,
+    discountRate,
+    linkAfiliado,
+    couponPercent,
+    couponAmount,
+    primeDiscountPercent,
+    pixDiscountPercent,
+    isFull,
+    freeShipping,
+    installmentsCount,
+    installmentAmount,
+    installmentsFreeInterest,
+  } = input;
   const rate = discountRate;
 
   const hasCoupon =
     (couponPercent != null && couponPercent > 0) || (couponAmount != null && couponAmount > 0);
   const hasPrime = primeDiscountPercent != null && primeDiscountPercent > 0;
+  const hasPix = pixDiscountPercent != null && pixDiscountPercent > 0;
+  const hasFull = isFull === true;
+  const hasFreeShipping = freeShipping === true;
+  const hasInstallments =
+    installmentsCount != null && installmentsCount > 1 && installmentAmount != null;
+  const hasAnyExtra =
+    hasCoupon || hasPrime || hasPix || hasFull || hasFreeShipping || hasInstallments;
 
   const lines: string[] = [];
   // Bloco 1: nome + uma linha em branco pro título respirar.
@@ -66,9 +100,10 @@ export function buildListaOfferDescription(input: ListaOfferWebhookInput): strin
   lines.push(`🔴 De: ~${formatBRL(precoRiscado)}~ `);
   lines.push(`🔥 Por: *${formatBRL(precoPor)}* 😱💸`);
 
-  // Bloco 3: cupom + Prime (Amazon) — só renderiza quando há algum, separado
-  // por uma linha em branco pra destacar visualmente do preço acima.
-  if (hasCoupon || hasPrime) {
+  // Bloco 3: extras (cupom, Prime, Pix, FULL, frete grátis, parcelado) — só
+  // renderiza quando há algum, separado por uma linha em branco pra destacar
+  // visualmente do preço acima. A ordem segue intensidade do gancho de venda.
+  if (hasAnyExtra) {
     lines.push("");
     if (couponPercent != null && couponPercent > 0) {
       lines.push(`🎟️ Cupom de ${Math.round(couponPercent)}% OFF`);
@@ -77,6 +112,21 @@ export function buildListaOfferDescription(input: ListaOfferWebhookInput): strin
     }
     if (hasPrime) {
       lines.push(`💻 Prime: ${Math.round(primeDiscountPercent as number)}% OFF`);
+    }
+    if (hasPix) {
+      lines.push(`💳 ${Math.round(pixDiscountPercent as number)}% OFF no Pix`);
+    }
+    if (hasFull) {
+      lines.push(`⚡ Chega rápido com FULL`);
+    }
+    if (hasFreeShipping) {
+      lines.push(`🚚 Frete grátis`);
+    }
+    if (hasInstallments) {
+      const count = installmentsCount as number;
+      const amount = formatBRL(installmentAmount as number);
+      const suffix = installmentsFreeInterest ? " sem juros" : "";
+      lines.push(`💳 ${count}x ${amount}${suffix}`);
     }
   }
 
@@ -102,6 +152,12 @@ export function buildListaOfferWebhookPayload(input: ListaOfferWebhookInput) {
     couponPercent,
     couponAmount,
     primeDiscountPercent,
+    pixDiscountPercent,
+    isFull,
+    freeShipping,
+    installmentsCount,
+    installmentAmount,
+    installmentsFreeInterest,
   } = input;
   const descricao = buildListaOfferDescription(input);
   const rate = discountRate;
@@ -116,12 +172,21 @@ export function buildListaOfferWebhookPayload(input: ListaOfferWebhookInput) {
     desconto: rate > 0 ? Math.round(rate) : null,
     precoRiscado: precoRiscado > 0 ? precoRiscado : null,
     precoPor: precoPor > 0 ? precoPor : null,
-    // Campos Amazon — null quando não há cupom/Prime ou quando a fonte é
-    // Shopee/ML (que ainda não populam esses campos).
+    // Campos por origem — `null` quando ausente. Cupom é compartilhado;
+    // Prime é Amazon-only; Pix/FULL/installments são ML-only.
     couponPercent: couponPercent != null && couponPercent > 0 ? Math.round(couponPercent) : null,
     couponAmount: couponAmount != null && couponAmount > 0 ? couponAmount : null,
     primeDiscountPercent:
       primeDiscountPercent != null && primeDiscountPercent > 0 ? Math.round(primeDiscountPercent) : null,
+    pixDiscountPercent:
+      pixDiscountPercent != null && pixDiscountPercent > 0 ? Math.round(pixDiscountPercent) : null,
+    isFull: isFull === true ? true : null,
+    freeShipping: freeShipping === true ? true : null,
+    installmentsCount:
+      installmentsCount != null && installmentsCount > 1 ? installmentsCount : null,
+    installmentAmount:
+      installmentAmount != null && installmentAmount > 0 ? installmentAmount : null,
+    installmentsFreeInterest: installmentsFreeInterest === true ? true : null,
   };
 }
 

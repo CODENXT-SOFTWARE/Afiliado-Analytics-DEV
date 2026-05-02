@@ -44,6 +44,14 @@ type Item = {
   priceOriginal: number | null;
   pricePromo: number | null;
   discountRate: number | null;
+  couponPercent: number | null;
+  couponAmount: number | null;
+  pixDiscountPercent: number | null;
+  isFull: boolean | null;
+  freeShipping: boolean | null;
+  installmentsCount: number | null;
+  installmentAmount: number | null;
+  installmentsFreeInterest: boolean | null;
   converterLink: string;
   productPageUrl?: string;
   createdAt: string;
@@ -349,6 +357,14 @@ export function MinhaListaOfertasMlListsPanel({ className }: { className?: strin
       priceOriginal: item.priceOriginal,
       pricePromo: item.pricePromo,
       discountRate: item.discountRate,
+      couponPercent: item.couponPercent,
+      couponAmount: item.couponAmount,
+      pixDiscountPercent: item.pixDiscountPercent,
+      isFull: item.isFull,
+      freeShipping: item.freeShipping,
+      installmentsCount: item.installmentsCount,
+      installmentAmount: item.installmentAmount,
+      installmentsFreeInterest: item.installmentsFreeInterest,
       converterLink: item.converterLink,
       formatCurrency,
     });
@@ -725,6 +741,42 @@ export function MinhaListaOfertasMlListsPanel({ className }: { className?: strin
                                         )}
                                         <span className="text-emerald-400 font-medium">✅ {displayPrecoPorLista(item)}</span>
                                       </p>
+                                      {/* Badges de promo/atratividade da PDP — só renderizam quando o campo está populado */}
+                                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                        {item.couponPercent != null && item.couponPercent > 0 ? (
+                                          <span className="text-[10px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20" title="Cupom disponível">
+                                            🎟️ {Math.round(item.couponPercent)}% OFF
+                                          </span>
+                                        ) : item.couponAmount != null && item.couponAmount > 0 ? (
+                                          <span className="text-[10px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20" title="Cupom disponível">
+                                            🎟️ {formatCurrency(item.couponAmount)} OFF
+                                          </span>
+                                        ) : null}
+                                        {item.pixDiscountPercent != null && item.pixDiscountPercent > 0 ? (
+                                          <span className="text-[10px] font-bold text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded-md border border-cyan-500/20" title="Desconto exclusivo no Pix">
+                                            💳 Pix {Math.round(item.pixDiscountPercent)}%
+                                          </span>
+                                        ) : null}
+                                        {item.isFull ? (
+                                          <span className="text-[10px] font-bold text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded-md border border-violet-500/20" title="Entrega rápida via Mercado Livre FULL">
+                                            ⚡ FULL
+                                          </span>
+                                        ) : null}
+                                        {item.freeShipping && !item.isFull ? (
+                                          <span className="text-[10px] font-semibold text-green-300 bg-green-500/10 px-1.5 py-0.5 rounded-md border border-green-500/20" title="Frete grátis">
+                                            🚚 Frete grátis
+                                          </span>
+                                        ) : null}
+                                        {item.installmentsCount != null &&
+                                        item.installmentsCount > 1 &&
+                                        item.installmentAmount != null &&
+                                        item.installmentAmount > 0 ? (
+                                          <span className="text-[10px] font-semibold text-text-secondary bg-[#1c1c1f] px-1.5 py-0.5 rounded-md border border-[#3e3e3e]" title="Parcelamento">
+                                            💳 {item.installmentsCount}x {formatCurrency(item.installmentAmount)}
+                                            {item.installmentsFreeInterest ? " s/juros" : ""}
+                                          </span>
+                                        ) : null}
+                                      </div>
                                       <div className="flex flex-wrap items-center gap-1 mt-2">
                                         <IconBtn
                                           title={copiedItemId === item.id ? "Copiado!" : "Copiar link"}

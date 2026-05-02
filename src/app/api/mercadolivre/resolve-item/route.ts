@@ -4,8 +4,10 @@ import { expandMercadoLivreAffiliateLink } from "@/lib/mercadolivre/expand-affil
 import { parseMlExtensionSessionToCookieHeader } from "@/lib/mercadolivre/ml-session-cookie";
 import { isMlSocialListsProfileUrl } from "@/lib/mercadolivre/site-search";
 import { gateMercadoLivre } from "@/lib/require-entitlements";
+import { fetchMlPdpPromo } from "@/lib/mercadolivre/fetch-ml-pdp-promo";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST { productUrl?: string, mlbId?: string, affiliateUrl?: string }
@@ -64,6 +66,64 @@ export async function POST(req: Request) {
       );
     }
 
+    // Enriquece com promo da PDP (cupom, Pix, FULL, frete, parcelamento) —
+    // mesmo padrão do `product-search` enrichWithPdpPromo. Requer cookie.
+    //
+    // Tentamos 2 URLs em sequência:
+    //   1) `meta.permalink` (versão "limpa" devolvida pelo metadata fetch)
+    //   2) `productUrl` (URL original que o usuário colou) — fallback caso
+    //      o permalink seja redirect intermediário ou listing genérico que
+    //      não tem o conteúdo de promo da variante específica.
+    //
+    // Para de tentar assim que uma URL retornar QUALQUER campo de promo.
+    let promo: Awaited<ReturnType<typeof fetchMlPdpPromo>> | null = null;
+    let promoSource: "permalink" | "productUrl" | "none" = "none";
+    if (mlCookieHeader) {
+      const candidates: Array<{ url: string; label: "permalink" | "productUrl" }> = [];
+      if (meta.permalink) candidates.push({ url: meta.permalink, label: "permalink" });
+      if (productUrl && productUrl !== meta.permalink) {
+        candidates.push({ url: productUrl, label: "productUrl" });
+      }
+      for (const c of candidates) {
+        const tentative = await fetchMlPdpPromo({
+          productPageUrl: c.url,
+          cookieHeader: mlCookieHeader,
+          timeoutMs: 6000,
+        });
+        const hasAny =
+          (tentative.couponPercent ?? 0) > 0 ||
+          (tentative.couponAmount ?? 0) > 0 ||
+          (tentative.pixDiscountPercent ?? 0) > 0 ||
+          tentative.isFull ||
+          tentative.freeShipping ||
+          tentative.installmentsCount != null;
+        if (hasAny) {
+          promo = tentative;
+          promoSource = c.label;
+          break;
+        }
+        // Se não veio nada, ainda guarda o último resultado pra retornar
+        // com `null`s sem ficar tentando depois.
+        promo = tentative;
+      }
+    }
+    // eslint-disable-next-line no-console
+    console.log("[ml] resolve-item promo:", {
+      hasCookie: !!mlCookieHeader,
+      permalink: meta.permalink,
+      productUrl: productUrl || null,
+      promoSource,
+      promoFound: promo
+        ? {
+            coupon: promo.couponPercent ?? promo.couponAmount,
+            pix: promo.pixDiscountPercent,
+            full: promo.isFull,
+            frete: promo.freeShipping,
+            inst: promo.installmentsCount,
+          }
+        : null,
+    });
+
     return NextResponse.json({
       data: {
         resolvedId: meta.resolvedId,
@@ -81,6 +141,15 @@ export async function POST(req: Request) {
         warranty: meta.warranty ?? null,
         listingTypeId: meta.listingTypeId ?? null,
         affiliateCommissionPct: meta.affiliateCommissionPct ?? null,
+        // Campos de promo da PDP — null quando sem cookie ou sem promo.
+        couponPercent: promo?.couponPercent ?? null,
+        couponAmount: promo?.couponAmount ?? null,
+        pixDiscountPercent: promo?.pixDiscountPercent ?? null,
+        isFull: promo?.isFull ?? null,
+        freeShipping: promo?.freeShipping ?? null,
+        installmentsCount: promo?.installmentsCount ?? null,
+        installmentAmount: promo?.installmentAmount ?? null,
+        installmentsFreeInterest: promo?.installmentsFreeInterest ?? null,
         usedAppCredentials: false,
         usedBearerToken: false,
         usedMlSessionCookie: !!mlCookieHeader,

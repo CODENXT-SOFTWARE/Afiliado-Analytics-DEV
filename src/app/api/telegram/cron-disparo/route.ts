@@ -192,10 +192,16 @@ async function runCronDisparoTelegram(opts?: CronRunOptions): Promise<CronResult
           price_promo: number | null;
           discount_rate: number | null;
           converter_link: string;
-          // Campos extras Amazon (null em Shopee/ML — colunas não existem nessas tabelas).
+          // Campos extras por marketplace — ver disparar/route.ts.
           coupon_percent?: number | null;
           coupon_amount?: number | null;
           prime_discount_percent?: number | null;
+          pix_discount_percent?: number | null;
+          is_full?: boolean | null;
+          free_shipping?: boolean | null;
+          installments_count?: number | null;
+          installment_amount?: number | null;
+          installments_free_interest?: boolean | null;
         };
         type InfoRow = {
           product_name: string;
@@ -215,11 +221,13 @@ async function runCronDisparoTelegram(opts?: CronRunOptions): Promise<CronResult
           table: "minha_lista_ofertas" | "minha_lista_ofertas_ml" | "minha_lista_ofertas_amazon",
           listaId: string,
         ): Promise<ListaRow[]> => {
-          // Amazon tem colunas extras (cupom + Prime); Shopee/ML não têm.
+          // Cada tabela tem colunas extras diferentes — ver disparar/route.ts.
           const cols =
             table === "minha_lista_ofertas_amazon"
               ? "id, product_name, image_url, price_original, price_promo, discount_rate, converter_link, coupon_percent, coupon_amount, prime_discount_percent"
-              : "id, product_name, image_url, price_original, price_promo, discount_rate, converter_link";
+              : table === "minha_lista_ofertas_ml"
+                ? "id, product_name, image_url, price_original, price_promo, discount_rate, converter_link, coupon_percent, coupon_amount, pix_discount_percent, is_full, free_shipping, installments_count, installment_amount, installments_free_interest"
+                : "id, product_name, image_url, price_original, price_promo, discount_rate, converter_link";
           const { data } = await supabase
             .from(table)
             .select(cols)
@@ -307,18 +315,24 @@ async function runCronDisparoTelegram(opts?: CronRunOptions): Promise<CronResult
             0;
           const precoPor = precoPorResolved || 0;
           const precoRiscado = (r.price_original ?? precoPor) || 0;
-          // Cupom e Prime só vêm da tabela Amazon (campos selecionados
-          // condicionalmente em `fetchLista`).
+          // Cada marketplace traz seu conjunto de campos.
           const isAmazon = item.kind === "amazon";
+          const isMl = item.kind === "ml";
           text = buildListaOfferMessage({
             nomeProduto,
             precoPor,
             precoRiscado,
             discountRate: rate,
             linkAfiliado,
-            couponPercent: isAmazon ? r.coupon_percent ?? null : null,
-            couponAmount: isAmazon ? r.coupon_amount ?? null : null,
+            couponPercent: isAmazon || isMl ? r.coupon_percent ?? null : null,
+            couponAmount: isAmazon || isMl ? r.coupon_amount ?? null : null,
             primeDiscountPercent: isAmazon ? r.prime_discount_percent ?? null : null,
+            pixDiscountPercent: isMl ? r.pix_discount_percent ?? null : null,
+            isFull: isMl ? r.is_full ?? null : null,
+            freeShipping: isMl ? r.free_shipping ?? null : null,
+            installmentsCount: isMl ? r.installments_count ?? null : null,
+            installmentAmount: isMl ? r.installment_amount ?? null : null,
+            installmentsFreeInterest: isMl ? r.installments_free_interest ?? null : null,
           });
           imageUrl = r.image_url?.trim() || undefined;
           nomeKeyword = nomeProduto.slice(0, 30);

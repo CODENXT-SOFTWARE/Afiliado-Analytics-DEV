@@ -1,12 +1,57 @@
 import { NextResponse } from "next/server";
 import { fetchMlSiteCategoryWithSession, fetchMlSiteSearchWithSession } from "@/lib/mercadolivre/site-search";
+import type { MlSiteSearchProduct } from "@/lib/mercadolivre/site-search";
 import { parseMlExtensionSessionToCookieHeader } from "@/lib/mercadolivre/ml-session-cookie";
 import { isMlListaCategorySlug } from "@/lib/mercadolivre/ml-lista-category-slugs";
 import { gateMercadoLivre } from "@/lib/require-entitlements";
+import { fetchMlPdpPromo } from "@/lib/mercadolivre/fetch-ml-pdp-promo";
 
 export const dynamic = "force-dynamic";
 /** Listagem + PDPs em lote podem passar do default em serverless. */
 export const maxDuration = 120;
+
+/**
+ * Quantos itens do topo da listagem a gente enriquece batendo na PDP pra
+ * pegar cupom + Pix + FULL + frete + parcelamento. Acima disso, o usuário
+ * ainda vê o produto, só sem esses dados extras. Mantém o tempo total da
+ * request controlado.
+ */
+const PDP_PROMO_ENRICH_LIMIT = 12;
+const PDP_PROMO_TIMEOUT_MS = 5500;
+
+async function enrichWithPdpPromo(
+  products: MlSiteSearchProduct[],
+  cookieHeader: string,
+): Promise<void> {
+  const targets = products
+    .slice(0, PDP_PROMO_ENRICH_LIMIT)
+    .filter((p) => Boolean(p.productLink && p.productLink.trim()));
+  if (targets.length === 0) return;
+  await Promise.all(
+    targets.map(async (p) => {
+      const promo = await fetchMlPdpPromo({
+        productPageUrl: p.productLink,
+        cookieHeader,
+        timeoutMs: PDP_PROMO_TIMEOUT_MS,
+      });
+      // Cupom só sobrescreve quando a SERP não trouxe (raro, mas seguro).
+      if (p.couponPercent == null && promo.couponPercent != null) {
+        p.couponPercent = promo.couponPercent;
+      }
+      if (p.couponAmount == null && promo.couponAmount != null) {
+        p.couponAmount = promo.couponAmount;
+      }
+      if (promo.pixDiscountPercent != null) p.pixDiscountPercent = promo.pixDiscountPercent;
+      if (promo.isFull) p.isFull = true;
+      if (promo.freeShipping) p.freeShipping = true;
+      if (promo.installmentsCount != null) {
+        p.installmentsCount = promo.installmentsCount;
+        p.installmentAmount = promo.installmentAmount;
+        p.installmentsFreeInterest = promo.installmentsFreeInterest;
+      }
+    }),
+  );
+}
 
 function sessionTokenFrom(req: Request, bodyToken: string | null | undefined): string | null {
   const h = req.headers.get("x-ml-session-token")?.trim();
@@ -47,21 +92,20 @@ async function runSearch(args: {
   const catOk = cat && isMlListaCategorySlug(cat);
 
   try {
+    let products: MlSiteSearchProduct[];
     if (catOk) {
-      const products = await fetchMlSiteCategoryWithSession(cat, limit, cookieHeader);
-      return NextResponse.json({ products });
-    }
-    if (cat && !catOk && !q.trim()) {
+      products = await fetchMlSiteCategoryWithSession(cat, limit, cookieHeader);
+    } else if (cat && !catOk && !q.trim()) {
       return NextResponse.json({ error: "Categoria inválida ou não permitida." }, { status: 400 });
-    }
-    if (!q.trim()) {
+    } else if (!q.trim()) {
       return NextResponse.json(
         { error: "Informe q (busca por nome) ou categoria (lista do app)." },
         { status: 400 },
       );
+    } else {
+      products = await fetchMlSiteSearchWithSession(q, limit, cookieHeader);
     }
-
-    const products = await fetchMlSiteSearchWithSession(q, limit, cookieHeader);
+    await enrichWithPdpPromo(products, cookieHeader);
     return NextResponse.json({ products });
   } catch (e) {
     const msg =

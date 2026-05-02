@@ -34,10 +34,18 @@ type SavedOfferRow = {
   price_promo: number | null;
   discount_rate: number | null;
   converter_link: string;
-  // Campos extras Amazon (null em Shopee/ML — colunas não existem nessas tabelas).
+  // Campos extras por marketplace — `coupon_*` existe em Amazon e ML;
+  // `prime_*` só em Amazon; `pix_*`/`is_full`/`free_shipping`/installments_*
+  // só em ML. Shopee não popula nada disso ainda.
   coupon_percent?: number | null;
   coupon_amount?: number | null;
   prime_discount_percent?: number | null;
+  pix_discount_percent?: number | null;
+  is_full?: boolean | null;
+  free_shipping?: boolean | null;
+  installments_count?: number | null;
+  installment_amount?: number | null;
+  installments_free_interest?: boolean | null;
 };
 
 export async function POST(req: Request) {
@@ -139,12 +147,14 @@ export async function POST(req: Request) {
       table: AffiliateOfferTable,
       fk: string,
     ): Promise<SavedOfferRow[]> => {
-      // Amazon tem colunas extras (cupom + Prime); Shopee/ML não têm.
-      // Selecionamos os extras só pra Amazon, evitando "column does not exist".
+      // Cada tabela tem colunas extras diferentes — pegamos só as que
+      // existem pra evitar erro "column does not exist" em Shopee.
       const cols =
         table === "minha_lista_ofertas_amazon"
           ? "product_name, image_url, price_original, price_promo, discount_rate, converter_link, coupon_percent, coupon_amount, prime_discount_percent"
-          : "product_name, image_url, price_original, price_promo, discount_rate, converter_link";
+          : table === "minha_lista_ofertas_ml"
+            ? "product_name, image_url, price_original, price_promo, discount_rate, converter_link, coupon_percent, coupon_amount, pix_discount_percent, is_full, free_shipping, installments_count, installment_amount, installments_free_interest"
+            : "product_name, image_url, price_original, price_promo, discount_rate, converter_link";
       const { data: itens, error: qErr } = await supabase
         .from(table)
         .select(cols)
@@ -254,10 +264,12 @@ export async function POST(req: Request) {
       const precoPor = precoPorResolved || 0;
       let precoRiscado = (row.price_original ?? 0) || 0;
       if (precoRiscado <= 0 && precoPor > 0) precoRiscado = precoPor;
-      // Cupom e Prime só existem no row vindo da tabela Amazon (campos
-      // selecionados condicionalmente em `carregarItensListaSalva`). Pra
-      // ML/Shopee vêm undefined e o builder ignora.
+      // Cada marketplace tem seu conjunto de campos extras (selecionados
+      // condicionalmente em `carregarItensListaSalva`). Cupom é compartilhado
+      // entre Amazon e ML; Prime é Amazon-only; Pix/FULL/installments são
+      // ML-only. Shopee ainda não popula nada.
       const isAmazon = item.source === "amazon";
+      const isMl = item.source === "ml";
       const payload = buildListaOfferWebhookPayload({
         instanceName,
         hash,
@@ -268,9 +280,15 @@ export async function POST(req: Request) {
         precoRiscado,
         discountRate: rate,
         linkAfiliado,
-        couponPercent: isAmazon ? row.coupon_percent ?? null : null,
-        couponAmount: isAmazon ? row.coupon_amount ?? null : null,
+        couponPercent: isAmazon || isMl ? row.coupon_percent ?? null : null,
+        couponAmount: isAmazon || isMl ? row.coupon_amount ?? null : null,
         primeDiscountPercent: isAmazon ? row.prime_discount_percent ?? null : null,
+        pixDiscountPercent: isMl ? row.pix_discount_percent ?? null : null,
+        isFull: isMl ? row.is_full ?? null : null,
+        freeShipping: isMl ? row.free_shipping ?? null : null,
+        installmentsCount: isMl ? row.installments_count ?? null : null,
+        installmentAmount: isMl ? row.installment_amount ?? null : null,
+        installmentsFreeInterest: isMl ? row.installments_free_interest ?? null : null,
       });
       const whRes = await fetch(listaWebhookUrl, {
         method: "POST",

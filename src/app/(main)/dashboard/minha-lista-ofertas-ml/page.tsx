@@ -72,6 +72,14 @@ type MlHistoryEntry = {
   pricePromo: number | null;
   priceOriginal: number | null;
   discountRate: number | null;
+  couponPercent: number | null;
+  couponAmount: number | null;
+  pixDiscountPercent: number | null;
+  isFull: boolean | null;
+  freeShipping: boolean | null;
+  installmentsCount: number | null;
+  installmentAmount: number | null;
+  installmentsFreeInterest: boolean | null;
   createdAt: string;
 };
 
@@ -163,6 +171,75 @@ function MlOfferRowCard({
               )}
             >
               {fmtMlDisc(p.discountRate)}
+            </span>
+          ) : null}
+          {p.couponPercent != null && p.couponPercent > 0 ? (
+            <span
+              className={cn(
+                "font-bold text-amber-300 bg-amber-500/10 px-1.5 py-px rounded-md border border-amber-500/20 whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title="Cupom disponível"
+            >
+              🎟️ {Math.round(p.couponPercent)}% OFF
+            </span>
+          ) : p.couponAmount != null && p.couponAmount > 0 ? (
+            <span
+              className={cn(
+                "font-bold text-amber-300 bg-amber-500/10 px-1.5 py-px rounded-md border border-amber-500/20 whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title="Cupom disponível"
+            >
+              🎟️ {formatCurrency(p.couponAmount)} OFF
+            </span>
+          ) : null}
+          {p.pixDiscountPercent != null && p.pixDiscountPercent > 0 ? (
+            <span
+              className={cn(
+                "font-bold text-cyan-300 bg-cyan-500/10 px-1.5 py-px rounded-md border border-cyan-500/20 whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title="Desconto exclusivo no Pix"
+            >
+              💳 Pix {Math.round(p.pixDiscountPercent)}%
+            </span>
+          ) : null}
+          {p.isFull ? (
+            <span
+              className={cn(
+                "font-bold text-violet-300 bg-violet-500/10 px-1.5 py-px rounded-md border border-violet-500/20 whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title="Entrega rápida via Mercado Livre FULL"
+            >
+              ⚡ FULL
+            </span>
+          ) : null}
+          {p.freeShipping && !p.isFull ? (
+            <span
+              className={cn(
+                "font-semibold text-green-300 bg-green-500/10 px-1.5 py-px rounded-md border border-green-500/20 whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title="Frete grátis"
+            >
+              🚚 Frete grátis
+            </span>
+          ) : null}
+          {p.installmentsCount != null &&
+          p.installmentsCount > 1 &&
+          p.installmentAmount != null &&
+          p.installmentAmount > 0 ? (
+            <span
+              className={cn(
+                "font-semibold text-text-secondary bg-[#1c1c1f] px-1.5 py-px rounded-md border border-[#3e3e3e] whitespace-nowrap",
+                compact ? "text-[9px]" : "text-[10px]",
+              )}
+              title={p.installmentsFreeInterest ? "Parcelado sem juros" : "Parcelado"}
+            >
+              💳 {p.installmentsCount}x {formatCurrency(p.installmentAmount)}
+              {p.installmentsFreeInterest ? " s/juros" : ""}
             </span>
           ) : null}
           <span className={cn("text-[#d8d8d8] whitespace-nowrap", compact ? "text-[9px]" : "text-[10px]")}>
@@ -709,11 +786,23 @@ function MinhaListaOfertasMlPageInner() {
     setMlSearchPage((p) => Math.min(p, tp));
   }, [mlSearchResultsVisible.length]);
 
-  const mlGoldenSimilarTotalPages = Math.max(1, Math.ceil(mlSimilarProducts.length / ML_SIMILAR_PAGE_SIZE));
+  /**
+   * Filtra "Ofertas semelhantes" pra esconder os placeholders (`Anúncio MLB...`)
+   * que vêm sem título de produto — geralmente listings sem dados que
+   * confundem o usuário e não dão pra converter.
+   */
+  const mlSimilarProductsVisible = useMemo(
+    () => mlSimilarProducts.filter((p) => !isMlAnuncioPlaceholderTitle(p.productName)),
+    [mlSimilarProducts],
+  );
+  const mlGoldenSimilarTotalPages = Math.max(
+    1,
+    Math.ceil(mlSimilarProductsVisible.length / ML_SIMILAR_PAGE_SIZE),
+  );
   const pagedMlGoldenSimilar = useMemo(() => {
     const from = (mlGoldenSimilarPage - 1) * ML_SIMILAR_PAGE_SIZE;
-    return mlSimilarProducts.slice(from, from + ML_SIMILAR_PAGE_SIZE);
-  }, [mlSimilarProducts, mlGoldenSimilarPage]);
+    return mlSimilarProductsVisible.slice(from, from + ML_SIMILAR_PAGE_SIZE);
+  }, [mlSimilarProductsVisible, mlGoldenSimilarPage]);
 
   useEffect(() => {
     setMlGoldenSimilarPage(1);
@@ -763,6 +852,22 @@ function MinhaListaOfertasMlPageInner() {
               priceOriginal: d.priceOriginal != null ? Number(d.priceOriginal) : null,
               discountRate: d.discountRate != null ? Number(d.discountRate) : null,
               currencyId: String(d.currencyId ?? "BRL") || "BRL",
+              affiliateCommissionPct:
+                d.affiliateCommissionPct != null ? Number(d.affiliateCommissionPct) : null,
+              couponPercent: d.couponPercent != null ? Number(d.couponPercent) : null,
+              couponAmount: d.couponAmount != null ? Number(d.couponAmount) : null,
+              pixDiscountPercent:
+                d.pixDiscountPercent != null ? Number(d.pixDiscountPercent) : null,
+              isFull: d.isFull == null ? null : Boolean(d.isFull),
+              freeShipping: d.freeShipping == null ? null : Boolean(d.freeShipping),
+              installmentsCount:
+                d.installmentsCount != null ? Number(d.installmentsCount) : null,
+              installmentAmount:
+                d.installmentAmount != null ? Number(d.installmentAmount) : null,
+              installmentsFreeInterest:
+                d.installmentsFreeInterest == null
+                  ? null
+                  : Boolean(d.installmentsFreeInterest),
             },
           ]);
           goProdutoOnMobile();
@@ -958,6 +1063,14 @@ function MinhaListaOfertasMlPageInner() {
           pricePromo: selectedMlProduct.price,
           priceOriginal: selectedMlProduct.priceOriginal,
           discountRate: selectedMlProduct.discountRate,
+          couponPercent: selectedMlProduct.couponPercent ?? null,
+          couponAmount: selectedMlProduct.couponAmount ?? null,
+          pixDiscountPercent: selectedMlProduct.pixDiscountPercent ?? null,
+          isFull: selectedMlProduct.isFull ?? null,
+          freeShipping: selectedMlProduct.freeShipping ?? null,
+          installmentsCount: selectedMlProduct.installmentsCount ?? null,
+          installmentAmount: selectedMlProduct.installmentAmount ?? null,
+          installmentsFreeInterest: selectedMlProduct.installmentsFreeInterest ?? null,
         }),
       });
       const hj = await hist.json();
@@ -1085,6 +1198,14 @@ function MinhaListaOfertasMlPageInner() {
             priceOriginal: entry.priceOriginal,
             pricePromo: entry.pricePromo,
             discountRate: entry.discountRate,
+            couponPercent: entry.couponPercent,
+            couponAmount: entry.couponAmount,
+            pixDiscountPercent: entry.pixDiscountPercent,
+            isFull: entry.isFull,
+            freeShipping: entry.freeShipping,
+            installmentsCount: entry.installmentsCount,
+            installmentAmount: entry.installmentAmount,
+            installmentsFreeInterest: entry.installmentsFreeInterest,
           }),
         });
         if (!res.ok) {
@@ -1936,7 +2057,40 @@ function MinhaListaOfertasMlPageInner() {
                         {fmtMlDisc(selectedMlProduct.discountRate)}
                       </span>
                     ) : null}
+                    {selectedMlProduct.couponPercent != null && selectedMlProduct.couponPercent > 0 ? (
+                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20" title="Cupom disponível">
+                        🎟️ {Math.round(selectedMlProduct.couponPercent)}% OFF
+                      </span>
+                    ) : selectedMlProduct.couponAmount != null && selectedMlProduct.couponAmount > 0 ? (
+                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20" title="Cupom disponível">
+                        🎟️ {formatCurrency(selectedMlProduct.couponAmount)} OFF
+                      </span>
+                    ) : null}
+                    {selectedMlProduct.pixDiscountPercent != null && selectedMlProduct.pixDiscountPercent > 0 ? (
+                      <span className="text-[9px] font-bold text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20" title="Desconto exclusivo no Pix">
+                        💳 Pix {Math.round(selectedMlProduct.pixDiscountPercent)}%
+                      </span>
+                    ) : null}
+                    {selectedMlProduct.isFull ? (
+                      <span className="text-[9px] font-bold text-violet-300 bg-violet-500/10 px-2 py-0.5 rounded-md border border-violet-500/20" title="Entrega rápida via Mercado Livre FULL">
+                        ⚡ FULL
+                      </span>
+                    ) : null}
+                    {selectedMlProduct.freeShipping && !selectedMlProduct.isFull ? (
+                      <span className="text-[9px] font-semibold text-green-300 bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/20" title="Frete grátis">
+                        🚚 Frete grátis
+                      </span>
+                    ) : null}
                   </div>
+                  {selectedMlProduct.installmentsCount != null &&
+                  selectedMlProduct.installmentsCount > 1 &&
+                  selectedMlProduct.installmentAmount != null &&
+                  selectedMlProduct.installmentAmount > 0 ? (
+                    <p className="text-[10px] text-text-secondary mt-1.5">
+                      💳 {selectedMlProduct.installmentsCount}x {formatCurrency(selectedMlProduct.installmentAmount)}
+                      {selectedMlProduct.installmentsFreeInterest ? " sem juros" : ""}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -1946,7 +2100,7 @@ function MinhaListaOfertasMlPageInner() {
                 </div>
               ) : null}
 
-              {!mlSimilarLoading && mlSimilarProducts.length > 0 ? (
+              {!mlSimilarLoading && mlSimilarProductsVisible.length > 0 ? (
                 <div className="pt-1 w-full min-w-0">
                   <h3 className="text-[11px] font-bold text-[#f0f0f2] uppercase tracking-widest">Ofertas semelhantes</h3>
                   <p className="text-[9px] text-[#9a9aa2] mt-0.5">Com base nas primeiras palavras do nome do produto.</p>
@@ -2398,12 +2552,53 @@ function MinhaListaOfertasMlPageInner() {
                             </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[#f0f0f2] line-clamp-2">{h.productName || "Link"}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <span className="text-[9px] text-[#a0a0a0]">
                           {new Date(h.createdAt).toLocaleDateString("pt-BR")}
                         </span>
                         {h.pricePromo != null ? (
                           <span className="text-[9px] font-semibold text-[#e24c30]">{formatCurrency(h.pricePromo)}</span>
+                        ) : null}
+                        {h.discountRate != null && h.discountRate > 0 ? (
+                          <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-px rounded-md border border-emerald-500/15">
+                            -{Math.round(h.discountRate)}%
+                          </span>
+                        ) : null}
+                        {h.couponPercent != null && h.couponPercent > 0 ? (
+                          <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-px rounded-md border border-amber-500/20" title="Cupom">
+                            🎟️ {Math.round(h.couponPercent)}% OFF
+                          </span>
+                        ) : h.couponAmount != null && h.couponAmount > 0 ? (
+                          <span className="text-[9px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-px rounded-md border border-amber-500/20" title="Cupom">
+                            🎟️ {formatCurrency(h.couponAmount)} OFF
+                          </span>
+                        ) : null}
+                        {h.pixDiscountPercent != null && h.pixDiscountPercent > 0 ? (
+                          <span className="text-[9px] font-bold text-cyan-300 bg-cyan-500/10 px-1.5 py-px rounded-md border border-cyan-500/20" title="Desconto Pix">
+                            💳 Pix {Math.round(h.pixDiscountPercent)}%
+                          </span>
+                        ) : null}
+                        {h.isFull ? (
+                          <span className="text-[9px] font-bold text-violet-300 bg-violet-500/10 px-1.5 py-px rounded-md border border-violet-500/20" title="Entrega FULL">
+                            ⚡ FULL
+                          </span>
+                        ) : null}
+                        {h.freeShipping && !h.isFull ? (
+                          <span className="text-[9px] font-semibold text-green-300 bg-green-500/10 px-1.5 py-px rounded-md border border-green-500/20" title="Frete grátis">
+                            🚚 Frete grátis
+                          </span>
+                        ) : null}
+                        {h.installmentsCount != null &&
+                        h.installmentsCount > 1 &&
+                        h.installmentAmount != null &&
+                        h.installmentAmount > 0 ? (
+                          <span
+                            className="text-[9px] font-semibold text-text-secondary bg-[#1c1c1f] px-1.5 py-px rounded-md border border-[#3e3e3e]"
+                            title={h.installmentsFreeInterest ? "Parcelado sem juros" : "Parcelado"}
+                          >
+                            💳 {h.installmentsCount}x {formatCurrency(h.installmentAmount)}
+                            {h.installmentsFreeInterest ? " s/juros" : ""}
+                          </span>
                         ) : null}
                       </div>
                       <p className="text-[10px] text-[#e24c30] font-mono break-all mt-1 line-clamp-2">{h.shortLink}</p>

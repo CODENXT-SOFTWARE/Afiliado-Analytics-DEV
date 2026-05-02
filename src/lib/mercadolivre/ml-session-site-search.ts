@@ -21,6 +21,22 @@ export type MlSiteSearchProduct = {
   currencyId: string;
   /** Do PDP com sessão afiliada: texto "GANHOS X%" na barra do ML. */
   affiliateCommissionPct?: number | null;
+  /** Cupom em % (1–99) — vindo da PDP enriquecida. */
+  couponPercent?: number | null;
+  /** Cupom em valor R$ — alternativo ao percentual. */
+  couponAmount?: number | null;
+  /** Desconto exclusivo Pix em % (ex.: 4 → "no Pix 4% OFF"). */
+  pixDiscountPercent?: number | null;
+  /** True se a entrega é via FULL (logística ML — chega rápido). */
+  isFull?: boolean | null;
+  /** True se há frete grátis disponível. */
+  freeShipping?: boolean | null;
+  /** Quantidade de parcelas (ex.: 4 → "4x sem juros"). */
+  installmentsCount?: number | null;
+  /** Valor de cada parcela em R$. */
+  installmentAmount?: number | null;
+  /** True se as parcelas são sem juros. */
+  installmentsFreeInterest?: boolean | null;
 };
 
 const BROWSER_HEADERS: Record<string, string> = {

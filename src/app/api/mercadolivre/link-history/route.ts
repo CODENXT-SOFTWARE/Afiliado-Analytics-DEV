@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from("mercadolivre_link_history")
       .select(
-        "id, short_link, origin_url, product_name, image_url, item_id, price_promo, price_original, discount_rate, created_at",
+        "id, short_link, origin_url, product_name, image_url, item_id, price_promo, price_original, discount_rate, coupon_percent, coupon_amount, pix_discount_percent, is_full, free_shipping, installments_count, installment_amount, installments_free_interest, created_at",
         { count: "exact" },
       )
       .eq("user_id", userId)
@@ -65,6 +65,20 @@ export async function GET(req: Request) {
       pricePromo: r.price_promo != null ? Number(r.price_promo) : null,
       priceOriginal: r.price_original != null ? Number(r.price_original) : null,
       discountRate: r.discount_rate != null ? Number(r.discount_rate) : null,
+      couponPercent: r.coupon_percent != null ? Number(r.coupon_percent) : null,
+      couponAmount: r.coupon_amount != null ? Number(r.coupon_amount) : null,
+      pixDiscountPercent:
+        r.pix_discount_percent != null ? Number(r.pix_discount_percent) : null,
+      isFull: r.is_full == null ? null : Boolean(r.is_full),
+      freeShipping: r.free_shipping == null ? null : Boolean(r.free_shipping),
+      installmentsCount:
+        r.installments_count != null ? Number(r.installments_count) : null,
+      installmentAmount:
+        r.installment_amount != null ? Number(r.installment_amount) : null,
+      installmentsFreeInterest:
+        r.installments_free_interest == null
+          ? null
+          : Boolean(r.installments_free_interest),
       createdAt: r.created_at,
     }));
 
@@ -91,6 +105,18 @@ export async function POST(req: Request) {
       );
     }
 
+    const num = (v: unknown) => {
+      if (v == null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const bool = (v: unknown) => {
+      if (v == null) return null;
+      if (typeof v === "boolean") return v;
+      if (v === "true" || v === 1 || v === "1") return true;
+      if (v === "false" || v === 0 || v === "0") return false;
+      return null;
+    };
     const { error } = await supabase.from("mercadolivre_link_history").insert({
       user_id: userId,
       short_link: shortLink,
@@ -98,9 +124,17 @@ export async function POST(req: Request) {
       product_name: String(body?.productName ?? "").trim(),
       image_url: String(body?.imageUrl ?? "").trim(),
       item_id: String(body?.itemId ?? "").trim(),
-      price_promo: body?.pricePromo != null ? Number(body.pricePromo) : null,
-      price_original: body?.priceOriginal != null ? Number(body.priceOriginal) : null,
-      discount_rate: body?.discountRate != null ? Number(body.discountRate) : null,
+      price_promo: num(body?.pricePromo),
+      price_original: num(body?.priceOriginal),
+      discount_rate: num(body?.discountRate),
+      coupon_percent: num(body?.couponPercent),
+      coupon_amount: num(body?.couponAmount),
+      pix_discount_percent: num(body?.pixDiscountPercent),
+      is_full: bool(body?.isFull),
+      free_shipping: bool(body?.freeShipping),
+      installments_count: num(body?.installmentsCount),
+      installment_amount: num(body?.installmentAmount),
+      installments_free_interest: bool(body?.installmentsFreeInterest),
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
