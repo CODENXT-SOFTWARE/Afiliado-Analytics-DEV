@@ -1,16 +1,17 @@
 // app/minha-conta/renovar/page.tsx
 import Link from 'next/link'
 import Image from 'next/image'
-import { ExternalLink, AlertTriangle } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../../../utils/supabase/server'
 import { LogoutButton } from './LogoutButton'
+import RenewPlansSection from './RenewPlansSection'
+import { subscriptionToneForPlanTier, type PlanTier } from '@/lib/plan-entitlements'
 
 const kiwifyLoginUrl = 'https://dashboard.kiwify.com/login?lang=pt'
 const whatsappUrl = 'https://wa.me/5579999144028'
 
-const checkoutPadrao = 'https://pay.kiwify.com.br/Q1eE7t8'
-const checkoutPro = 'https://pay.kiwify.com.br/y7I4SuT'
+
 
 export default async function RenewPage({
   searchParams,
@@ -53,111 +54,103 @@ export default async function RenewPage({
     !error && profile?.subscription_status === 'active' && precisaPlano
   )
 
+  // Tone do plano atual pra `PricingPlansEmbed` marcar o card correspondente
+  // como "atual" (mesmo padrão usado no modal "Planos e preços" do dashboard).
+  // Trial / sem plano → tone "inicial" (default seguro).
+  const currentPlanTone = subscriptionToneForPlanTier(
+    (profile?.plan_tier as PlanTier) ?? 'inicial',
+  )
+
   return (
-    <div className="bg-dark-bg min-h-screen flex flex-col items-center justify-center font-sans p-4">
-
+    <div className="bg-dark-bg min-h-screen flex flex-col items-center font-sans p-4 py-8">
       {/* Logo */}
-        <Image
-          src="/logo.png"
-          alt="Afiliado Analytics"
-          width={240}
-          height={40}
-          priority
-          className="object-contain"
-        />
+      <Image
+        src="/logo.png"
+        alt="Afiliado Analytics"
+        width={240}
+        height={40}
+        priority
+        className="object-contain mb-6"
+      />
 
-      {/* Card — shadow-md para sombra mais suave */}
-      <div className="max-w-md w-full bg-dark-card border border-dark-border rounded-2xl shadow-md overflow-hidden">
-
-        {/* Corpo */}
-        <div className="px-6 py-8 text-center">
-
-          {/* Ícone central */}
-          <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-            <AlertTriangle className="h-8 w-8 text-amber-400" />
-          </div>
-
-          <h1 className="text-xl font-bold text-text-primary mb-3">
-            {upgradeMode ? 'Recurso do plano pago' : 'Sua assinatura expirou'}
-          </h1>
-          <p className="text-text-secondary text-sm leading-relaxed mb-8">
-            {upgradeMode
-              ? 'Esta área faz parte dos planos Padrão ou Pro. Assine para desbloquear GPL, ATI, automação de grupos e muito mais.'
-              : 'Seu acesso ao dashboard foi pausado. Escolha um plano abaixo para voltar a usar todas as ferramentas. Use o mesmo e-mail da sua conta ao pagar na Kiwify.'}
-          </p>
-
-          <div className="flex flex-col gap-3 mb-2">
-            <Link
-              href={checkoutPro}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-shopee-orange to-orange-500 py-3 px-4 text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
-            >
-              Assinar Pro
-              <ExternalLink className="h-4 w-4" />
-            </Link>
-            <Link
-              href={checkoutPadrao}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dark-border bg-dark-bg/60 py-3 px-4 text-base font-semibold text-text-primary transition-transform hover:scale-[1.01]"
-            >
-              Assinar Padrão
-              <ExternalLink className="h-4 w-4" />
-            </Link>
-            {upgradeMode ? (
-              <Link
-                href="/dashboard"
-                className="text-sm text-shopee-orange hover:underline mt-1"
-              >
-                Voltar ao dashboard
-              </Link>
-            ) : (
-              <>
-                <p className="mt-4 text-xs text-text-secondary">
-                  Já assina ou precisa reativar na Kiwify?
-                </p>
+      {/* Aviso compacto + ações secundárias */}
+      <div className="w-full max-w-[1480px] mb-6">
+        <div className="bg-dark-card border border-dark-border rounded-2xl shadow-md overflow-hidden">
+          <div className="px-6 py-6 flex flex-col items-center text-center gap-4 sm:flex-row sm:items-center sm:text-left sm:gap-6">
+            <div className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 flex items-center justify-center">
+              <Image
+                src="/sadsho3.png"
+                alt=""
+                width={96}
+                height={96}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-text-primary mb-1">
+                {upgradeMode ? 'Recurso do plano pago' : 'Sua assinatura expirou'}
+              </h1>
+              <p className="text-text-secondary text-sm leading-relaxed">
+                {upgradeMode ? (
+                  'Esta área faz parte dos planos Padrão ou Pro. Escolha um plano abaixo para desbloquear.'
+                ) : (
+                  <>
+                    Seu acesso ao dashboard foi pausado. Escolha um plano abaixo para voltar a usar as ferramentas.{' '}
+                    <span className="block sm:inline mt-1 sm:mt-0 text-base font-bold text-shopee-orange">
+                      Use o mesmo e-mail da sua conta ao pagar na Kiwify.
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
+              {upgradeMode ? (
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-dark-border bg-dark-bg/60 px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-white/5"
+                >
+                  Voltar ao dashboard
+                </Link>
+              ) : (
                 <Link
                   href={kiwifyLoginUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dark-border py-3 px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-white/5"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-dark-border bg-dark-bg/60 px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-white/5"
                 >
-                  Gerenciar assinatura na Kiwify
-                  <ExternalLink className="h-4 w-4" />
+                  Gerenciar na Kiwify
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
-              </>
-            )}
+              )}
+              <LogoutButton />
+            </div>
           </div>
-
-          <div className="my-5 flex items-center gap-3">
-            <span className="flex-1 h-px bg-dark-border" />
-            <span className="text-xs text-text-secondary">ou</span>
-            <span className="flex-1 h-px bg-dark-border" />
-          </div>
-
-          {/* Botão de logout — Client Component */}
-          <LogoutButton />
-        </div>
-
-        {/* Rodapé do card */}
-        <div className="px-6 py-4 border-t border-dark-border bg-dark-bg/40 text-center">
-          <p className="text-xs text-text-secondary">
-            Dúvidas?{' '}
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-shopee-orange hover:underline"
-            >
-           Chame no WhatsApp
-            </a>
-          </p>
         </div>
       </div>
 
+      {/* Cards de planos — mesmo componente usado no modal "Planos e preços"
+          do dashboard. Toggle Mensal/Trimestral, destaque MAIS POPULAR no Pro,
+          card do plano atual fica marcado quando aplicável. */}
+      <div className="w-full max-w-[1480px]">
+        <RenewPlansSection currentPlanTone={currentPlanTone} />
+      </div>
+
+      {/* Rodapé com suporte */}
+      <p className="mt-6 text-sm text-text-secondary">
+        Dúvidas?{' '}
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-shopee-orange hover:underline font-medium"
+        >
+          Chame no WhatsApp
+        </a>
+      </p>
+
       {/* Copyright */}
-      <p className="mt-8 text-xs text-text-secondary/60">
+      <p className="mt-4 text-xs text-text-secondary/60">
         © 2026 Afiliado Analytics. Todos os direitos reservados.
       </p>
     </div>

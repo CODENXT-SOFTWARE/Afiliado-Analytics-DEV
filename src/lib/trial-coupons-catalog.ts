@@ -17,6 +17,7 @@ export type TrialCouponCatalogEntry = {
 };
 
 export const TRIAL_COUPONS_CATALOG: TrialCouponCatalogEntry[] = [
+  { cupom: "3DAYSFREE", days: 3, ativo: true, quantidade: 99999 },
   { cupom: "7DAYSFREE", days: 7, ativo: true, quantidade: 99999 },
   { cupom: "30DAYSFREE", days: 30, ativo: true, quantidade: 99999 },
   { cupom: "1DAYFREE", days: 1, ativo: true, quantidade: 99999 },
@@ -24,4 +25,4 @@ export const TRIAL_COUPONS_CATALOG: TrialCouponCatalogEntry[] = [
 ];
 
 /** Cupom exibido por padrão no modal de cadastro gratuito. */
-export const DEFAULT_TRIAL_COUPON_CODE = "7DAYSFREE";
+export const DEFAULT_TRIAL_COUPON_CODE = "3DAYSFREE";

@@ -225,7 +225,7 @@ function FreeTrialCard({ onStart, index }: { onStart: () => void; index: number 
         <div className="pointer-events-none absolute left-[18px] right-[18px] top-0 h-[2px] rounded-[999px] bg-[linear-gradient(90deg,rgba(52,211,153,0),rgba(52,211,153,0.55),rgba(226,76,48,0.12),rgba(52,211,153,0))]" />
         <div className="relative mb-[16px] flex min-h-[46px] flex-col gap-1">
           <h3 className="font-[var(--font-space-grotesk)] text-[22px] font-extrabold text-[#fff]">
-            Trial 7 dias
+            Trial 3 dias
           </h3>
 
         </div>
@@ -238,7 +238,7 @@ function FreeTrialCard({ onStart, index }: { onStart: () => void; index: number 
             <span className="font-[var(--font-space-grotesk)] text-[clamp(2.1rem,4vw,2.8rem)] font-black text-[#fff]">
               R$ 0
             </span>
-            <span className="pb-1 font-['Inter'] text-[14px] text-[rgba(255,255,255,0.72)]">/ 7 dias</span>
+            <span className="pb-1 font-['Inter'] text-[14px] text-[rgba(255,255,255,0.72)]">/ 3 dias</span>
           </div>
         </div>
 
@@ -735,7 +735,7 @@ export type PricingPlansEmbedProps = {
    * `null` = não inferido → não trava por período (permite ex.: mensal→trimestral no mesmo plano).
    */
   userSubscriptionBillingQuarterly?: boolean | null
-  /** Assinantes logados: oculta o card Trial 7 dias. */
+  /** Assinantes logados: oculta o card Trial 3 dias. */
   hideFreeTrial?: boolean
   /** Layout mais denso (modal Minha Conta), sem scroll interno na maioria dos viewports. */
   compact?: boolean

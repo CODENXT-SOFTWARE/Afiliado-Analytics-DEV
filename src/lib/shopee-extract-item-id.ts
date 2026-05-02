@@ -91,7 +91,13 @@ export function extractShopeeItemIdFromInput(raw: string): number | null {
   return null;
 }
 
-/** Link curto s.shopee.com.br/código — não dá para obter itemId sem abrir no navegador. */
+/**
+ * Link curto da Shopee — não dá pra obter itemId sem seguir o redirect.
+ * Cobre dois formatos:
+ *   1) `s.shopee.com.br/...` / `s.shopee.com/...` — link de afiliado curto
+ *   2) `br.shp.ee/...` / `shp.ee/...` — link de compartilhamento padrão
+ *      (botão "compartilhar" na PDP do app/site da Shopee)
+ */
 export function isShopeeShortLinkInput(raw: string): boolean {
   const trimmed = raw.trim();
   if (!trimmed) return false;
@@ -103,11 +109,13 @@ export function isShopeeShortLinkInput(raw: string): boolean {
       h === "s.shopee.com.br" ||
       h.endsWith(".s.shopee.com.br") ||
       h === "s.shopee.com" ||
-      h.endsWith(".s.shopee.com");
+      h.endsWith(".s.shopee.com") ||
+      h === "shp.ee" ||
+      h.endsWith(".shp.ee");
     if (!isShortHost) return false;
     const seg = u.pathname.replace(/^\/+|\/+$/g, "").split("/")[0] ?? "";
     return seg.length > 0 && /^[a-z0-9_-]+$/i.test(seg);
   } catch {
-    return /s\.shopee\.com(?:\.br)?\/[a-z0-9_-]+/i.test(trimmed);
+    return /(?:s\.shopee\.com(?:\.br)?|(?:[a-z]+\.)?shp\.ee)\/[a-z0-9_-]+/i.test(trimmed);
   }
 }

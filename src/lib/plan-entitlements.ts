@@ -11,7 +11,7 @@
  *
  * SPEC OFICIAL (mantenha sincronizado com /pricing):
  *
- *   TRIAL (7 dias) ≡ INICIAL:
+ *   TRIAL (duração definida pelo cupom — 3 dias é o default atual) ≡ INICIAL:
  *     ✓ Análise de comissões / cliques
  *     ✓ Redirecionador de links
  *     ✓ Gerador de links Shopee

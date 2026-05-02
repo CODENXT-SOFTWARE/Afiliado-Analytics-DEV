@@ -346,7 +346,7 @@ export default function LoginModal({ onClose, initialMode = 'login' }: LoginModa
                       onChange={(e) => setCoupon(e.target.value.toUpperCase())}
                       className="block w-full rounded-[12px] border border-white/10 bg-black/20 light:border-zinc-200 light:bg-zinc-50 px-4 py-3 font-['Inter'] text-[14px] text-white light:text-zinc-900 placeholder-white/30 light:placeholder-zinc-400 outline-none transition-all focus:border-[#e24c30]/50 focus:bg-black/30 light:focus:border-shopee-orange/60 light:focus:bg-white focus:ring-1 focus:ring-[#e24c30]/50 disabled:opacity-50"
                       disabled={submitting}
-                      placeholder="7DAYSFREE"
+                      placeholder="3DAYSFREE"
                     />
                   </div>
 

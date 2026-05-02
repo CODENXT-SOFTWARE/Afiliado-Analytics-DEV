@@ -1,7 +1,11 @@
 /**
- * Resolve um link curto da Shopee (ex.: https://s.shopee.com.br/xxxx) para a URL
- * completa do produto e, se possível, extrai o `itemId` para usar diretamente na
- * busca por itemId (mesmo fluxo do Gerador de Links Shopee com link longo).
+ * Resolve um link curto da Shopee para a URL completa do produto e, se
+ * possível, extrai o `itemId` para usar diretamente na busca por itemId.
+ *
+ * Aceita dois formatos:
+ *   1) Link de afiliado curto: `https://s.shopee.com.br/xxxx`
+ *   2) Link de compartilhamento padrão: `https://br.shp.ee/xxxx` (gerado
+ *      pelo botão "Compartilhar" na PDP do app/site da Shopee)
  *
  * A Shopee usa normalmente:
  *   1) 301/302 com header `Location`.
@@ -27,7 +31,10 @@ function isShortShopeeHost(host: string): boolean {
     h === "s.shopee.com.br" ||
     h.endsWith(".s.shopee.com.br") ||
     h === "s.shopee.com" ||
-    h.endsWith(".s.shopee.com")
+    h.endsWith(".s.shopee.com") ||
+    // Link de compartilhamento padrão (botão "Compartilhar" da PDP).
+    h === "shp.ee" ||
+    h.endsWith(".shp.ee")
   );
 }
 
