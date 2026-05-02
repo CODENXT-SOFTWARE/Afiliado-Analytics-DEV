@@ -19,7 +19,8 @@ export function UpgradePlanNotice({
 }: {
   title: string;
   description: string;
-  onClose: () => void;
+  /** Quando omitido, o botão "Fechar" não aparece (uso como gate permanente). */
+  onClose?: () => void;
   currentPlanToneForPricing: SubscriptionPlanTone;
   userSubscriptionBillingQuarterly: boolean | null;
 }) {
@@ -56,13 +57,15 @@ export function UpgradePlanNotice({
             >
               Ver planos
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs text-text-secondary transition hover:text-text-primary"
-            >
-              Fechar
-            </button>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-xs text-text-secondary transition hover:text-text-primary"
+              >
+                Fechar
+              </button>
+            )}
           </div>
         </div>
       </div>
