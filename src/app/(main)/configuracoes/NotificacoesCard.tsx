@@ -192,20 +192,27 @@ export default function NotificacoesCard({ onActiveChange }: NotificacoesCardPro
     try {
       const res = await fetch("/api/push/test-comissao", { method: "POST" });
       const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
         error?: string;
+        reason?: string;
+        // Fluxo novo:
+        comissaoOntem?: number | null;
+        comissaoOntemData?: string | null;
+        // Fluxo legado:
         comissaoTotal?: number | null;
       };
+
       if (!res.ok) {
+        // 409 + reason="sem-coleta" no fluxo novo: ainda não rolou a coleta
+        // do dia (cron das 09:30 BRT) ou o usuário não tem chave Shopee.
+        // Mensagem do servidor já é descritiva — usamos direto.
         throw new Error(json?.error ?? "Falha ao enviar teste de comissão");
       }
-      // Se o user nunca abriu o dashboard, comissaoTotal pode vir null e o
-      // payload usa o texto fallback. Avisa pra ele saber porque não veio
-      // valor em R$.
-      const text =
-        json.comissaoTotal == null
-          ? "Notificação de comissão enviada (sem valor — abra o dashboard pelo menos uma vez pra registrar)."
-          : "Notificação de comissão enviada. Verifique a bandeja em alguns segundos.";
-      setFeedback({ kind: "ok", text });
+
+      setFeedback({
+        kind: "ok",
+        text: "Notificação de comissão enviada. Verifique a bandeja em alguns segundos.",
+      });
     } catch (err) {
       setFeedback({
         kind: "error",

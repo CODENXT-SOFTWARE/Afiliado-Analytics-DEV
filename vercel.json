@@ -16,6 +16,9 @@
     },
     "src/app/api/cron/push-comissao-retry/route.ts": {
       "maxDuration": 300
+    },
+    "src/app/api/cron/push-coletar-comissao-ontem/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
@@ -27,6 +30,8 @@
     { "path": "/api/gpl/cron-sync", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/shopee-trends", "schedule": "0 * * * *" },
     { "path": "/api/cron/push?slug=bom-dia", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/push-limpar-comissao-ontem", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/push-coletar-comissao-ontem", "schedule": "30 12 * * *" },
     { "path": "/api/cron/push?slug=comissao-total", "schedule": "30 13 * * *" },
     { "path": "/api/cron/push-comissao-retry", "schedule": "0 1 * * *" },
     { "path": "/api/cron/cleanup-push-logs", "schedule": "0 6 * * *" },

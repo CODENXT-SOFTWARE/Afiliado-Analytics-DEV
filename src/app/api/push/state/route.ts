@@ -100,25 +100,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // ── Catch-up: se já passou do horário do cron diário (10:30 BRT) e o
-  // user ainda não recebeu hoje, dispara push agora com o valor novo.
-  // Resolve race conditions e cron falho. Operação não-bloqueante: se
-  // falhar, só loga (não retorna erro pro client).
+  // ── Catch-up: só roda no FLUXO LEGADO (PUSH_COMISSAO_NOVO_FLUXO=false).
+  //
+  // No fluxo novo, a fonte de verdade é o cron das 09:30 BRT que coleta
+  // server-side da Shopee — usar o valor calculado pelo dashboard (range
+  // filtrado pelo user) aqui ia sobrescrever a regra de "comissão de
+  // ontem" e gerar push inconsistente. Por isso desativamos.
+  //
+  // No legado: se já passou de 10:35 BRT e o user ainda não recebeu hoje,
+  // dispara push agora com o valor que o dashboard acabou de calcular.
   let catchUpSent = false;
-  try {
-    if (comissao != null && jaPassouDoHorarioCron()) {
-      const recebeu = await userJaRecebeuComissaoHoje(user.id);
-      if (!recebeu) {
-        const result = await sendPushToUser(
-          user.id,
-          payloadComissaoTotal(comissao),
-          { logSlug: "comissao-total" },
-        );
-        catchUpSent = result.ok > 0;
+  const fluxoLegado = process.env.PUSH_COMISSAO_NOVO_FLUXO === "false";
+  if (fluxoLegado) {
+    try {
+      if (comissao != null && jaPassouDoHorarioCron()) {
+        const recebeu = await userJaRecebeuComissaoHoje(user.id);
+        if (!recebeu) {
+          const result = await sendPushToUser(
+            user.id,
+            payloadComissaoTotal(comissao),
+            { logSlug: "comissao-total" },
+          );
+          catchUpSent = result.ok > 0;
+        }
       }
+    } catch (catchupErr) {
+      console.error("[push/state] catch-up falhou:", catchupErr);
     }
-  } catch (catchupErr) {
-    console.error("[push/state] catch-up falhou:", catchupErr);
   }
 
   return NextResponse.json({ ok: true, catchUpSent });
