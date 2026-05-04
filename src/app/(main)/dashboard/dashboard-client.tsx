@@ -320,11 +320,7 @@ export default function CommissionsPage() {
         }
 
         const end = getYesterday();
-        const start = (() => {
-          const d = new Date(end + "T12:00:00");
-          d.setDate(d.getDate() - 6);
-          return localYMD(d);
-        })();
+        const start = end;
 
         setSource("api");
         setDateFromDraft(start);

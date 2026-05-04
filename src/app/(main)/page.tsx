@@ -128,7 +128,7 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
               className="mb-10 max-w-[560px] font-['Inter'] text-[clamp(1.05rem,1.2vw,1.15rem)] font-light leading-relaxed text-text-secondary"
             >
-              O único ecossistema com <strong className="font-semibold text-text-primary">12 ferramentas poderosas</strong> que os super afiliados usam para faturar mais, trabalhar menos e <strong className="font-semibold text-[#ff7a54]">dominar qualquer nicho.</strong>
+              O único ecossistema com <strong className="font-semibold text-text-primary">13 ferramentas poderosas</strong> que os super afiliados usam para faturar mais, trabalhar menos e <strong className="font-semibold text-[#ff7a54]">dominar qualquer nicho.</strong>
             </motion.p>
 
             {/* Botões - ANIMADOS */}

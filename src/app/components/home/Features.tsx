@@ -6,7 +6,7 @@ import {
   BarChart2, MousePointerClick, Link2, TrendingUp,
   LayoutTemplate, ShoppingBag, Bell, Calculator,
   Zap, ArrowLeftRight,
-  User,
+  User, Flame,
 } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
@@ -14,60 +14,11 @@ import NasaParticles from "./NasaParticles";
 
 const features = [
   {
-    icon: TrendingUp,
-    tag: "ANALYTICS",
-    title: "Tráfego Inteligente (ATI)",
+    icon: Flame,
+    tag: "IA / TENDÊNCIAS",
+    title: "Tendências Shopee",
     description:
-      "Cruze dados do Meta e Shopee para validar criativos. Escale suas campanhas com o termômetro de performance Ruim, Bom ou Excelente.",
-  },
-  {
-    icon: Zap,
-    tag: "Automação",
-    title: "Gerador de criativo",
-    description:
-      "Gere vídeos de achadinhos prontos para postar com nossa IA. Economize tempo e escale sua criação de conteúdo.",
-  },
-  {
-    icon: Bell,
-    tag: "Automação",
-    title: "Automação de Grupos",
-    description:
-      "Gerencie listas de transmissão e dispare ofertas automaticamente para seus grupos de WhatsApp.",
-  },
-  {
-    icon: ArrowLeftRight,
-    tag: "Espelhamento",
-    title: "Espelhamento de Grupos",
-    description:
-      "Espelhe ofertas de outros grupos para os seus: o conteúdo chega nos seus grupos com seu link de afiliado e mídia preservada.",
-  },
-  {
-    icon: Calculator,
-    tag: "Calculadora",
-    title: "Calculadora GPL",
-    description:
-      "Monitore o custo por lead e as saídas. Descubra o prejuízo exato e projete sua receita real.",
-  },
-  {
-    icon: LayoutTemplate,
-    tag: "Conversão",
-    title: "Site de Captura",
-    description:
-      "Crie páginas de captura de alta conversão em minutos. Sem precisar de programador.",
-  },
-  {
-    icon: ShoppingBag,
-    tag: "Produtos",
-    title: "Criar campanha Meta",
-    description:
-      "Suba e gerencie seus anúncios sem precisar abrir o Meta Ads, controlando tudo direto pelo nosso painel.",
-  },
-  {
-    icon: Link2,
-    tag: "LINKS",
-    title: "Gerador Link Shopee",
-    description:
-      "Gere links rastreáveis da Shopee com Sub IDs, sem precisar abrir o aplicativo. Salve os links e crie listas de ofertas.",
+      "Descubra quais produtos estão explodindo na Shopee agora. Use nossa análise contínua por IA para encontrar oportunidades de alta comissão antes de todo mundo.",
   },
   {
     icon: BarChart2,
@@ -84,18 +35,74 @@ const features = [
       "Analise minuciosamente o volume, a origem e os horários de pico dos seus cliques na Shopee.",
   },
   {
-    icon: Link2,
-    tag: "Links",
-    title: "Redirecionador de Links",
+    icon: LayoutTemplate,
+    tag: "Conversão",
+    title: "Site de Captura",
     description:
-      "Crie links curtos, amigáveis e evite o bloqueio em redes sociais alterando o destino.",
+      "Crie páginas de captura de alta conversão em minutos. Sem precisar de programador.",
+  },
+  {
+    icon: Bell,
+    tag: "Automação",
+    title: "Automação de Grupos",
+    description:
+      "Gerencie listas de transmissão e dispare ofertas automaticamente para seus grupos de WhatsApp.",
+  },
+  {
+    icon: ArrowLeftRight,
+    tag: "Espelhamento",
+    title: "Espelhamento de Grupos",
+    description:
+      "Espelhe ofertas de outros grupos para os seus: o conteúdo chega nos seus grupos com seu link de afiliado e mídia preservada.",
+  },
+  {
+    icon: Zap,
+    tag: "Automação",
+    title: "Gerador de criativo",
+    description:
+      "Gere vídeos de achadinhos prontos para postar com nossa IA. Economize tempo e escale sua criação de conteúdo.",
   },
   {
     icon: User,
     tag: "IA",
     title: "Gerador de Especialistas",
     description:
-      "Gere especialistas para seus grupos de WhatsApp com nossa IA. Faça o seu especialista usar seus produtos.",
+      "Gere vídeos de vendas com um apresentador criado por Inteligência Artificial mostrando e recomendando seus produtos.",
+  },
+  {
+    icon: ShoppingBag,
+    tag: "VENDAS",
+    title: "Infoprodutor",
+    description:
+      "Cadastre seus próprios produtos, organize listas de ofertas personalizadas e automatize o envio de links de checkout para seus grupos, gerenciando vendas e logística.",
+  },
+  {
+    icon: Link2,
+    tag: "LINKS",
+    title: "Gerador de link de afiliado",
+    description:
+      "Gere links de afiliado rastreáveis usando os Sub IDs da Shopee, Mercado Livre e Amazon.",
+  },
+  {
+    icon: TrendingUp,
+    tag: "ANALYTICS",
+    title: "Tráfego Inteligente (ATI)",
+    description:
+      "Cruze dados do Meta e Shopee para validar criativos. Escale suas campanhas com o termômetro de performance Ruim, Bom ou Excelente.",
+  },
+  {
+    icon: Calculator,
+    tag: "Calculadora",
+    title: "Calculadora GPL",
+    description:
+      "Monitore o custo por lead e as saídas. Descubra o prejuízo exato e projete sua receita real.",
+  },
+  {
+    icon: Link2,
+    tag: "Links",
+    title: "Redirecionador de Links",
+    description:
+      "Crie links curtos, amigáveis e evite o bloqueio em redes sociais alterando o destino.",
   }
 ];
 
@@ -315,7 +322,7 @@ export default function FeaturesHybrid() {
 
             <div className="space-y-6">
               <p className="font-['Inter'] text-[16px] leading-[1.8] text-white/60 light:text-zinc-600 max-w-[400px] mx-auto lg:mx-0">
-                Analytics, automação, IA e links — tudo integrado para você escalar suas vendas na Shopee sem abrir 12 abas diferentes.
+                Analytics, automação, IA e links — tudo integrado para você escalar suas vendas na Shopee sem abrir 13 abas diferentes.
               </p>
             </div>
           </div>
