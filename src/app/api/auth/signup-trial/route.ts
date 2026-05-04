@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { isValidCpf, normalizeCpf } from "@/lib/cpf";
 import {
@@ -10,6 +11,28 @@ function normalizeCoupon(code: unknown): string {
   return String(code ?? "")
     .trim()
     .toUpperCase();
+}
+
+/**
+ * Lê o cookie `signup_track` (setado em /track_vendors/<vendor> via
+ * TrackHandler.tsx) e devolve o nome do vendor pra persistir em
+ * `profiles.user_track`. Se ausente, malformado ou maior que 40 chars,
+ * retorna null — cadastro pela home padrão sai sem track.
+ *
+ * O regex aqui DEVE espelhar o do TrackHandler client-side. Servidor
+ * é a última linha de defesa: cookie pode ter sido editado manualmente.
+ */
+const SAFE_TRACK = /^[a-zA-Z0-9_-]{1,40}$/;
+async function readSignupTrack(): Promise<string | null> {
+  try {
+    const store = await cookies();
+    const raw = store.get("signup_track")?.value?.trim();
+    if (!raw) return null;
+    const decoded = decodeURIComponent(raw);
+    return SAFE_TRACK.test(decoded) ? decoded : null;
+  } catch {
+    return null;
+  }
 }
 
 function normalizeWhatsapp(raw: unknown): string {
@@ -136,6 +159,11 @@ export async function POST(req: Request) {
     const trialUntil = new Date();
     trialUntil.setUTCDate(trialUntil.getUTCDate() + Number(couponRow.duration_days ?? 1));
 
+    // Tracking de origem (vendor): cookie setado quando o usuário visita
+    // /track_vendors/<vendor>?track=<nome>. Cadastro pela home padrão
+    // não tem cookie → user_track fica NULL.
+    const userTrack = await readSignupTrack();
+
     const { error: profErr } = await supabase.from("profiles").insert([
       {
         id: userId,
@@ -147,6 +175,7 @@ export async function POST(req: Request) {
         whatsapp_phone: whatsapp,
         cpf,
         account_setup_pending: false,
+        user_track: userTrack,
       },
     ]);
 
